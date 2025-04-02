@@ -2309,7 +2309,7 @@ function initBackgroundScan() {
                     case 0:{ // potluck, last_chance
                         if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.0 with _subStage: ', _subStage);
                         if (_stageZeroSites[_subStage]) {
-                            updateBackgroundScanScreenText(`${_scannerName} ${_stageZeroSites[_subStage].replace('queue=', '')} Page: ${_subStage} / ${_PageMax}`);
+                            updateBackgroundScanScreenText(`${_scannerName} ${_stageZeroSites[_subStage].replace('queue=', '')} Page`);
                             if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.0 with _subStage: ', _subStage, ' inside IF');
                             backGroundTileScanner(`${_baseUrl}?${_stageZeroSites[_subStage]}` , (newCount) => {_scanFinished(newCount)});
                             _subStage++
@@ -2337,7 +2337,7 @@ function initBackgroundScan() {
                         _PageMax = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX')) || 0;
 
                         if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.1 with _subStage: ', _subStage);
-                        updateBackgroundScanScreenText(`${_scannerName} encore Page: ${_subStage} / ${_PageMax}`);
+                        updateBackgroundScanScreenText(`${_scannerName} encore Page: ${_subStage + 1} / ${_PageMax}`);
 
                         //Wenn die maximale Seitenzahl nicht erreicht ist, wird gescannt
                         if (_subStage < _PageMax) {
