@@ -16,14 +16,19 @@ class DB_HANDLER {
     * @return {DB_HANDLER} DBHANDLER Object
     */
 
-    constructor(dbName, storeName, version, cb = (sucess, err) => { }) {
+    constructor(dbName, storeName, version) {
         if (!dbName) throw new Error(`CLASS DB_HANDLER needs a name for the database to init: exampe:  const db = new DB_HANDLER('AnyName')`);
         this.#dbName = dbName;
         this.#version = version || 1;
         this.#storeName = storeName || dbName + '_ObjectStore';
-        this.#init().then(cb).catch(cb(null, true));
     }
-
+    
+    static async init(dbName, storeName, version) {
+        const instance = new DB_HANDLER(dbName, storeName, version);
+        await instance.#init();
+        return instance;
+    }
+    
     /**
      * Class Internal DB Init Function
      * @async
