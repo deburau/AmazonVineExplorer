@@ -68,7 +68,7 @@ let BackGroundScanIsRunning = false;
 // Make some things accessable from console
 unsafeWindow.ave = {
     classes: [
-        DB_HANDLER = DB_HANDLER
+        DB_HANDLER
     ],
     config: SETTINGS,
     event: ave_eventhandler,

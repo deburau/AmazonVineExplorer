@@ -1,4 +1,4 @@
-
+// eslint-disable-next-line no-unused-vars
 console.log('loaded db_handler.js');
 class DB_HANDLER {
     #version;
