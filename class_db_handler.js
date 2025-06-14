@@ -1,8 +1,3 @@
-/*
-    global
-        SETTINGS,
-        ave_eventhandler,
-*/
 
 console.log('loaded db_handler.js');
 class DB_HANDLER {
@@ -137,7 +132,7 @@ class DB_HANDLER {
                 }
             }
         };
-        _request.onerror = (event) => { cb([]); throw new Error(`DB_HANDLER.#checkForDuplicatedAsin: ${event.target.error.name}`); };
+        _request.onerror = (event) => { throw new Error(`DB_HANDLER.#checkForDuplicatedAsin: ${event.target.error.name}`); };
     };
 
     /**
@@ -377,7 +372,7 @@ class DB_HANDLER {
      * @async
      * @returns {Promise<Product[]>}
      */
-    async getFavEntries(cb) {
+    async getFavEntries(_cb) { // Renamed cb to _cb
         return new Promise((resolve, reject) => {
             const _result = [];
             const _onlyTrue = IDBKeyRange.only(1);
