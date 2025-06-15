@@ -178,8 +178,7 @@ class DB_HANDLER {
                 reject(`DB_HANDLER.add(): ${event.target.error}`);
             };
 
-            // eslint-disable-next-line no-unused-vars
-            _request.onsuccess = (_event) => {
+            _request.onsuccess = () => {
                 resolve();
                 this.#fireDataChangedEvent();
             };
@@ -280,7 +279,7 @@ class DB_HANDLER {
                 reject(event.target.error);
             };
 
-            _request.onsuccess = (event) => {
+            _request.onsuccess = () => {
                 // console.log('Called DB_HANDLER:update() --> success');
                 this.#fireDataChangedEvent();
                 resolve();
@@ -337,7 +336,7 @@ class DB_HANDLER {
         return new Promise((resolve, reject) => {
             const _request = this.#getStore().getAllKeys();
             _request.onsuccess = (event) => { resolve(event.target.result); };
-            _request.onerror = (event) => { reject(`DB_HANDLER.getAllKeys(): ${event.target.error.name}`) };
+            _request.onerror = (_event) => { reject(`DB_HANDLER.getAllKeys(): ${_event.target.error.name}`) };
         })
     };
 
@@ -414,7 +413,7 @@ class DB_HANDLER {
             if (typeof (id) !== 'string') (reject('DB_HANDLER.removeID(): id is not defined or is not typeof string'));
 
             const _request = this.#getStore(true).delete(id);
-            _request.onsuccess = (event) => {
+            _request.onsuccess = () => {
                 resolve();
                 this.#fireDataChangedEvent();
             };
@@ -467,7 +466,7 @@ class DB_HANDLER {
         return new Promise((resolve, reject) => {
             const _request = this.#getStore().count();
             _request.onsuccess = (event) => { resolve(event.target.result); };
-            _request.onerror = (event) => { reject(`DB_HANDLER.getAll(): ${event.target.error.name}`); };
+            _request.onerror = (_event) => { reject(`DB_HANDLER.count(): ${_event.target.error.name}`); };
         });
     }
 
