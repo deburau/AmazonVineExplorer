@@ -13,6 +13,16 @@ const AVE_SESSION_ID = generateSessionID();
  */
 let AVE_IS_THIS_SESSION_MASTER = false;
 
+const INIT_AUTO_SCAN = (localStorage.getItem('AVE_INIT_AUTO_SCAN') === 'true') ? true : false;
+const AUTO_SCAN_IS_RUNNING = (localStorage.getItem('AVE_AUTO_SCAN_IS_RUNNING') === 'true') ? true : false;
+const AUTO_SCAN_PAGE_CURRENT = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_CURRENT')) || -1
+const AUTO_SCAN_PAGE_MAX = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_MAX')) || -1
+const PAGE_LOAD_TIMESTAMP = Date.now();
+
+const DATABASE_NAME = 'VineVoiceExplorer';
+const DATABASE_OBJECT_STORE_NAME = `${DATABASE_NAME}_Objects`;
+const DATABASE_VERSION = 3;
+
 // Make some things accessable from console
 unsafeWindow.ave = {};
 
