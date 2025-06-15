@@ -1,10 +1,5 @@
-/*
-    global
-        SETTINGS,
-        ave_eventhandler,
-*/
-
 console.log('loaded db_handler.js');
+// eslint-disable-next-line no-unused-vars
 class DB_HANDLER {
     #version;
     #dbName;
@@ -183,7 +178,8 @@ class DB_HANDLER {
                 reject(`DB_HANDLER.add(): ${event.target.error}`);
             };
 
-            _request.onsuccess = (event) => {
+            // eslint-disable-next-line no-unused-vars
+            _request.onsuccess = (_event) => {
                 resolve();
                 this.#fireDataChangedEvent();
             };
@@ -471,7 +467,7 @@ class DB_HANDLER {
         return new Promise((resolve, reject) => {
             const _request = this.#getStore().count();
             _request.onsuccess = (event) => { resolve(event.target.result); };
-            _request.onerror = (event) => { reject(`DB_HANDLER.count(): ${event.target.error.name}`); };
+            _request.onerror = (event) => { reject(`DB_HANDLER.getAll(): ${event.target.error.name}`); };
         });
     }
 
