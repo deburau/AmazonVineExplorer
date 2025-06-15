@@ -49,9 +49,7 @@ let BackGroundScanIsRunning = false;
 
 // Make some things accessable from console
 unsafeWindow.ave = {
-    classes: [
-        DB_HANDLER = DB_HANDLER
-    ],
+    classes: [DB_HANDLER],
     config: SETTINGS,
     event: ave_eventhandler,
 };
@@ -536,7 +534,7 @@ function createButton(text, id, style, clickHandler){
 
 async function createTileFromProduct(product, btnID, cb) {
     if (!product && SETTINGS.DebugLevel > 10) console.error(`createTileFromProduct got no valid product element`);
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         const _btnAutoID = btnID || Math.round(Math.random() * 10000);
 
         const _tile = document.createElement('div');
@@ -709,7 +707,6 @@ ${_data.tax}
 
 ${newUrl}`
 
-        const cursorPosition = event.target.selectionStart;
         const inputRect = event.target.getBoundingClientRect();
 
         const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
@@ -816,12 +813,12 @@ async function createProductSite(siteType, productArray, cb) {
 
 
     // Items Grid Container
-    const _tilesContainer = document.getElementById('vvp-items-grid-container');
-    if (!_tilesContainer) reloadPageWithSubpageTarget(siteType);
+    if (!document.getElementById('vvp-items-grid-container')) reloadPageWithSubpageTarget(siteType);
 
     // Edit Top Line
-    if (_tilesContainer) {
-        const _topLine = _tilesContainer.getElementsByTagName('p')[0];
+    // const _tilesContainerOriginal = document.getElementById('vvp-items-grid-container'); // This line is removed
+    if (document.getElementById('vvp-items-grid-container')) { // Check directly
+        const _topLine = document.getElementById('vvp-items-grid-container').getElementsByTagName('p')[0];
         _topLine.innerHTML = `<p>Anzeigen von <strong>${_fastCount}</strong> von <strong>${_productArrayLength}</strong> Ergebnissen</p>`
     }
 
@@ -874,10 +871,10 @@ async function createInfiniteScrollSite(siteType, cb) {
     if (_nodesContainer) _nodesContainer.innerHTML = '';
 
     // Items Grid Container
-    const _tilesContainer = document.getElementById('vvp-items-grid-container');
-    if (!_tilesContainer) reloadPageWithSubpageTarget(siteType);
+    if (!document.getElementById('vvp-items-grid-container')) reloadPageWithSubpageTarget(siteType);
 
     // Edit Top Line
+    const _tilesContainer = document.getElementById('vvp-items-grid-container');
     if (_tilesContainer) {
         const _topLine = _tilesContainer.getElementsByTagName('p')[0];
         _topLine.innerHTML = ''
@@ -986,7 +983,8 @@ function createNewSite(type, data) {
         }
         case PAGETYPE.ALL:{
             currentMainPage = PAGETYPE.ALL;
-            createInfiniteScrollSite(currentMainPage,(tilesContainer) => {
+            // eslint-disable-next-line no-unused-vars
+            createInfiniteScrollSite(currentMainPage,(_unusedTilesContainer) => {
                 const _baseUrl = (/(http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items)/.exec(window.location.href))[1];
                 const _preloadPages = ['potluck', 'last_chance', 'encore']
                 infiniteScrollLastPreloadedPage = 1;
@@ -1030,9 +1028,9 @@ function createNewSite(type, data) {
     }
 }
 
-
 let lastGetTilesFromURLQuerry = 0;
-function getTilesFromURL(url, cb = (tilesArray) => {}) {
+// eslint-disable-next-line no-unused-vars
+function getTilesFromURL(url, cb = (_tilesArray) => {}) {
     if (lastGetTilesFromURLQuerry + SETTINGS.PageLoadMinDelay > Date.now()) {
         const _delay =  Math.max(1, lastGetTilesFromURLQuerry + SETTINGS.PageLoadMinDelay - Date.now());
         console.warn(`getTilesFromURL() DELAYED for ${_delay}ms`)
@@ -1057,7 +1055,7 @@ function getTilesFromURL(url, cb = (tilesArray) => {}) {
                 cb(_retArr);
 
                 const _paginationData = getPageinationData();
-                if (_paginationData) infiniteScrollMaxPreloadPage = _pageinationData.maxPage;
+                if (_paginationData) infiniteScrollMaxPreloadPage = _paginationData.maxPage;
             }, _doc);
         }
     })
@@ -1151,7 +1149,8 @@ function addTileEventhandlers(_currTile) {
     _data.asin = _btn.getAttribute('data-asin');
     _data.parent_asin = _btn.getAttribute('data-is-parent-asin');
     _data.recommendation_id = _btn.getAttribute('data-recommendation-id');
-    waitForHtmlElmement('[id^="ave-taxinfo-"]', (elem) => {
+    // eslint-disable-next-line no-unused-vars
+    waitForHtmlElmement('[id^="ave-taxinfo-"]', (_unusedElem) => {
         _data.tax = _currTile.querySelector('[id^="ave-taxinfo-"] > span').textContent;
     });
 
@@ -1722,7 +1721,8 @@ function createSettingsKeywordsTableElement(dat, index, entry){
     const _tableRow_td1_button = document.createElement('button');
     _tableRow_td1_button.innerHTML = `<i class="a-icon a-icon-close"></i>`;
     _tableRow_td1_button.setAttribute('ave-data-keyword', entry);
-    _tableRow_td1_button.addEventListener('click', (elm, ev) =>{
+    // eslint-disable-next-line no-unused-vars
+    _tableRow_td1_button.addEventListener('click', (_elm, _ev) =>{
         // console.log('DELETE_BTN:: ', elm)
         SETTINGS[dat.key].splice(index, 1);
         SETTINGS.save();
@@ -1738,70 +1738,6 @@ function createSettingsKeywordsTableElement(dat, index, entry){
     _tableRow_td2.innerText = entry;
     _tableRow.appendChild(_tableRow_td2);
     return _tableRow;
-}
-
-function addOverlays() { // Old Settings Code
-    const _overlayBackground = document.createElement('div');
-    _overlayBackground.style.position = 'fixed';
-    _overlayBackground.style.backgroundColor = '#000000b0';
-    _overlayBackground.style.zIndex = '1750';
-    _overlayBackground.style.width = '100%';
-    _overlayBackground.style.height = '100%';
-    _overlayBackground.style.top = '0';
-
-    document.body.appendChild(_overlayBackground);
-
-    const _settingsDiv = document.createElement('div');
-    _settingsDiv.style.position = 'fixed';
-    _settingsDiv.style.zIndex = '1750';
-    _settingsDiv.style.width = '100%';
-    _settingsDiv.style.height = '100%';
-    _settingsDiv.style.top = '0';
-    _settingsDiv.style.display = 'flex';
-    _settingsDiv.style.justifyContent = 'center';
-    _settingsDiv.style.alignItems = 'center';
-
-    _settingsDiv.innerHTML = `
-    <style>
-    .ave-setting {
-    padding: 0 0 7px;
-    }
-    </style>
-    <div style="background-color: white;border-radius: 8px;width: 50%;min-width: 250px;height: 75%;overflow: hidden;">
-      <div id="settingsInner"width: 100%; height: 100%;"> <!--- Inner Start -->
-        <div id="settingsNav" style="background-color: #F0F2F2;border-bottom: 1px solid #D5D9D9;display: flex;height: 50px;align-items: center;padding: 0 24px;"> <!--- Nav Start -->
-         <div style="color: #444;font-size: 16px;font-weight: 700;">Amazon Vine Explorer Einstellungen</div>
-         <div style="color: #444;margin-left: auto;width: 50px;height: 50px;display: flex;justify-content: center;align-items: center;font-weight: 600;font-size: larger;cursor: pointer;transform: translate(50%, 0);">
-           <i class="a-icon a-icon-close"></i>
-         </div>
-        </div> <!--- Nav End -->
-        <div style="padding: 16px 24px;color: #0F111"> <!--- Content Start -->
-        <div class="ave-setting">
-          <input type="number" value="${SETTINGS.DebugLevel}" onchange="console.log('Setting Changed')"> - Debug Level
-        </div>
-        <div class="ave-setting">
-        <input type="checkbox" checked="${SETTINGS.EnableFullWidth}" onchange="console.log('Setting Changed')"> - Full Width
-        </div>
-        <div class="ave-setting">
-        <input type="checkbox" checked="${SETTINGS.DisableFooter}" onchange="console.log('Setting Changed')"> - Disable Footer
-        </div>
-        <div class="ave-setting">
-        <input type="checkbox" checked="${SETTINGS.DisableSuggestions}" onchange="console.log('Setting Changed')"> - Disable Suggestions
-        </div>
-        <div class="ave-setting">
-        <input type="checkbox" checked="${SETTINGS.DisableFooterShopping}" onchange="console.log('Setting Changed')"> - Disable Footer Shopping
-        </div>
-        <div class="ave-setting">
-        <input type="checkbox" checked="${SETTINGS.DisableSuggestionsShopping}" onchange="console.log('Setting Changed')"> - Disable Suggestions Shopping
-        </div>
-        </div> <!--- Content End -->
-        <div> <!--- Footer Start -->
-        </div> <!--- Footer End -->
-      </div> <!--- Inner End -->
-    </div>
-`
-
-    document.body.appendChild(_settingsDiv);
 }
 
 function componentToHex(c) {
@@ -1836,7 +1772,7 @@ function colorToHex(color) {
 
 }
 
-ave.colorToHex = colorToHex;
+unsafeWindow.ave.colorToHex = colorToHex;
 
 function addDBCleaningSymbol(){
     const _cleaningDiv = document.createElement('div');
@@ -2006,7 +1942,7 @@ async function cleanUpDatabase(cb = () => {}) {
         let currentTimeStamp = unixTimeStamp();
 
         for (const _currEntry of prodArr) {
-            _workersProms.push(new Promise((resolve, reject) => {
+            _workersProms.push(new Promise((resolve) => {
                 let _needUpdate = false;
                 if (SETTINGS.DebugLevel > 10) console.log(`cleanUpDatabase() - Checking Entry ${_currEntry.id} `);
 
@@ -2041,14 +1977,16 @@ async function cleanUpDatabase(cb = () => {}) {
                 if ((_currEntry.notSeenCounter > 0 && currentTimeStamp - _currEntry.ts_lastSeen >= secondsBeforeCleanup || _currEntry.forceRemove) && !_currEntry.isFav) {
                     if (SETTINGS.DebugLevel > 10) console.log(`cleanUpDatabase() - Removing Entry ${_currEntry.id}`);
 
-                    database.removeID(_currEntry.id).then((ret) => {
+                    // eslint-disable-next-line no-unused-vars
+                    database.removeID(_currEntry.id).then((_ret) => {
                         _deleted++;
                         resolve()
                     });
                 } else if (!_needUpdate){
                     resolve()
                 } else {
-                    database.update(_currEntry).then((ret) => {_updated++; resolve();});
+                    // eslint-disable-next-line no-unused-vars
+                    database.update(_currEntry).then((_ret) => {_updated++; resolve();});
                 }
             }))
         }
@@ -2066,6 +2004,7 @@ async function cleanUpDatabase(cb = () => {}) {
 
 unsafeWindow.ave.dbCleanup = cleanUpDatabase;
 
+// eslint-disable-next-line no-unused-vars
 function exportDatabase() {
     console.log('Create Database Dump...');
 
@@ -2091,6 +2030,7 @@ function exportDatabase() {
  * @returns {Promise<void>}
  */
 async function importDatabase() {
+    let enableBackgroundScan; // Declare here
     return new Promise((resolve, reject) => {
         // Create an input element of type "file"
         const fileInput = document.createElement('input');
@@ -2102,7 +2042,7 @@ async function importDatabase() {
             const file = event.target.files[0];
 
             if (file) {
-                const enableBackgroundScan = SETTINGS.EnableBackgroundScan;
+                enableBackgroundScan = SETTINGS.EnableBackgroundScan; // Assign here
                 SETTINGS.EnableBackgroundScan = false;
                 if (backGroundScanTimeout) {
                     console.log('Stopping background scan');
@@ -2469,7 +2409,7 @@ function backGroundTileScanner(url, cb) {
     if (SETTINGS.DebugLevel > 10) console.log(`Called backgroundTileScanner(${url})`);
     const _iconLoading = addLoadingSymbol();
     const _iframeDoc = document.querySelector('#ave-iframe-backgroundloader').contentWindow.document;
-    ave.backGroundIFrame = _iframeDoc;
+    unsafeWindow.ave.backGroundIFrame = _iframeDoc;
     _iframeDoc.location.href = url;
     const _loopDelay = setInterval(() => {
         if (SETTINGS.DebugLevel > 10) console.log(`backgroundTileScanner(): check if we have tiles to read...`);
@@ -2547,7 +2487,6 @@ function startAutoScan() {
 }
 
 function handleAutoScan() {
-    let _href;
     const _delay = Math.max(SETTINGS.PageLoadMinDelay - (Date.now() - PAGE_LOAD_TIMESTAMP), 0) + 500;
     if (SETTINGS.DebugLevel > 10) console.log(`handleAutoScan() - _delay: ${_delay}`);
     if (AUTO_SCAN_PAGE_CURRENT < AUTO_SCAN_PAGE_MAX) {
@@ -2703,7 +2642,7 @@ function desktopNotifikation(title, message, image = null, requireInteraction = 
         Notification.requestPermission().then(function(permission) {
             if (permission === 'granted') {
                 console.log('Berechtigung für Benachrichtigungen erhalten!');
-                desktopNotifikation(title, message, icon, onclick);
+                desktopNotifikation(title, message, image, onClick);
             }
         });
     }
@@ -2778,7 +2717,7 @@ function addStyleToTile(_currTile, _product) {
 }
 
 async function requestProductDetails(prod) {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => { // Removed async from executor
         if (prod.data_asin_is_parent) {// Lets get the Childs first
             fetch(`${window.location.origin}/vine/api/recommendations/${prod.id}`.replace(/#/g, '%23')).then(r => r.json()).then(async (res) => {
                 if (res.error) {
@@ -2857,7 +2796,7 @@ function init(hasTiles) {
 
         const _tilesLength = _tiles.length;
         const _tilePorms = [];
-        const _parseStartTime = Date.now();
+        // const _parseStartTime = Date.now(); // Removed
         for (let i = 0; i < _tilesLength; i++) {
             const _currTile = _tiles[i];
             _currTile.style.cssText = "background-color: yellow;";

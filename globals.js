@@ -4,8 +4,6 @@ if (window.top !== window.self) return; //don't run on frames or iframes
 // Constants Needed for some things
 const AVE_VERSION = (GM_info?.script?.version)
 const AVE_TITLE = (GM_info?.script?.name);
-const SECONDS_PER_DAY = 86400;
-const SECONDS_PER_WEEK = 604800;
 const SITE_IS_VINE = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/vine\//.test(window.location.href);
 const SITE_IS_SHOPPING = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/(?!vine)(?!gp\/video)(?!music)/.test(window.location.href);
 const AVE_SESSION_ID = generateSessionID();
@@ -14,18 +12,6 @@ const AVE_SESSION_ID = generateSessionID();
  * Is this Browser Tab / Window the Master Instance ??
  */
 let AVE_IS_THIS_SESSION_MASTER = false;
-
-// Obsolete sobald der Backgroundscan läuft
-const INIT_AUTO_SCAN = (localStorage.getItem('AVE_INIT_AUTO_SCAN') === 'true') ? true : false;
-const AUTO_SCAN_IS_RUNNING = (localStorage.getItem('AVE_AUTO_SCAN_IS_RUNNING') === 'true') ? true : false;
-const AUTO_SCAN_PAGE_CURRENT = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_CURRENT')) || -1
-const AUTO_SCAN_PAGE_MAX = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_MAX')) || -1
-const PAGE_LOAD_TIMESTAMP = Date.now();
-
-// Obsolete sobald die Datenbank über Tampermonkey läuft
-const DATABASE_NAME = 'VineVoiceExplorer';
-const DATABASE_OBJECT_STORE_NAME = `${DATABASE_NAME}_Objects`;
-const DATABASE_VERSION = 3;
 
 // Make some things accessable from console
 unsafeWindow.ave = {};
@@ -252,10 +238,11 @@ SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableSuggestionsShopping', type: 'bool
 SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Settings for Developers and Testers', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DebugLevel', type: 'number', min: 0, max: 15, name: 'Debuglevel', description: ''});
 
-SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'RESET SETTINGS TO DEFAULT', bgColor: 'rgb(255,128,0)', description: 'It does what it says', btnClick: () => {SETTINGS.reset(); window.location.href = window.location.href} });
+SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'RESET SETTINGS TO DEFAULT', bgColor: 'rgb(255,128,0)', description: 'It does what it says', btnClick: () => {SETTINGS.reset(); window.location.reload()} });
 SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DATABSE EXPORT >>>', bgColor: 'lime', description: 'Export the entire Database', btnClick: () => {exportDatabase();}});
 SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DATABSE IMPORT <<<', bgColor: 'yellow', description: 'Clear the current database and import data from an earlier exported file. Data is imported as is, i.e. there is no validation. Please wait for the completion notification after clicking the button', btnClick: () => {importDatabase();}});
-SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DELETE DATABSE', bgColor: 'rgb(255,0,0)', description: 'A USER DOES NOT NEED TO DO THIS ! ITS ONLY FOR DEVELOPMENT PURPOSES', btnClick: () => {database.deleteDatabase().then(() => {window.location.href = window.location.href})}});
+// TODO: define database
+SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DELETE DATABSE', bgColor: 'rgb(255,0,0)', description: 'A USER DOES NOT NEED TO DO THIS ! ITS ONLY FOR DEVELOPMENT PURPOSES', btnClick: () => {database.deleteDatabase().then(() => {window.location.reload()})}});
 
 class SETTINGS_DEFAULT {
     EnableFullWidth = true;
@@ -341,6 +328,7 @@ const SETTINGS = new SETTINGS_DEFAULT();
 /**
   * Load Settings from GM Storage
   */
+// eslint-disable-next-line no-unused-vars
 function loadSettings() {
     const _settingsStore = GM_getValue('AVE_SETTINGS', {});
     console.log('Got Settings from GM:(', typeof(_settingsStore),')', _settingsStore);
@@ -359,6 +347,7 @@ function loadSettings() {
 /**
   * Save Settings to GM Storage
   */
+// eslint-disable-next-line no-unused-vars
 function saveSettings() {
     SETTINGS.save();
 }
@@ -367,6 +356,7 @@ function saveSettings() {
   * Timestamp in Seconds
   * @return {number} unixTimestamp
   */
+// eslint-disable-next-line no-unused-vars
 function unixTimeStamp () {
     return Math.floor(Date.now() / 1000)
 }
@@ -376,6 +366,7 @@ function unixTimeStamp () {
     * @param {number} now Millis Timestamp as from Date.now();
     * @return {number} unix Timestamp
     */
+// eslint-disable-next-line no-unused-vars
 function toUnixTimestamp(now) {
     return Math.floor(now / 1000)
 }
@@ -386,6 +377,7 @@ function toUnixTimestamp(now) {
     * @param {number} unixTimestamp unix Timestamp
     * @return {number} Millis Timestamp as from Date.now();
     */
+// eslint-disable-next-line no-unused-vars
 function toTimestamp(unixTimestamp) {
     return (unixTimestamp * 1000);
 }
@@ -406,6 +398,7 @@ async function waitForHtmlElmement(selector, cb, altDocument = document) {
         return;
     }
 
+    // eslint-disable-next-line no-unused-vars
     const _observer = new MutationObserver(mutations => {
         if (altDocument.querySelector(selector)) {
             _observer.disconnect();
@@ -470,6 +463,7 @@ async function findActiveMenuButton() {
  * @param {number} milliseconds
  * @returns
  */
+// eslint-disable-next-line no-unused-vars
 async function delay(milliseconds) {
     return new Promise(resolve => {
         setTimeout(() => {
@@ -483,6 +477,7 @@ async function delay(milliseconds) {
 /**
     * This Function will Monitor and fire Style Changes asap
     */
+// eslint-disable-next-line no-unused-vars
 async function fastStyleChanges() {
 
     if (SITE_IS_VINE) {
@@ -629,5 +624,5 @@ async function fastStyleChanges() {
  * @returns {string} Session ID
  */
 function generateSessionID() {
-    return 'aaaa-aaaaa-AVE-SESSION-aaaaaaa-aaaaaaaa'.replace(/[a]/g, ( c ) => { return Math.round(Math.random() * 36).toString(36) });
+    return 'aaaa-aaaaa-AVE-SESSION-aaaaaaa-aaaaaaaa'.replace(/[a]/g, () => { return Math.round(Math.random() * 36).toString(36) });
 }
