@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    http://tampermonkey.net/
-// @version      0.11.18
+// @version      0.11.20
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @description  Better View, Search and Explore for Amazon Vine Products - Vine Voices Edition
@@ -380,7 +380,7 @@ async function parseTileData(tile) {
 
     _newProduct.data_asin = _div_vpp_item_tile_content_button_inner_input.getAttribute('data-asin');
     _newProduct.data_recommendation_type = _div_vpp_item_tile_content_button_inner_input.getAttribute('data-recommendation-type');
-    _newProduct.data_asin_is_parent = (_div_vpp_item_tile_content_button_inner_input.getAttribute('data-is-parent-asin') === 'true');
+    _newProduct.data_asin_is_parent = (isTrueString(_div_vpp_item_tile_content_button_inner_input.getAttribute('data-is-parent-asin')));
 
     _newProduct.description_short = _div_vvp_item_product_title_container_a.getElementsByClassName('a-truncate-cut')[0].textContent;
 
@@ -2125,7 +2125,7 @@ function initBackgroundScan() {
             clearInterval(_paginatinWaitLoop);
             if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): pagination WaitLoop');
 
-            if (!(localStorage.getItem('AVE_BACKGROUND_SCAN_IS_RUNNING') === 'true')) {
+            if (!isTrueString(localStorage.getItem('AVE_BACKGROUND_SCAN_IS_RUNNING'))) {
                 if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): init localStorage Variables');
                 localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_MAX', _maxPage);
                 localStorage.setItem('AVE_BACKGROUND_SCAN_IS_RUNNING', true);
@@ -2146,7 +2146,7 @@ function initBackgroundScan() {
                 if (_loopIsWorking) return;
                 _loopIsWorking = true;
 
-                if (!(localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') === 'true')) {
+                if (isTrueString(localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING'))) {
                     let _fastTimeWaitingMS = Date.now() - (localStorage.getItem('AVE_FAST_SCAN_LAST_TIME') || 0);
                     let _fastTimeWaitingMin = _fastTimeWaitingMS / 1000 / 60;
                     let _startFastScan = true;
@@ -2198,7 +2198,7 @@ function initBackgroundScan() {
                 if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): loop with _backgroundScanStage ', _backGroundScanStage, ' and Substage: ', _subStage);
 
                 let _scannerName;
-                if (localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') === 'true') {
+                if (isTrueString(localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING'))) {
                     _scannerName = 'Fast Scanner';
                 } else {
                     _scannerName = 'Background Scanner';
@@ -2338,7 +2338,7 @@ function initBackgroundScan() {
                     localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', _subStage);
                     _loopIsWorking = false;
 
-                    if (localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') === 'true') {
+                    if (isTrueString(localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING'))) {
                         let _stopFastScan = false;
 
                         const _backGroundScanStage = localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') || 0;
@@ -2925,4 +2925,19 @@ function sort_by_key(array, key, order)
         const multiplier = order === "asc" ? 1 : -1;
         return ((x < y) ? -1 : ((x > y) ? 1 : 0))*multiplier;
     });
+}
+function isTrueString(inputString) {
+    if (typeof inputString !== 'string') {
+        return null;
+    }
+
+    const trimmedLowercasedString = inputString.trim().toLowerCase();
+
+    if (trimmedLowercasedString === 'true') {
+        return true;
+    }
+    if (trimmedLowercasedString === 'false') {
+        return false;
+    }
+    return null;
 }
