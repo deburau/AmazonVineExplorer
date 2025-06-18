@@ -19,6 +19,9 @@ We are aware of the issue and are working on a fix.
 
 ## Changelog Deburau
 
+##### [2025-06-18] - Version 0.11.21
+*  Reenabled pagination on top, fixes [deburau/AmazonVineExplorer#25](https://github.com/deburau/AmazonVineExplorer/issues/25)
+
 ##### [2025-06-18] - Version 0.11.20
 *  Setting "Enable Button All Products" had no effect, fixes [deburau/AmazonVineExplorer#20](https://github.com/deburau/AmazonVineExplorer/issues/20)
 
