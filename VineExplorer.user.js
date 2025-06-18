@@ -434,7 +434,6 @@ function addLeftSideButtons(forceClean) {
 
         if (SETTINGS.DebugLevel > 10) console.log('Clicked All Seen Button');
         markAllCurrentSiteProductsAsSeen();
-        window.scrollTo(0, 0);
     });
     _div.appendChild(_setAllSeenBtn);
 
