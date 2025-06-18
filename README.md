@@ -19,6 +19,9 @@ We are aware of the issue and are working on a fix.
 
 ## Changelog Deburau
 
+##### [2025-06-18] - Version 0.11.19
+*  Cosmetic change: Explicitly assigned homepage and support url for tampermonkey overview
+
 ##### [2025-06-17] - Version 0.11.18
 *  Amazon introduced new product property data-is-pre-release. Fixes [deburau/AmazonVineExplorer#21](https://github.com/deburau/AmazonVineExplorer/issues/21)
 
