@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.21
+// @version      0.11.22
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2229,8 +2229,7 @@ function initBackgroundScan() {
                     if (_startFastScan) {
                         if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): starting fast scan');
                         localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', true);
-                        localStorage.setItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNT1', -1);
-                        localStorage.setItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNT2', -1);
+                        localStorage.setItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS', '-1:-1:-1:-1');
                         localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT', localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT'));
                         localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_STAGE', localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE'));
                         localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', 0);
@@ -2411,20 +2410,21 @@ function initBackgroundScan() {
                         if (_backGroundScanStage > 1) {
                             _stopFastScan = true;
                         }
-                        if (_backGroundScanStage > 0 && newCount === 0 && localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNT1') == 0 && localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNT2') == 0) {
+                        if (SETTINGS.DebugLevel > 10) console.log(`checking fast scan AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS=${localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS')} _backGroundScanStage=${_backGroundScanStage} newCount=${newCount}`);
+                        if (_backGroundScanStage > 0 && newCount === 0 && 
+                            (!localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS').match(/^[-0-9]+(:[-0-9]+){3}/) || localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS') == '0:0:0:0')) {
                             _stopFastScan = true;
                         }
-                        if (_backGroundScanStage == 1 && _lastBackGroundScanStage == 1 && _scanPageCurrent > 0 && _scanPageCurrent >= _lastScanPageCurrent) {
+                        if (_backGroundScanStage == 1 && _lastBackGroundScanStage == 1 && _scanPageCurrent > 0 && _scanPageCurrent - _lastScanPageCurrent >= 0) {
                             _stopFastScan = true;
                         }
 
                         if(_backGroundScanStage > 0 && newCount >= 0) {
-                            localStorage.setItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNT2', localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNT1'));
-                            localStorage.setItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNT1', newCount);
+                            localStorage.setItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS', (localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS') + ':' + newCount).replace(/^[^:]+:/, ''));
                         }
 
                         if (_stopFastScan) {
-                            if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): stopping fast scan');
+                            if (SETTINGS.DebugLevel > 10) console.log(`stopping fast scan AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS=${localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS')} _backGroundScanStage=${_backGroundScanStage} newCount=${newCount}`);
                             localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
                             localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', _lastScanPageCurrent);
                             localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', _lastBackGroundScanStage);

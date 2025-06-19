@@ -19,6 +19,10 @@ We are aware of the issue and are working on a fix.
 
 ## Changelog Deburau
 
+##### [2025-06-19] - Version 0.11.22
+*  Fast scan now runs until after four pages without new items, fixes [deburau/AmazonVineExplorer#24](https://github.com/deburau/AmazonVineExplorer/issues/24)
+*  Fix: fast scan sometimes was terminated too early, even though new items where found
+
 ##### [2025-06-18] - Version 0.11.21
 *  Reenabled pagination on top, fixes [deburau/AmazonVineExplorer#25](https://github.com/deburau/AmazonVineExplorer/issues/25)
 
