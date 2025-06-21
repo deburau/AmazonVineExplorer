@@ -4,6 +4,19 @@ Makes the Amazon Vine Website even a bit better
 
 ![](vine_logo_notification_image.png)
 
+## A personal remark
+
+This fork of the Amazon Vine Exporter is for me to fix bugs and to implement and try out new features for myself.
+I have not adopted the official repository as I do not want to take on any obligations for it.
+So you can use the AVE from this fork, report bugs and make suggestions for improvement.
+However, I will only fix bugs or implement new things if they concern me and my time allows it.
+
+## A word of warning
+
+This extension is in no way official and may not comply with the guidelines.
+So please never contact Amazon or sellers with questions or problems with this extension.
+Use at your own risk and if you lose your Vine status as a result, you are solely responsible.
+
 ## Description:
 
 This script enhances the experience on the Amazon Vine website. However, it does not provide you with unfair and unintended advantages over other Vine Voices. For example, there will be no automated ordering based on keywords or price! We aim to operate 100% in compliance with the terms and conditions of Amazon Vine using this script.
