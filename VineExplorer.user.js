@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.22
+// @version      0.11.23
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -544,11 +544,11 @@ async function createTileFromProduct(product, btnID, cb) {
         const _tile = document.createElement('div');
         _tile.setAttribute('class', 'vvp-item-tile');
         _tile.setAttribute('data-recommendation-id', product.data_recommendation_id);
-        _tile.setAttribute('data-img-url', product.data_img_url);
+        _tile.setAttribute('data-img-url', fixProductImageUrl(product.data_img_url));
         _tile.setAttribute('style', (product.notSeenCounter > 0) ? SETTINGS.CssProductRemovalTag : (product.isFav) ? SETTINGS.CssProductNewTag : (product.isNew) ? SETTINGS.CssProductNewTag : SETTINGS.CssProductDefault);
         _tile.innerHTML =`
             <div class="vvp-item-tile-content">
-                <img alt="${product.data_img_alt}" src="${product.data_img_url}">
+                <img alt="${product.data_img_alt}" src="${fixProductImageUrl(product.data_img_url)}">
                 <div class="vvp-item-product-title-container">
                     <a class="a-link-normal" target="_blank" rel="noopener" href="${product.link}">
                         <span class="a-truncate" data-a-word-break="normal" data-a-max-rows="2" data-a-overflow-marker="&amp;hellip;" style="line-height: 1.3em !important; max-height: 2.6em;" data-a-recalculate="false" data-a-updated="true">
@@ -2657,7 +2657,7 @@ function updateNewProductsBtn() {
                         _keyFound = _descFull.includes(_currKey);
                     }
                     if (_keyFound) {
-                        desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, _prod.description_full, _prod.data_img_url, true, function(event) {
+                        desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, _prod.description_full, fixProductImageUrl(_prod.data_img_url), true, function(event) {
                             event.preventDefault();
                             window.open(window.location.origin + _prod.link, '_blank');
                           });
@@ -2989,4 +2989,10 @@ function sort_by_key(array, key, order)
         const multiplier = order === "asc" ? 1 : -1;
         return ((x < y) ? -1 : ((x > y) ? 1 : 0))*multiplier;
     });
+}
+
+// fix product image url
+// fix for deburau/AmazonVineExplorer#30
+function fixProductImageUrl(url) {
+    return (url.replace(/\/images\/.*\/images\//, '/images/'));
 }

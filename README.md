@@ -19,6 +19,9 @@ We are aware of the issue and are working on a fix.
 
 ## Changelog Deburau
 
+##### [2025-06-21] - Version 0.11.23
+*  Fix: some images where missing from product tiles, fixes [deburau/AmazonVineExplorer#30](https://github.com/deburau/AmazonVineExplorer/issues/30)
+
 ##### [2025-06-19] - Version 0.11.22
 *  Fast scan now runs until after four pages without new items, fixes [deburau/AmazonVineExplorer#24](https://github.com/deburau/AmazonVineExplorer/issues/24)
 *  Fix: fast scan sometimes was terminated too early, even though new items where found
