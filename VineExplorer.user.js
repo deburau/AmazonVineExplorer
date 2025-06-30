@@ -2932,7 +2932,7 @@ function init(hasTiles) {
 
     // Modify Pageination if exists
     const _pageinationContainer = document.getElementsByClassName('a-pagination')[0];
-    if (_pageinationContainer) {
+    Array.from(_pageinationContainers).forEach(function (_pageinationContainer) {
         if (SETTINGS.DebugLevel > 10) console.log('Manipulating Pageination');
 
         const _nextBtn = _pageinationContainer.lastChild;
@@ -2978,7 +2978,7 @@ function init(hasTiles) {
 
         _pageinationContainer.appendChild(_btn);
         _pageinationContainer.appendChild(_AveNextArrow);
-    }
+    });
 }
 
 //Sort Items by key
