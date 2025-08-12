@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.23
+// @version      0.11.24
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2200,7 +2200,7 @@ function initBackgroundScan() {
             let _loopIsWorking = false;
             let _subStage = 0;
             let _PageMax = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX')) || 0;
-            const _stageZeroSites = ['queue=potluck', 'queue=last_chance']
+            const _stageZeroSites = ['queue=potluck'/*, 'queue=last_chance'*/]
 
             backGroundScanTimeout = setTimeout(initBackgroundScanSubFunctionScannerLoop, SETTINGS.BackGroundScanDelayPerPage);
             function initBackgroundScanSubFunctionScannerLoop(){
@@ -2210,19 +2210,29 @@ function initBackgroundScan() {
                 _loopIsWorking = true;
 
                 if (!(localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true')) {
+                    let _backgroundScanStage = localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') || -1;
+                    let _backgroundScanPageMax= localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX') || -1;
+                    let _backgroundScanPageCurrent = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT') || -1;
+
                     let _fastTimeWaitingMS = Date.now() - (localStorage.getItem('AVE_FAST_SCAN_LAST_TIME') || 0);
-                    let _fastTimeWaitingMin = _fastTimeWaitingMS / 1000 / 60;
+                    let _fastTimeWaitingSec = _fastTimeWaitingMS / 1000;
+                    let _fastTimeIntervalSec = (SETTINGS.BackGroundScanDelayPerPage + SETTINGS.BackGroundScannerRandomness / 2) * 15 / 1000;
+                    if (_fastTimeIntervalSec < 30) _fastTimeIntervalSec = 30
+
                     let _startFastScan = true;
-                    if (_fastTimeWaitingMin < 5) {
+                    if (_startFastScan && _fastTimeWaitingSec < _fastTimeIntervalSec) {
                         _startFastScan = false;
                     }
-                    if (!(localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') > 0)) {
+                    if (_startFastScan && _backgroundScanStage <= 0) {
                         _startFastScan = false;
                     }
-                    if (!(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX') > 0)) {
+                    if (_startFastScan && _backgroundScanPageMax <= 0) {
                         _startFastScan = false;
                     }
-                    if (localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') == 1 && !(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT') > 0)) {
+                    if (_startFastScan && _backgroundScanStage == 1 && _backgroundScanPageCurrent <= 0) {
+                        _startFastScan = false;
+                    }
+                    if (_startFastScan && _backgroundScanStage == 1 && _backgroundScanPageCurrent < _backgroundScanPageMax / 20) {
                         _startFastScan = false;
                     }
 
@@ -2623,7 +2633,7 @@ function updateNewProductsBtn() {
         }
 
         let _notifyed = false;
-        if (SETTINGS.EnableDesktopNotifikation && SETTINGS.DesktopNotifikationKeywords?.length > 0) {
+        if ((SETTINGS.EnableDesktopNotifikation || SETTINGS.EnableAutoMarkFavorite) && SETTINGS.DesktopNotifikationKeywords?.length > 0) {
 
             if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Inside IF`);
 
@@ -2657,12 +2667,17 @@ function updateNewProductsBtn() {
                         _keyFound = _descFull.includes(_currKey);
                     }
                     if (_keyFound) {
-                        desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, _prod.description_full, fixProductImageUrl(_prod.data_img_url), true, function(event) {
+                        if (SETTINGS.EnableDesktopNotifikation) {
+                        desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `${_prod.description_full}\nkey: ${_currKey}`, fixProductImageUrl(_prod.data_img_url), true, function(event) {
                             event.preventDefault();
                             window.open(window.location.origin + _prod.link, '_blank');
                           });
+                        }
                         _notifyed = true;
                         _prod.isNotified = true;
+                        if (SETTINGS.EnableAutoMarkFavorite){
+                            _prod.isFav = 1;
+                        }
                         database.update(_prod);
                         break;
                     }

@@ -26,11 +26,12 @@ This script enhances the experience on the Amazon Vine website. However, it does
 * Install Tampermonkey: [https://www.tampermonkey.net/](https://www.tampermonkey.net/)
 * Install Amazon Vine Explorer: [https://github.com/deburau/AmazonVineExplorer/raw/main/VineExplorer.user.js](https://github.com/deburau/AmazonVineExplorer/raw/main/VineExplorer.user.js)
 
-## Notice:
-The Script has currently some issues processing the Tax Value.
-We are aware of the issue and are working on a fix.
-
 ## Changelog Deburau
+
+##### [2025-08-12] - Version 0.11.24
+*  Fast scan now is started more often, after about 15 pages, or 15 * ([Background Scan Per Page Min Delay] + [Background Scan Randomness per Page] / 2). Before it was five minutes
+*  Scanning the queue "last-chance" was removed, as amazon has removed it
+*  New setting "Enable auto marking product as favotite": if it is enabled, new products matching one of the desktop notification highlights are marked as favorite
 
 ##### [2025-06-21] - Version 0.11.23
 *  Fix: some images where missing from product tiles, fixes [deburau/AmazonVineExplorer#30](https://github.com/deburau/AmazonVineExplorer/issues/30)
