@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.24.7
+// @version      0.11.24.8
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2200,12 +2200,14 @@ function initBackgroundScan() {
             let _loopIsWorking = false;
             let _subStage = 0;
             let _PageMax = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX')) || 0;
-            const _stageZeroSites = ['queue=potluck'];
-
-            // Dynamically check for the 'last-chance' queue link to support regional differences.
-            const lastChanceLink = document.querySelector("#vvp-items-button-container a[href*='queue=last_chance']");
-            if (lastChanceLink) {
-                _stageZeroSites.push('queue=last_chance');
+            let _stageZeroSites;
+            switch (getCountry()) {
+                case 'DE':
+                    _stageZeroSites = ['queue=potluck'];
+                    break;
+                default:
+                    _stageZeroSites = ['queue=potluck', 'queue=last_chance'];
+                    break;
             }
 
             backGroundScanTimeout = setTimeout(initBackgroundScanSubFunctionScannerLoop, SETTINGS.BackGroundScanDelayPerPage);
