@@ -2946,8 +2946,8 @@ function init(hasTiles) {
     if (SETTINGS.EnableBackgroundScan) initBackgroundScan();
 
     // Modify Pageination if exists
-    const _pageinationContainer = document.getElementsByClassName('a-pagination')[0];
-    if (_pageinationContainer) {
+    const _paginationContainers = document.querySelectorAll('.a-pagination');
+    _paginationContainers.forEach(_pageinationContainer => {
         if (SETTINGS.DebugLevel > 10) console.log('Manipulating Pageination');
 
         const _nextBtn = _pageinationContainer.lastChild;
@@ -2993,7 +2993,7 @@ function init(hasTiles) {
 
         _pageinationContainer.appendChild(_btn);
         _pageinationContainer.appendChild(_AveNextArrow);
-    }
+    });
 }
 
 //Sort Items by key
