@@ -399,7 +399,7 @@ function toTimestamp(unixTimestamp) {
     * @param {function} cb Callback Function
     * @param {object} [altDocument] Alternativ document root
     */
-async function waitForHtmlElmement(selector, cb, altDocument = document) {
+async function waitForHtmlElement(selector, cb, altDocument = document) {
     if (typeof(selector) != 'string') throw new Error('waitForHtmlElement(): selector is not defined or is not type of string');
     if (typeof(cb) != 'function') throw new Error('waitForHtmlElement(): cb is not defined or is not type of string');
 
@@ -422,10 +422,10 @@ async function waitForHtmlElmement(selector, cb, altDocument = document) {
     });
 }
 
-// Wrap waitForHtmlElmement in a Promise to use it with async/await
+// Wrap waitForHtmlElement in a Promise to use it with async/await
 async function waitForHtmlElementPromise(selector, altDocument = document) {
     return new Promise((resolve, reject) => {
-        waitForHtmlElmement(selector, resolve, altDocument);
+        waitForHtmlElement(selector, resolve, altDocument);
         setTimeout(() => {
             reject(new Error(`Timeout waiting for element: ${selector}`));
         }, 10000); // 10 seconds timeout
@@ -489,40 +489,40 @@ async function fastStyleChanges() {
 
     if (SITE_IS_VINE) {
         if (SETTINGS.EnableFullWidth) {
-            waitForHtmlElmement('.vvp-body', (elem) => {
+            waitForHtmlElement('.vvp-body', (elem) => {
                 elem.style.maxWidth = '100%';
             });
         }
 
         if (SETTINGS.DisableAmazonNavbar) {
-            waitForHtmlElmement('#navbar-main', (elem) => {
+            waitForHtmlElement('#navbar-main', (elem) => {
                 elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
 
-            waitForHtmlElmement('#skiplink', (elem) => {
+            waitForHtmlElement('#skiplink', (elem) => {
                 elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
 
-            waitForHtmlElmement('#vvp-logo-link > img', (elem) => {
+            waitForHtmlElement('#vvp-logo-link > img', (elem) => {
                 elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
 
-            waitForHtmlElmement('#vvp-header', (elem) => {
+            waitForHtmlElement('#vvp-header', (elem) => {
                 elem.style.marginTop = '0';
                 elem.style.marginBottom = '0';
                 //elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
 
-            waitForHtmlElmement('.a-container.vvp-body > .a-section:not(#vvp-header)', (elem) => {
+            waitForHtmlElement('.a-container.vvp-body > .a-section:not(#vvp-header)', (elem) => {
                 elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
 
-            waitForHtmlElmement('.a-tab-container.vvp-tab-set-container', (elem) => {
+            waitForHtmlElement('.a-tab-container.vvp-tab-set-container', (elem) => {
                 elem.style.marginTop = '0';
                 //elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
@@ -530,7 +530,7 @@ async function fastStyleChanges() {
         }
 
         if (SETTINGS.DisableCategories) {
-            waitForHtmlElmement('#vvp-browse-nodes-container', (elem) => {
+            waitForHtmlElement('#vvp-browse-nodes-container', (elem) => {
                 elem.style.display = 'none';
                 //elem.style.visibility = 'hidden';
             });
@@ -538,42 +538,42 @@ async function fastStyleChanges() {
 
         if (SETTINGS.DisableSuggestions) {
             //rhf-frame
-            waitForHtmlElmement('.copilot-secure-display', (elem) => {
+            waitForHtmlElement('.copilot-secure-display', (elem) => {
                 elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableFooter) {
-            waitForHtmlElmement('#navFooter', (elem) => {
+            waitForHtmlElement('#navFooter', (elem) => {
                 elem.style.display = 'none';
                 elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableBtnPotLuck) {
-            waitForHtmlElmement('#vvp-items-button--recommended', (elem) => {
+            waitForHtmlElement('#vvp-items-button--recommended', (elem) => {
                 elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableBtnLastChance) {
-            waitForHtmlElmement('#vvp-items-button--all', (elem) => {
+            waitForHtmlElement('#vvp-items-button--all', (elem) => {
                 elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableBtnSeller) {
-            waitForHtmlElmement('#vvp-items-button--seller', (elem) => {
+            waitForHtmlElement('#vvp-items-button--seller', (elem) => {
                 elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.EnableTopLogoChange) {
-            waitForHtmlElmement('#vvp-logo-link > img', (elem) => {
+            waitForHtmlElement('#vvp-logo-link > img', (elem) => {
                 elem.src = 'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_notification_image.png';
                 elem.style.height = '100px';
             });
@@ -585,7 +585,7 @@ async function fastStyleChanges() {
             if (activeButtonId) {
                 console.log('EnablePaginationTop: Active menu button ID:', activeButtonId);
                 if (activeButtonId == "vvp-items-button--seller") {
-                    waitForHtmlElmement('nav.a-text-center', (elem) => {
+                    waitForHtmlElement('nav.a-text-center', (elem) => {
                         var clonedDiv = elem.cloneNode(true);
                         //clonedDiv.style.marginTop = '-25px';
                         clonedDiv.style.marginBottom = '10px';
@@ -611,14 +611,14 @@ async function fastStyleChanges() {
 
         if (SETTINGS.DisableSuggestionsShopping) {
             //rhf-frame
-            waitForHtmlElmement('#rhf', (elem) => {
+            waitForHtmlElement('#rhf', (elem) => {
                 elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableFooterShopping) {
-            waitForHtmlElmement('#navFooter', (elem) => {
+            waitForHtmlElement('#navFooter', (elem) => {
                 elem.style.display = 'none';
                 elem.style.visibility = 'hidden';
             });

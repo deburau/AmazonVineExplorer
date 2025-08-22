@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.24.1
+// @version      0.11.24.2
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -68,7 +68,7 @@ let database;
         if (SITE_IS_VINE){
             console.log('We are on Amazon Vine'); // We are on the amazon vine site
             if(SETTINGS.DarkMode){
-                waitForHtmlElmement('body', () => {
+                waitForHtmlElement('body', () => {
                     injectDarkMode();
                 })
             }
@@ -78,7 +78,7 @@ let database;
             let aveShareData = localStorage.getItem('ave-share-details');
             if(aveData || aveShareData){
                 let _data = aveShareData ? JSON.parse(aveShareData) : (aveData ? JSON.parse(aveData) : null);
-                waitForHtmlElmement('body', () => {
+                waitForHtmlElement('body', () => {
                     let aveShareElementTmp = document.createElement('div');
                     aveShareElementTmp.style.display = "none";
                     aveShareElementTmp.innerHTML = `
@@ -101,7 +101,7 @@ let database;
             }
             addAveSettingsTab();
             addAVESettingsMenu();
-            waitForHtmlElmement('.vvp-details-btn', () => {
+            waitForHtmlElement('.vvp-details-btn', () => {
                 if (_execLock) return;
                 _execLock = true;
                 addBranding();
@@ -117,11 +117,11 @@ let database;
                     }
                 }, 100);
             });
-            waitForHtmlElmement('.vvp-no-offers-msg', () => { // Empty Page ?!?!
+            waitForHtmlElement('.vvp-no-offers-msg', () => { // Empty Page ?!?!
                 if (_execLock) return;
                 _execLock = true;
                 if(SETTINGS.DarkMode){
-                    waitForHtmlElmement('body', () => {
+                    waitForHtmlElement('body', () => {
                         injectDarkMode();
                     })
                 }
@@ -131,7 +131,7 @@ let database;
         } else if (SITE_IS_SHOPPING) {
             console.log('We are on Amazon Shopping');
             _execLock = true;
-            waitForHtmlElmement('body', () => {
+            waitForHtmlElement('body', () => {
                 addBranding();
             });
             useEnrollmentData();
@@ -568,7 +568,7 @@ async function createTileFromProduct(product, btnID, cb) {
         _tile.prepend(createFavStarElement(product, btnID));
         _tile.prepend(createTimeSeenElement(product, btnID));
         _tile.prepend(createShareElement(product, btnID));
-        waitForHtmlElmement('.vvp-item-product-title-container', (_elem) => {
+        waitForHtmlElement('.vvp-item-product-title-container', (_elem) => {
             insertHtmlElementAfter(_elem, createTaxInfoElement(product, btnID));
         }, _tile)
         // insertHtmlElementAfter((_tile.getElementsByClassName('vvp-item-product-title-container')[0]), createTaxInfoElement(product, btnID));
@@ -1049,7 +1049,7 @@ function getTilesFromURL(url, cb = (tilesArray) => {}) {
             const _parser = new DOMParser();
             const _doc = _parser.parseFromString(response.responseText, "text/html");
             lastGetTilesFromURLQuerry = Date.now();
-            waitForHtmlElmement('#vvp-items-grid', (itemsContainer) => {
+            waitForHtmlElement('#vvp-items-grid', (itemsContainer) => {
                 if (SETTINGS.DebugLevel > 10) console.log('getTileFromURL(): itemsContainer:', itemsContainer);
                 // cb(itemsContainer.getElementsByClassName('vvp-item-tile'));
                 const _retArr = [];
@@ -1154,7 +1154,7 @@ function addTileEventhandlers(_currTile) {
     _data.asin = _btn.getAttribute('data-asin');
     _data.parent_asin = _btn.getAttribute('data-is-parent-asin');
     _data.recommendation_id = _btn.getAttribute('data-recommendation-id');
-    waitForHtmlElmement('[id^="ave-taxinfo-"]', (elem) => {
+    waitForHtmlElement('[id^="ave-taxinfo-"]', (elem) => {
         _data.tax = _currTile.querySelector('[id^="ave-taxinfo-"] > span').textContent;
     });
 
@@ -1166,11 +1166,11 @@ function addTileEventhandlers(_currTile) {
         _childs[j].addEventListener('click', (event) => {btnEventhandlerClick(event, _data)});
     }
 
-    waitForHtmlElmement('.ave-favorite-star', (elem) => {
+    waitForHtmlElement('.ave-favorite-star', (elem) => {
         elem.addEventListener('click', (event) => {favStarEventhandlerClick(event, _data)});
     }, _currTile);
 
-    waitForHtmlElmement('.ave-share', (elem) => {
+    waitForHtmlElement('.ave-share', (elem) => {
         elem.addEventListener('click', (event) => {shareEventHandlerClick(event, _data)});
     }, _currTile);
 }
@@ -1212,7 +1212,7 @@ function updateAutoScanScreenText(text = '') {
 }
 
 function addAveSettingsTab(){
-    waitForHtmlElmement('.vvp-tab-set-container > ul', (_upperButtonsContainer) => {
+    waitForHtmlElement('.vvp-tab-set-container > ul', (_upperButtonsContainer) => {
         const _upperSettingsButton = document.createElement('li');
         _upperSettingsButton.id = 'vvp-ave-settings-tab';
         _upperSettingsButton.classList = 'a-tab-heading';
@@ -1246,7 +1246,7 @@ function addAveSettingsTab(){
 }
 
 function addAVESettingsMenu(){
-    waitForHtmlElmement('.a-tab-container.vvp-tab-set-container', (_tabContainer) => {
+    waitForHtmlElement('.a-tab-container.vvp-tab-set-container', (_tabContainer) => {
         //const _tabContainer = document.body.querySelector('.a-tab-container.vvp-tab-set-container');
 
         const _boxContainer = document.createElement('div');
@@ -2795,7 +2795,7 @@ function addStyleToTile(_currTile, _product) {
     _currTile.prepend(createFirstSeenElement(_product));
     _currTile.prepend(createShareElement(_product));
     // insertHtmlElementAfter((_currTile.getElementsByClassName('vvp-item-product-title-container')[0]), createTaxInfoElement(_product));
-    waitForHtmlElmement('.vvp-item-product-title-container', (_elem) => {
+    waitForHtmlElement('.vvp-item-product-title-container', (_elem) => {
         insertHtmlElementAfter(_elem, createTaxInfoElement(_product));
     }, _currTile)
 

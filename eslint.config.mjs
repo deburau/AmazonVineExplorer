@@ -44,7 +44,7 @@ export default [
         unixTimeStamp: 'readonly',
         toUnixTimestamp: 'readonly',
         toTimestamp: 'readonly',
-        waitForHtmlElmement: 'readonly',
+        waitForHtmlElement: 'readonly',
         waitForHtmlElementPromise: 'readonly',
         findActiveMenuButton: 'readonly',
         delay: 'readonly',
