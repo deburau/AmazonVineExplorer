@@ -434,13 +434,13 @@ async function waitForHtmlElementPromise(selector, altDocument = document, timeo
 
 function getCountry() {
     return document.location.hostname.replace(/.*amazon\./i, "")
-        .replace(/\.com$/, "US")
-        .replace(/\.de$/, "DE")
-        .replace(/\.fr$/, "FR")
-        .replace(/\.it$/, "IT")
-        .replace(/\.es$/, "ES")
-        .replace(/\.co.uk$/, "UK")
-        .replace(/\.co.jp$/, "JP");     
+        .replace(/com$/, "US")
+        .replace(/de$/, "DE")
+        .replace(/fr$/, "FR")
+        .replace(/it$/, "IT")
+        .replace(/es$/, "ES")
+        .replace(/co.uk$/, "UK")
+        .replace(/co.jp$/, "JP");     
 }
 
 // Function to find the active menu button (used for top pagination)
