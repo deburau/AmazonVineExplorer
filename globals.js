@@ -423,12 +423,12 @@ async function waitForHtmlElement(selector, cb, altDocument = document) {
 }
 
 // Wrap waitForHtmlElement in a Promise to use it with async/await
-async function waitForHtmlElementPromise(selector, altDocument = document) {
+async function waitForHtmlElementPromise(selector, altDocument = document, timeout = 10000) {
     return new Promise((resolve, reject) => {
         waitForHtmlElement(selector, resolve, altDocument);
         setTimeout(() => {
             reject(new Error(`Timeout waiting for element: ${selector}`));
-        }, 10000); // 10 seconds timeout
+        }, timeout); // 10 seconds timeout default
     });
 }
 
@@ -438,12 +438,18 @@ async function findActiveMenuButton() {
     const buttonIds = [
         'vvp-items-button--recommended',
         'vvp-items-button--all',
-        'vvp-items-button--seller'
+        'vvp-items-button--seller',
+        'vvp-all-items-button'
     ];
 
     for (const id of buttonIds) {
         try {
-            const buttonSpan = await waitForHtmlElementPromise(`#${id}`);
+            const buttonSpan = await waitForHtmlElementPromise(`#${id}`, document, 250);
+            if (!buttonSpan) {
+                console.warn(`findActiveMenuButton(): buttonSpan is null or undefined for ${id}`);
+                continue;
+            }
+
             const innerSpan = buttonSpan.querySelector('.a-button-inner');
             if (innerSpan) {
                 const link = innerSpan.querySelector('a');
