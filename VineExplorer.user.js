@@ -2200,7 +2200,13 @@ function initBackgroundScan() {
             let _loopIsWorking = false;
             let _subStage = 0;
             let _PageMax = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX')) || 0;
-            const _stageZeroSites = ['queue=potluck'/*, 'queue=last_chance'*/]
+            const _stageZeroSites = ['queue=potluck'];
+
+            // Dynamically check for the 'last-chance' queue link to support regional differences.
+            const lastChanceLink = document.querySelector("#vvp-items-button-container a[href*='queue=last_chance']");
+            if (lastChanceLink) {
+                _stageZeroSites.push('queue=last_chance');
+            }
 
             backGroundScanTimeout = setTimeout(initBackgroundScanSubFunctionScannerLoop, SETTINGS.BackGroundScanDelayPerPage);
             function initBackgroundScanSubFunctionScannerLoop(){
