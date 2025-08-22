@@ -432,16 +432,37 @@ async function waitForHtmlElementPromise(selector, altDocument = document, timeo
     });
 }
 
+function getCountry() {
+    return document.location.hostname.replace(/.*amazon\./i, "")
+        .replace(/\.com$/, "US")
+        .replace(/\.de$/, "DE")
+        .replace(/\.fr$/, "FR")
+        .replace(/\.it$/, "IT")
+        .replace(/\.es$/, "ES")
+        .replace(/\.co.uk$/, "UK")
+        .replace(/\.co.jp$/, "JP");     
+}
+
 // Function to find the active menu button (used for top pagination)
 async function findActiveMenuButton() {
     // Array of menu IDs
-    const buttonIds = [
-        'vvp-items-button--recommended',
-        'vvp-items-button--all',
-        'vvp-items-button--seller',
-        'vvp-all-items-button'
-    ];
-
+    let buttonIds;
+    switch (getCountry()) {
+        case 'DE':
+            buttonIds = [
+                'vvp-items-button--recommended',
+                'vvp-all-items-button'
+            ];
+            break;
+        default:
+            buttonIds = [
+                'vvp-items-button--recommended',
+                'vvp-items-button--all',
+                'vvp-items-button--seller'
+            ];
+            break;
+    }
+    
     for (const id of buttonIds) {
         try {
             const buttonSpan = await waitForHtmlElementPromise(`#${id}`, document, 250);
