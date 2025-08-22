@@ -445,11 +445,6 @@ async function findActiveMenuButton() {
     for (const id of buttonIds) {
         try {
             const buttonSpan = await waitForHtmlElementPromise(`#${id}`, document, 250);
-            if (!buttonSpan) {
-                console.warn(`findActiveMenuButton(): buttonSpan is null or undefined for ${id}`);
-                continue;
-            }
-
             const innerSpan = buttonSpan.querySelector('.a-button-inner');
             if (innerSpan) {
                 const link = innerSpan.querySelector('a');
@@ -590,7 +585,7 @@ async function fastStyleChanges() {
             const activeButtonId = await findActiveMenuButton();
             if (activeButtonId) {
                 console.log('EnablePaginationTop: Active menu button ID:', activeButtonId);
-                if (activeButtonId == "vvp-items-button--seller") {
+                if (activeButtonId == "vvp-items-button--seller" || activeButtonId == "vvp-all-items-button") {
                     waitForHtmlElement('nav.a-text-center', (elem) => {
                         var clonedDiv = elem.cloneNode(true);
                         //clonedDiv.style.marginTop = '-25px';
