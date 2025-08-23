@@ -465,7 +465,7 @@ async function findActiveMenuButton() {
     
     for (const id of buttonIds) {
         try {
-            const buttonSpan = await waitForHtmlElementPromise(`#${id}`, document, 250);
+            const buttonSpan = await waitForHtmlElementPromise(`#${id}`, document);
             const innerSpan = buttonSpan.querySelector('.a-button-inner');
             if (innerSpan) {
                 const link = innerSpan.querySelector('a');
