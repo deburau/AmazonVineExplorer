@@ -792,8 +792,10 @@ async function createProductSite(siteType, productArray, cb) {
 
 
     // Remove Pagination
-    const _pagination = document.querySelector('.a-pagination')
-    if (_pagination) _pagination.remove();
+    const _paginations = document.querySelectorAll('.a-pagination');
+    _paginations.forEach(_pageination => {
+        _pagination.remove();
+    });
 
     const _contentContainer = document.querySelector('.a-section.vvp-tab-content');
     if(_contentContainer.querySelector('.vvp-no-offers-msg')){
@@ -851,8 +853,10 @@ async function createInfiniteScrollSite(siteType, cb) {
     if (SETTINGS.DebugLevel > 10) console.log(`Called createInfiniteScrollSite()`);
 
     // Remove Pagination
-    const _pagination = document.querySelector('.a-pagination')
-    if (_pagination) _pagination.remove();
+    const _paginations = document.querySelectorAll('.a-pagination');
+    _paginations.forEach(_pageination => {
+        _pagination.remove();
+    });
 
     const _contentContainer = document.querySelector('.a-section.vvp-tab-content');
     if(_contentContainer.querySelector('.vvp-no-offers-msg')){
