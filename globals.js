@@ -60,6 +60,9 @@ class AVE_EVENTHANDLER {
 const ave_eventhandler = new AVE_EVENTHANDLER();
 
 function addBranding() {
+    // sometimes document.body is null. I don't know why, but at least, it does not throw an error then
+    if (!document?.body) return;
+
     const _isMasterSession = AVE_IS_THIS_SESSION_MASTER && SITE_IS_VINE;
 
     const _oldElem = document.getElementById('ave-branding-text');
@@ -125,7 +128,7 @@ function addBranding() {
     `;
 
 
-    document?.body?.appendChild(_text);
+    document.body.appendChild(_text);
 
     const _brandingClose = document.getElementById('ave-branding-x');
 
