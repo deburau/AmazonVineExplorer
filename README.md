@@ -32,6 +32,7 @@ This script enhances the experience on the Amazon Vine website. However, it does
 *  Fix: last_chance queue availability for vine sites that use it (thank you adripo)
 *  Fix: show Gelesen button all pagination elements (thank you adripo)
 *  Fix: add optional top navigation to button "Alle Artikel"
+*  Fix: remove all pagination elements when necessary (thank you adripo)
 
 ##### [2025-08-12] - Version 0.11.24
 *  Fast scan now is started more often, after about 15 pages, or 15 * ([Background Scan Per Page Min Delay] + [Background Scan Randomness per Page] / 2). Before it was five minutes
