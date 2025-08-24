@@ -28,7 +28,7 @@ This script enhances the experience on the Amazon Vine website. However, it does
 
 ## Changelog Deburau
 
-##### [2025-08-xx] - Version 0.11.25
+##### [2025-08-24] - Version 0.11.25
 *  Fix: last_chance queue availability for vine sites that use it (thank you adripo)
 *  Fix: show Gelesen button all pagination elements (thank you adripo)
 *  Fix: add optional top navigation to button "Alle Artikel"
