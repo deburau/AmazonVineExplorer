@@ -435,6 +435,7 @@ async function waitForHtmlElementPromise(selector, altDocument = document, timeo
 function getCountry() {
     return document.location.hostname.replace(/.*amazon\./i, "")
         .replace(/com$/, "US")
+        .replace(/ca$/, "CA")
         .replace(/de$/, "DE")
         .replace(/fr$/, "FR")
         .replace(/it$/, "IT")
