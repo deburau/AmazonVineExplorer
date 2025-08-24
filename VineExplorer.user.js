@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.24.12
+// @version      0.11.24.13
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -793,7 +793,7 @@ async function createProductSite(siteType, productArray, cb) {
 
     // Remove Pagination
     const _paginations = document.querySelectorAll('.a-pagination');
-    _paginations.forEach(_pageination => {
+    _paginations.forEach(_pagination => {
         _pagination.remove();
     });
 
@@ -854,7 +854,7 @@ async function createInfiniteScrollSite(siteType, cb) {
 
     // Remove Pagination
     const _paginations = document.querySelectorAll('.a-pagination');
-    _paginations.forEach(_pageination => {
+    _paginations.forEach(_pagination => {
         _pagination.remove();
     });
 
