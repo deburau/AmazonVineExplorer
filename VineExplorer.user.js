@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.25.2
+// @version      0.11.25.3
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1557,6 +1557,7 @@ function createSettingsMenuElement(dat){
         const _elem_item_left_input = document.createElement('input');
         _elem_item_left_input.type = 'password';
         _elem_item_left_input.className = 'ave-input-number';
+        _elem_item_left_input.style.width = '300px';
         _elem_item_left_input.setAttribute('ave-data-key', dat.key);
         _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
         _elem_item_left_input.addEventListener('change', (event) => {
@@ -1583,6 +1584,7 @@ function createSettingsMenuElement(dat){
         const _elem_item_left_input = document.createElement('input');
         _elem_item_left_input.type = 'url';
         _elem_item_left_input.className = 'ave-input-number';
+        _elem_item_left_input.style.width = '300px';
         _elem_item_left_input.setAttribute('ave-data-key', dat.key);
         _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
         _elem_item_left_input.addEventListener('change', (event) => {
