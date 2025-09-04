@@ -311,7 +311,8 @@ class SETTINGS_DEFAULT {
     SearchBarInputDelay = 500;
     IdlePeriodAfterScan = 180;
     DesktopNotifikationKeywords = [];
-
+    GotifyUrl = '';
+    GotifyToken = '';
     CssProductNewTag = "border: 2mm ridge rgba(218, 247, 166, .6); background-color: rgba(218, 247, 166, .2)";
     CssProductSaved = "border: 2mm ridge rgba(105, 163, 0, .6); background-color: rgba(105, 163, 0, .2)";
     CssProductFavTag = "border: 2mm ridge rgba(255, 255, 102, .6); background-color: rgba(255, 255, 102, .2)";
