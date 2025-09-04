@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.25.6
+// @version      0.11.25.7
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2753,7 +2753,7 @@ function updateNewProductsBtn() {
                                 message: `${_prod.description_full}\nkey: ${_currKey}`,
                                 priority: 5,
                                 extras: {
-                                    client::notification: {
+                                    'client::notification': {
                                             click: window.location.origin + _prod.link,
                                             bigImageUrl: fixProductImageUrl(_prod.data_img_url)
                                     }
