@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.25.3
+// @version      0.11.25.4
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1591,6 +1591,12 @@ function createSettingsMenuElement(dat){
             const _value = event.target.value;
             console.log('This is a URL Value Input', event);
 
+            let _url = event.target.value;
+            if (_url.length > 0) {
+                if (!_url.endsWith('/')) _url = _url + '/';
+                if (!(_url.startsWith('http://') || _url.startsWith('https://'))) _url = 'https://' + _url;
+            }
+            event.target.value = _url;
             SETTINGS[dat.key] = event.target.value;
             SETTINGS.save();
 
