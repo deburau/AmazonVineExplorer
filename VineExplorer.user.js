@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.25
+// @version      0.11.25.1
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -23,6 +23,7 @@
 // @grant        GM.getValue
 // @grant        GM.setValue
 // @grant        GM.xmlHttpRequest
+// @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @require      globals.js
 // @require      class_db_handler.js
@@ -1549,6 +1550,58 @@ function createSettingsMenuElement(dat){
 
         _elem.appendChild(_elem_item_right);
 
+    } else if (dat.type == 'password') { // Number Value
+
+        const _elem_item_left = document.createElement('div');
+        _elem_item_left.classList.add('ave-item-left');
+        const _elem_item_left_input = document.createElement('input');
+        _elem_item_left_input.type = 'password';
+        _elem_item_left_input.className = 'ave-input-number';
+        _elem_item_left_input.setAttribute('ave-data-key', dat.key);
+        _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
+        _elem_item_left_input.addEventListener('change', (event) => {
+            const _value = event.target.value;
+            console.log('This is a Password Value Input', event);
+
+            SETTINGS[dat.key] = event.target.value;
+            SETTINGS.save();
+
+        })
+        _elem_item_left.appendChild(_elem_item_left_input);
+        _elem.appendChild(_elem_item_left);
+
+        const _elem_item_right = document.createElement('div');
+        _elem_item_right.classList.add('ave-item-right');
+        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${(dat.description && dat.description != '') ? dat.description : dat.name}">${dat.name}</label>`
+
+        _elem.appendChild(_elem_item_right);
+
+    } else if (dat.type == 'url') { // Number Value
+
+        const _elem_item_left = document.createElement('div');
+        _elem_item_left.classList.add('ave-item-left');
+        const _elem_item_left_input = document.createElement('input');
+        _elem_item_left_input.type = 'url';
+        _elem_item_left_input.className = 'ave-input-number';
+        _elem_item_left_input.setAttribute('ave-data-key', dat.key);
+        _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
+        _elem_item_left_input.addEventListener('change', (event) => {
+            const _value = event.target.value;
+            console.log('This is a URL Value Input', event);
+
+            SETTINGS[dat.key] = event.target.value;
+            SETTINGS.save();
+
+        })
+        _elem_item_left.appendChild(_elem_item_left_input);
+        _elem.appendChild(_elem_item_left);
+
+        const _elem_item_right = document.createElement('div');
+        _elem_item_right.classList.add('ave-item-right');
+        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${(dat.description && dat.description != '') ? dat.description : dat.name}">${dat.name}</label>`
+
+        _elem.appendChild(_elem_item_right);
+
     } else if (dat.type == 'number') { // Number Value
 
         const _elem_item_left = document.createElement('div');
@@ -2680,14 +2733,14 @@ function updateNewProductsBtn() {
                     }
                     if (_keyFound) {
                         if (SETTINGS.EnableDesktopNotifikation) {
-                        desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `${_prod.description_full}\nkey: ${_currKey}`, fixProductImageUrl(_prod.data_img_url), true, function(event) {
-                            event.preventDefault();
-                            window.open(window.location.origin + _prod.link, '_blank');
-                          });
+                            desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `${_prod.description_full}\nkey: ${_currKey}`, fixProductImageUrl(_prod.data_img_url), true, function (event) {
+                                event.preventDefault();
+                                window.open(window.location.origin + _prod.link, '_blank');
+                            });
                         }
                         _notifyed = true;
                         _prod.isNotified = true;
-                        if (SETTINGS.EnableAutoMarkFavorite){
+                        if (SETTINGS.EnableAutoMarkFavorite) {
                             _prod.isFav = 1;
                         }
                         database.update(_prod);
