@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.25.4
+// @version      0.11.25.5
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2706,7 +2706,7 @@ function updateNewProductsBtn() {
         }
 
         let _notifyed = false;
-        if ((SETTINGS.EnableDesktopNotifikation || SETTINGS.EnableAutoMarkFavorite) && SETTINGS.DesktopNotifikationKeywords?.length > 0) {
+        if ((SETTINGS.EnableDesktopNotifikation || SETTINGS.EnableAutoMarkFavorite || SETTINGS.GotifyUrl) && SETTINGS.DesktopNotifikationKeywords?.length > 0) {
 
             if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Inside IF`);
 
@@ -2744,6 +2744,28 @@ function updateNewProductsBtn() {
                             desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `${_prod.description_full}\nkey: ${_currKey}`, fixProductImageUrl(_prod.data_img_url), true, function (event) {
                                 event.preventDefault();
                                 window.open(window.location.origin + _prod.link, '_blank');
+                            });
+                        }
+                        if (SETTINGS.GotifyUrl) {
+                            const url = SETTINGS.GotifyUrl + 'message?token=' + SETTINGS.GotifyToken;
+                            const bodyFormData = {
+                                title: `Amazon Vine Explorer - ${AVE_VERSION}`,
+                                message: `${_prod.description_full}\nkey: ${_currKey}`,
+                                priority: 5,
+                            };
+                            GM.xmlHttpRequest({
+                                method: 'POST',
+                                url: url,
+                                data: JSON.stringify(bodyFormData),
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                onload: function (response) {
+                                    console.log('Response:', response.responseText);
+                                },
+                                onerror: function (err) {
+                                    console.error('Error:', err);
+                                }
                             });
                         }
                         _notifyed = true;
