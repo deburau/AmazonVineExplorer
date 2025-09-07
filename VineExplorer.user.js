@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.25
+// @version      0.11.25.1
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -162,7 +162,7 @@ let showDbUpdateLogoIcon = null;
 ave_eventhandler.on('ave-database-changed', () => {
     if (SETTINGS.DebugLevel > 1) console.info('EVENT - Database has new Data for us! we should look what has changed');
     updateNewProductsBtn();
-
+    updateFavoritesBtn()
     if (showDbUpdateLogoTimeout) clearTimeout(showDbUpdateLogoTimeout);
     if (!showDbUpdateLogoIcon) showDbUpdateLogoIcon = addDBLoadingSymbol();
 
@@ -2324,7 +2324,7 @@ function initBackgroundScan() {
                     }
                     case 1: { // queue=encore | queue=encore&pn=&cn=&page=2...x
                         _subStage = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT')) || 0;
-                        
+
                         if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.1 update PAGE_MAX');
 
                         let _pagedate = getPageinationData(document.querySelector('#ave-iframe-backgroundloader').contentWindow.document);
@@ -2433,7 +2433,7 @@ function initBackgroundScan() {
                             _stopFastScan = true;
                         }
                         if (SETTINGS.DebugLevel > 10) console.log(`checking fast scan AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS=${localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS')} _backGroundScanStage=${_backGroundScanStage} newCount=${newCount}`);
-                        if (_backGroundScanStage > 0 && newCount === 0 && 
+                        if (_backGroundScanStage > 0 && newCount === 0 &&
                             (!localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS').match(/^[-0-9]+(:[-0-9]+){3}/) || localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS') == '0:0:0:0')) {
                             _stopFastScan = true;
                         }
@@ -2624,6 +2624,20 @@ function stickElementToTopScrollEVhandler(elemID, dist) {
 }
 
 let lastDesktopNotifikationTimestamp = 0;
+
+function updateFavoritesBtn(){
+    console.log(database.getFavEntries());
+    database.getFavEntries().then((favArr) => {
+        const _btnFavBadge = document.getElementById('ave-fav-items-btn-badge');
+        if (favArr.length > 0) {
+            _btnFavBadge.style.display = 'inline-block';
+            _btnFavBadge.innerText = favArr.length;
+        } else {
+            _btnFavBadge.style.display = 'none';
+            _btnFavBadge.innerText = '';
+        }
+    });
+}
 
 function updateNewProductsBtn() {
     if (AUTO_SCAN_IS_RUNNING) return;
@@ -2915,11 +2929,11 @@ function init(hasTiles) {
     const _searchbarContainer = document.getElementById('vvp-items-button-container');
 
     if (SETTINGS.EnableBtnAll) _searchbarContainer.appendChild(createNavButton('ave-btn-favorites', 'Alle Produkte', '', SETTINGS.BtnColorAllProducts, () => { createNewSite(PAGETYPE.ALL); }));
-    _searchbarContainer.appendChild(createNavButton('ave-btn-favorites', 'Favoriten', '', SETTINGS.BtnColorFavorites, () => {createNewSite(PAGETYPE.FAVORITES);}));
+    _searchbarContainer.appendChild(createNavButton('ave-btn-favorites', 'Favoriten', '', SETTINGS.BtnColorFavorites, () => {createNewSite(PAGETYPE.FAVORITES);}, 'ave-fav-items-btn-badge', '-'));
     _searchbarContainer.appendChild(createNavButton('ave-btn-list-new', 'Neue Einträge', 'ave-new-items-btn', SETTINGS.BtnColorNewProducts, () => {createNewSite(PAGETYPE.NEW_ITEMS);}, 'ave-new-items-btn-badge', '-'));
 
     updateNewProductsBtn();
-
+    updateFavoritesBtn();
     // Searchbar
     const _searchBarSpan = document.createElement('span');
     _searchBarSpan.setAttribute('class', 'ave-search-container');
