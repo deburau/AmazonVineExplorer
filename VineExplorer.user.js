@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.25.1
+// @version      0.11.25.2
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -24,9 +24,9 @@
 // @grant        GM.setValue
 // @grant        GM.xmlHttpRequest
 // @grant        unsafeWindow
-// @require      globals.js
-// @require      class_db_handler.js
-// @require      class_product.js
+// @require      https://raw.githubusercontent.com/Galile0/AmazonVineExplorer/FavoriteNotify/globals.js
+// @require      https://raw.githubusercontent.com/Galile0/AmazonVineExplorer/FavoriteNotify/class_db_handler.js
+// @require      https://raw.githubusercontent.com/Galile0/AmazonVineExplorer/FavoriteNotify/class_product.js
 // @require      https://raw.githubusercontent.com/eligrey/FileSaver.js/v2.0.4/src/FileSaver.js
 // @require      https://raw.githubusercontent.com/Christof121/VineFetchFix/main/fetchfix.js
 // ==/UserScript==
@@ -2693,11 +2693,16 @@ function updateNewProductsBtn() {
                         _keyFound = _descFull.includes(_currKey);
                     }
                     if (_keyFound) {
-                        if (SETTINGS.EnableDesktopNotifikation) {
-                        desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `${_prod.description_full}\nkey: ${_currKey}`, fixProductImageUrl(_prod.data_img_url), true, function(event) {
+                        // Check if we should bypass delay for keyword notifications
+                        const shouldBypassKeywordDelay = SETTINGS.EnableDesktopNotifikationFavoriteIgnoreDelay;
+                        const keywordDelayPassed = (unixTimeStamp() - lastDesktopNotifikationTimestamp >= SETTINGS.DesktopNotifikationDelay);
+                        
+                        if (SETTINGS.EnableDesktopNotifikation && SETTINGS.EnableDesktopNotifikationFavorite && (shouldBypassKeywordDelay || keywordDelayPassed || SETTINGS.DesktopNotifikationDelay === 0)) {
+                          desktopNotifikation(`AVE - ${new Date().toLocaleTimeString()}`, `Keyword: ${_currKey}\n${_prod.description_full}`, fixProductImageUrl(_prod.data_img_url), true, function(event) {
                             event.preventDefault();
                             window.open(window.location.origin + _prod.link, '_blank');
                           });
+                          lastDesktopNotifikationTimestamp = unixTimeStamp();
                         }
                         _notifyed = true;
                         _prod.isNotified = true;
@@ -2710,12 +2715,33 @@ function updateNewProductsBtn() {
                 }
             }
         }
-        if (SETTINGS.EnableDesktopNotifikation && SETTINGS.DesktopNotifikationDelay > 0 && !_notifyed && _prodArrLength > oldCountOfNewItems){
-            if (unixTimeStamp() - lastDesktopNotifikationTimestamp >= SETTINGS.DesktopNotifikationDelay) {
-                oldCountOfNewItems = _prodArrLength;
-                lastDesktopNotifikationTimestamp = unixTimeStamp();
 
-                desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}` , `Es wurden ${_prodArrLength} neue Vine Produkte gefunden`);
+        if (SETTINGS.EnableDesktopNotifikation && SETTINGS.DesktopNotifikationDelay > 0 && !_notifyed && _prodArrLength > oldCountOfNewItems ){
+            // Get newly discovered items (items that weren't in oldCountOfNewItems)
+            const newlyDiscoveredItems = prodArr.slice(oldCountOfNewItems);
+            
+            // Check if we should bypass delay for favorites
+            const hasNewFavorites = SETTINGS.EnableDesktopNotifikationFavorite && newlyDiscoveredItems.some(prod => prod.isFav);
+            const shouldBypassDelay = SETTINGS.EnableDesktopNotifikationFavoriteIgnoreDelay && hasNewFavorites;
+            
+            if (shouldBypassDelay || (unixTimeStamp() - lastDesktopNotifikationTimestamp >= SETTINGS.DesktopNotifikationDelay)) {
+                // Check if we should only notify for favorites
+                let shouldNotify = true;
+                let notificationCount = _prodArrLength - oldCountOfNewItems;
+                
+                if (SETTINGS.EnableDesktopNotifikationFavorite) {
+                    // Only notify if there are newly discovered favorite items
+                    const newFavorites = newlyDiscoveredItems.filter(prod => prod.isFav);
+                    shouldNotify = newFavorites.length > 0;
+                    notificationCount = newFavorites.length;
+                }
+                
+                if (shouldNotify && !SETTINGS.EnableDesktopNotifikationFavorite) {
+                    oldCountOfNewItems = _prodArrLength;
+                    lastDesktopNotifikationTimestamp = unixTimeStamp();
+                    
+                    desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `Es wurden ${notificationCount} neue Vine Produkte gefunden`);
+                }
             }
         }
     })
@@ -2736,7 +2762,7 @@ function desktopNotifikation(title, message, image = null, requireInteraction = 
     if (Notification.permission === 'granted') {
         const _notification = new Notification(title, {
             body: message,
-            icon: (!requireInteraction) ? _vineLogo : _vineLogoImp,
+            icon: (image || !requireInteraction) ? image : _vineLogoImp,
             image: image || _defaultImage,
             tag: (requireInteraction) ? `ave-notify-${Math.round(Math.random()* 10000000)}`: 'ave-notify',
             requireInteraction: requireInteraction,
