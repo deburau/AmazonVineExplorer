@@ -2626,7 +2626,6 @@ function stickElementToTopScrollEVhandler(elemID, dist) {
 let lastDesktopNotifikationTimestamp = 0;
 
 function updateFavoritesBtn(){
-    console.log(database.getFavEntries());
     database.getFavEntries().then((favArr) => {
         const _btnFavBadge = document.getElementById('ave-fav-items-btn-badge');
         if (favArr.length > 0) {
@@ -2700,7 +2699,13 @@ function updateNewProductsBtn() {
                         if (SETTINGS.EnableDesktopNotifikation && SETTINGS.EnableDesktopNotifikationFavorite && (shouldBypassKeywordDelay || keywordDelayPassed || SETTINGS.DesktopNotifikationDelay === 0)) {
                           desktopNotifikation(`AVE - ${new Date().toLocaleTimeString()}`, `Keyword: ${_currKey}\n${_prod.description_full}`, fixProductImageUrl(_prod.data_img_url), true, function(event) {
                             event.preventDefault();
-                            window.open(window.location.origin + _prod.link, '_blank');
+                            const newUrl = `${window.location.origin}/vine/vine-items?vine-data=${encodeURIComponent(JSON.stringify({
+                                asin: _prod.data_asin,
+                                isParentAsin: _prod.data_asin_is_parent,
+                                recommendationId: _prod.data_recommendation_id,
+                                tax: _prod.data_estimated_tax,
+                            }))}`;
+                            window.open(newUrl, '_blank');
                           });
                           lastDesktopNotifikationTimestamp = unixTimeStamp();
                         }
