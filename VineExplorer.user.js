@@ -24,9 +24,9 @@
 // @grant        GM.setValue
 // @grant        GM.xmlHttpRequest
 // @grant        unsafeWindow
-// @require      https://raw.githubusercontent.com/Galile0/AmazonVineExplorer/FavoriteNotify/globals.js
-// @require      https://raw.githubusercontent.com/Galile0/AmazonVineExplorer/FavoriteNotify/class_db_handler.js
-// @require      https://raw.githubusercontent.com/Galile0/AmazonVineExplorer/FavoriteNotify/class_product.js
+// @require      globals.js
+// @require      class_db_handler.js
+// @require      class_product.js
 // @require      https://raw.githubusercontent.com/eligrey/FileSaver.js/v2.0.4/src/FileSaver.js
 // @require      https://raw.githubusercontent.com/Christof121/VineFetchFix/main/fetchfix.js
 // ==/UserScript==
