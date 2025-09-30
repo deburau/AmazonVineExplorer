@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.25.17
+// @version      0.11.25.18
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2757,7 +2757,13 @@ function updateNewProductsBtn() {
                         if (SETTINGS.EnableDesktopNotifikation) {
                             desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `${_prod.description_full}\nkey: ${_currKey}`, fixProductImageUrl(_prod.data_img_url), true, function (event) {
                                 event.preventDefault();
-                                window.open(window.location.origin + _prod.link, '_blank');
+                                const newUrl = `${window.location.origin}/vine/vine-items?vine-data=${encodeURIComponent(JSON.stringify({
+                                    asin: _prod.data_asin,
+                                    isParentAsin: _prod.data_asin_is_parent,
+                                    recommendationId: _prod.data_recommendation_id,
+                                    tax: _prod.data_estimated_tax,
+                                }))}`;
+                                window.open(newUrl, '_blank');
                             });
                         }
                         if (SETTINGS.GotifyUrl) {

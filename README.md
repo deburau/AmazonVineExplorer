@@ -31,6 +31,7 @@ This script enhances the experience on the Amazon Vine website. However, it does
 ##### [2025-xx-xx] - Version 0.11.26
 *  Notifications can be sent to a Gotify server
 *  Added badge counter to favorites button (thank you Galile0)
+*  Change notification URL to go directly to the vine item (thank you Galile0)
 
 ##### [2025-08-24] - Version 0.11.25
 *  Fix: last_chance queue availability for vine sites that use it (thank you adripo)
