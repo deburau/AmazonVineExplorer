@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.25.14
+// @version      0.11.25.15
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -163,6 +163,7 @@ let showDbUpdateLogoIcon = null;
 ave_eventhandler.on('ave-database-changed', () => {
     if (SETTINGS.DebugLevel > 1) console.info('EVENT - Database has new Data for us! we should look what has changed');
     updateNewProductsBtn();
+    updateFavoritesBtn()
 
     if (showDbUpdateLogoTimeout) clearTimeout(showDbUpdateLogoTimeout);
     if (!showDbUpdateLogoIcon) showDbUpdateLogoIcon = addDBLoadingSymbol();
@@ -2686,6 +2687,19 @@ function stickElementToTopScrollEVhandler(elemID, dist) {
 
 let lastDesktopNotifikationTimestamp = 0;
 
+function updateFavoritesBtn(){
+    database.getFavEntries().then((favArr) => {
+        const _btnFavBadge = document.getElementById('ave-fav-items-btn-badge');
+        if (favArr.length > 0) {
+            _btnFavBadge.style.display = 'inline-block';
+            _btnFavBadge.innerText = favArr.length;
+        } else {
+            _btnFavBadge.style.display = 'none';
+            _btnFavBadge.innerText = '';
+        }
+    });
+}
+
 function updateNewProductsBtn() {
     if (AUTO_SCAN_IS_RUNNING) return;
     if (SETTINGS.DebugLevel > 1) console.log('Called updateNewProductsBtn()');
@@ -3012,6 +3026,7 @@ function init(hasTiles) {
     _searchbarContainer.appendChild(createNavButton('ave-btn-list-new', 'Neue Einträge', 'ave-new-items-btn', SETTINGS.BtnColorNewProducts, () => {createNewSite(PAGETYPE.NEW_ITEMS);}, 'ave-new-items-btn-badge', '-'));
 
     updateNewProductsBtn();
+    updateFavoritesBtn();
 
     // Searchbar
     const _searchBarSpan = document.createElement('span');
