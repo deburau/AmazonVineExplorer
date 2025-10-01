@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.25.18
+// @version      0.11.25.19
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2379,6 +2379,7 @@ function initBackgroundScan() {
                         } else {
                             if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.0 with _subStage: ', _subStage, ' inside ELSE');
                             _subStage = 0;
+                            localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', _subStage);
                             _backGroundScanStage++;
                             _scanFinished();
                         }
@@ -2400,8 +2401,8 @@ function initBackgroundScan() {
 
                         if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.1 with _subStage: ', _subStage);
 
-                        //Wenn die maximale Seitenzahl nicht erreicht ist, wird gescannt
-                        if (_subStage < _PageMax) {
+                        // Wenn die aktuelle Seite die erste ist oder die maximale Seitenzahl nicht erreicht ist, wird gescannt
+                        if (_subStage == 0 ||_subStage < _PageMax) {
                             updateBackgroundScanScreenText(`${_scannerName} encore Page: ${_subStage + 1} / ${_PageMax}`);
                             backGroundTileScanner(`${_baseUrl}?queue=encore&pn=&cn=&page=${_subStage + 1}` , (newCount) => {_scanFinished(newCount)});
                             _subStage++
