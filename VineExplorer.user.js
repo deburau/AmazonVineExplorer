@@ -2853,7 +2853,23 @@ function desktopNotifikation(title, message, image = null, requireInteraction = 
     }
 }
 
-function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeValue) {
+function getContrastColor(hexColor) {
+    // Remove the leading '#' if present
+    const hex = hexColor.replace('#', '');
+
+    // Parse RGB components
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+
+    // Calculate perceived brightness according W3C Accessibility guidelines
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+
+    // Return black for bright colors, white for dark colors
+    return brightness > 125 ? 'black' : 'white';
+}
+
+function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeValue, badgeColor) {
     const _btn = document.createElement('span');
     _btn.setAttribute('id', mainID);
     _btn.setAttribute('class', 'a-button a-button-normal a-button-toggle vvp-items-button');
@@ -2875,8 +2891,8 @@ function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeVal
         const _btnInnerBadge = document.createElement('span');
         _btnInnerBadge.setAttribute('id', badgeId)
         _btnInnerBadge.setAttribute('class', 'a-button-text')
-        _btnInnerBadge.style.backgroundColor = 'red';
-        _btnInnerBadge.style.color = 'white';
+        _btnInnerBadge.style.backgroundColor = badgeColor;
+        _btnInnerBadge.style.color = getContrastColor(badgeColor);
         _btnInnerBadge.style.display = 'inline-block';
         _btnInnerBadge.style.textAlign = 'center';
         // _btnInnerBadge.style.transform = 'translate(-75%, -100%)';
@@ -3029,8 +3045,8 @@ function init(hasTiles) {
     const _searchbarContainer = document.getElementById('vvp-items-button-container');
 
     if (SETTINGS.EnableBtnAll) _searchbarContainer.appendChild(createNavButton('ave-btn-favorites', 'Alle Produkte', '', SETTINGS.BtnColorAllProducts, () => { createNewSite(PAGETYPE.ALL); }));
-    _searchbarContainer.appendChild(createNavButton('ave-btn-favorites', 'Favoriten', '', SETTINGS.BtnColorFavorites, () => {createNewSite(PAGETYPE.FAVORITES);}, 'ave-fav-items-btn-badge', '-'));
-    _searchbarContainer.appendChild(createNavButton('ave-btn-list-new', 'Neue Einträge', 'ave-new-items-btn', SETTINGS.BtnColorNewProducts, () => {createNewSite(PAGETYPE.NEW_ITEMS);}, 'ave-new-items-btn-badge', '-'));
+    _searchbarContainer.appendChild(createNavButton('ave-btn-favorites', 'Favoriten', '', SETTINGS.BtnColorFavorites, () => {createNewSite(PAGETYPE.FAVORITES);}, 'ave-fav-items-btn-badge', '-', SETTINGS.BtnColorFavoritesBadge));
+    _searchbarContainer.appendChild(createNavButton('ave-btn-list-new', 'Neue Einträge', 'ave-new-items-btn', SETTINGS.BtnColorNewProducts, () => {createNewSite(PAGETYPE.NEW_ITEMS);}, 'ave-new-items-btn-badge', '-', SETTINGS.BtnColorNewProductsBadge));
 
     updateNewProductsBtn();
     updateFavoritesBtn();
