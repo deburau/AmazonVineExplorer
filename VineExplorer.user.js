@@ -2853,6 +2853,22 @@ function desktopNotifikation(title, message, image = null, requireInteraction = 
     }
 }
 
+function getContrastColor(hexColor) {
+    // Remove the leading '#' if present
+    const hex = hexColor.replace('#', '');
+
+    // Parse RGB components
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+
+    // Calculate perceived brightness according W3C Accessibility guidelines
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+
+    // Return black for bright colors, white for dark colors
+    return brightness > 125 ? 'black' : 'white';
+}
+
 function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeValue, badgeColor) {
     const _btn = document.createElement('span');
     _btn.setAttribute('id', mainID);
@@ -2876,7 +2892,7 @@ function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeVal
         _btnInnerBadge.setAttribute('id', badgeId)
         _btnInnerBadge.setAttribute('class', 'a-button-text')
         _btnInnerBadge.style.backgroundColor = badgeColor;
-        _btnInnerBadge.style.color = 'white';
+        _btnInnerBadge.style.color = getContrastColor(badgeColor);
         _btnInnerBadge.style.display = 'inline-block';
         _btnInnerBadge.style.textAlign = 'center';
         // _btnInnerBadge.style.transform = 'translate(-75%, -100%)';
