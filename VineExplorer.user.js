@@ -2853,7 +2853,7 @@ function desktopNotifikation(title, message, image = null, requireInteraction = 
     }
 }
 
-function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeValue) {
+function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeValue, badgeColor) {
     const _btn = document.createElement('span');
     _btn.setAttribute('id', mainID);
     _btn.setAttribute('class', 'a-button a-button-normal a-button-toggle vvp-items-button');
@@ -2875,7 +2875,7 @@ function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeVal
         const _btnInnerBadge = document.createElement('span');
         _btnInnerBadge.setAttribute('id', badgeId)
         _btnInnerBadge.setAttribute('class', 'a-button-text')
-        _btnInnerBadge.style.backgroundColor = 'red';
+        _btnInnerBadge.style.backgroundColor = badgeColor;
         _btnInnerBadge.style.color = 'white';
         _btnInnerBadge.style.display = 'inline-block';
         _btnInnerBadge.style.textAlign = 'center';
@@ -3029,8 +3029,8 @@ function init(hasTiles) {
     const _searchbarContainer = document.getElementById('vvp-items-button-container');
 
     if (SETTINGS.EnableBtnAll) _searchbarContainer.appendChild(createNavButton('ave-btn-favorites', 'Alle Produkte', '', SETTINGS.BtnColorAllProducts, () => { createNewSite(PAGETYPE.ALL); }));
-    _searchbarContainer.appendChild(createNavButton('ave-btn-favorites', 'Favoriten', '', SETTINGS.BtnColorFavorites, () => {createNewSite(PAGETYPE.FAVORITES);}, 'ave-fav-items-btn-badge', '-'));
-    _searchbarContainer.appendChild(createNavButton('ave-btn-list-new', 'Neue Einträge', 'ave-new-items-btn', SETTINGS.BtnColorNewProducts, () => {createNewSite(PAGETYPE.NEW_ITEMS);}, 'ave-new-items-btn-badge', '-'));
+    _searchbarContainer.appendChild(createNavButton('ave-btn-favorites', 'Favoriten', '', SETTINGS.BtnColorFavorites, () => {createNewSite(PAGETYPE.FAVORITES);}, 'ave-fav-items-btn-badge', '-', SETTINGS.BtnColorFavoritesBadge));
+    _searchbarContainer.appendChild(createNavButton('ave-btn-list-new', 'Neue Einträge', 'ave-new-items-btn', SETTINGS.BtnColorNewProducts, () => {createNewSite(PAGETYPE.NEW_ITEMS);}, 'ave-new-items-btn-badge', '-', SETTINGS.BtnColorNewProductsBadge));
 
     updateNewProductsBtn();
     updateFavoritesBtn();

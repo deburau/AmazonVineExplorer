@@ -240,12 +240,14 @@ SETTINGS_USERCONFIG_DEFINES.push({key: 'MaxItemsPerPage', type: 'number', min: 2
 
 SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Colors and Styles', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorNewProducts', type: 'color', name: 'Button Color New Products', description: ''});
+SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorNewProductsBadge', type: 'color', name: 'Button Color New Products Badge', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorMarkCurrSiteAsSeen', type: 'color', name: 'Button Color Mark Current Site As Seen', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorMarkAllAsSeen', type: 'color', name: 'Button Color Mark All As Seen', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorBackToTop', type: 'color', name: 'Button Color Back To Top', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorUpdateDB', type: 'color', name: 'Button Color Update Database', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorAllProducts', type: 'color', name: 'Button Color All Products', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorFavorites', type: 'color', name: 'Button Color Favorites', description: ''});
+SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorFavoritesBadge', type: 'color', name: 'Button Color Favorites Badge', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'FavStarColorDefault', type: 'color', name: 'Color Favorite Star unchecked', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'FavStarColorChecked', type: 'color', name: 'Color Favorite Star checked', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DarkModeBackgroundColor', type: 'color', name: 'Dark Mode Background Color', description: ''});
@@ -286,7 +288,9 @@ class SETTINGS_DEFAULT {
     ShowFirstSeen = false;
 
     BtnColorFavorites = '#ffe143';
+    BtnColorFavoritesBadge = '#ff4343';
     BtnColorNewProducts = '#00FF00';
+    BtnColorNewProductsBadge = '#ff4343';
     BtnColorMarkCurrSiteAsSeen = '#00FF00';
     BtnColorMarkAllAsSeen = '#FFA28E';
     BtnColorBackToTop = '#FFFFFF'
