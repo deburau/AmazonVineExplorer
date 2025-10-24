@@ -30,6 +30,7 @@ This script enhances the experience on the Amazon Vine website. However, it does
 
 ##### [2025-10-24] - Version 0.11.27
 *  Enable badge color choice (thank you adripo)
+*  New setting for cleaning up favorites
 
 ##### [2025-10-06] - Version 0.11.26
 *  Notifications can be sent to a Gotify server
