@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.27.1
+// @version      0.11.27.2
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -29,7 +29,7 @@
 // @require      class_db_handler.js
 // @require      class_product.js
 // @require      https://raw.githubusercontent.com/eligrey/FileSaver.js/v2.0.4/src/FileSaver.js
-// @require      https://raw.githubusercontent.com/Christof121/VineFetchFix/main/fetchfix.js
+// @require      https://raw.githubusercontent.com/adripo/VineFetchFix/refs/heads/main/fetchfix.js
 // ==/UserScript==
 
 'use strict';
