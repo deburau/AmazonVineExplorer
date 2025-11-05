@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.27
+// @version      0.11.27.1
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1160,9 +1160,8 @@ function addTileEventhandlers(_currTile) {
     _data.asin = _btn.getAttribute('data-asin');
     _data.parent_asin = _btn.getAttribute('data-is-parent-asin');
     _data.recommendation_id = _btn.getAttribute('data-recommendation-id');
-    waitForHtmlElement('[id^="ave-taxinfo-"]', (elem) => {
-        _data.tax = _currTile.querySelector('[id^="ave-taxinfo-"] > span').textContent;
-    });
+
+    waitForHtmlElement('[id^="ave-taxinfo-"]', (elem) => { _data.tax = elem?.textContent; }, _currTile);
 
     const _childs = _btn.childNodes;
     _btn.addEventListener('click', (event) => {btnEventhandlerClick(event, _data)});
