@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.27.2
+// @version      0.11.27.3
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -28,8 +28,8 @@
 // @require      globals.js
 // @require      class_db_handler.js
 // @require      class_product.js
+// @require      vine_fetch.js
 // @require      https://raw.githubusercontent.com/eligrey/FileSaver.js/v2.0.4/src/FileSaver.js
-// @require      https://raw.githubusercontent.com/adripo/VineFetchFix/refs/heads/main/fetchfix.js
 // ==/UserScript==
 
 'use strict';
@@ -2939,7 +2939,7 @@ function addStyleToTile(_currTile, _product) {
 async function requestProductDetails(prod) {
     return new Promise(async (resolve, reject) => {
         if (prod.data_asin_is_parent) {// Lets get the Childs first
-            fetch(`${window.location.origin}/vine/api/recommendations/${prod.id}`.replace(/#/g, '%23')).then(r => r.json()).then(async (res) => {
+            vineFetch(`${window.location.origin}/vine/api/recommendations/${prod.id}`.replace(/#/g, '%23')).then(r => r.json()).then(async (res) => {
                 if (res.error) {
                     if (res.error.exceptionType == 'ITEM_NOT_IN_ENROLLMENT') {
                         prod.forceRemove = true;
@@ -2960,7 +2960,7 @@ async function requestProductDetails(prod) {
                 // const _promArray = new Array();
                 // prod.data_estimated_tax_prize = prod.data_estimated_tax_prize || 0;
                 // for (const _child of prod.data_childs) {
-                //     _promArray.push(fetch(`${window.location.origin}/vine/api/recommendations/${(prod.id).replace(/#/g, '%23')}/item/${_child.asin}`.replace(/#/g, '%23')).then(r => r.json()).then((childData) => {
+                //     _promArray.push(vineFetch(`${window.location.origin}/vine/api/recommendations/${(prod.id).replace(/#/g, '%23')}/item/${_child.asin}`.replace(/#/g, '%23')).then(r => r.json()).then((childData) => {
                 //         console.log('CHILD_DATA:', childData);
                 //         if (!childData.error) {
 
@@ -2982,7 +2982,7 @@ async function requestProductDetails(prod) {
                 // });
             })
         } else {
-            fetch(`${window.location.origin}/vine/api/recommendations/${prod.id}/item/${prod.data_asin}`.replace(/#/g, '%23')).then(r => r.json()).then(ret => {
+            vineFetch(`${window.location.origin}/vine/api/recommendations/${prod.id}/item/${prod.data_asin}`.replace(/#/g, '%23')).then(r => r.json()).then(ret => {
                 if (SETTINGS.DebugLevel > 1) console.log('RETURN:', ret);
                 if (ret.error) {
                     reject(ret.error.exceptionType) // => "ITEM_NOT_IN_ENROLLMENT"
