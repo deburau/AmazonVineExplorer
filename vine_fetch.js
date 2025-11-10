@@ -1,3 +1,7 @@
+var extHelper_LastParentVariant = null;
+var extHelper_responseData = {};
+var extHelper_postData = {};
+
 async function vineFetch(...args) {
     let response = await fetch(...args);
     let lastParent = extHelper_LastParentVariant;
