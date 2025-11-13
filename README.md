@@ -28,9 +28,9 @@ This script enhances the experience on the Amazon Vine website. However, it does
 
 ## Changelog Deburau
 
-##### [2025-11-05] - Version 0.11.28
+##### [2025-11-13] - Version 0.11.28
 *  Fix [deburau/AmazonVineExplorer#54](https://github.com/deburau/AmazonVineExplorer/issues/54)
-*  Replaced FileSaver.js an updated version from adipro
+*  Replaced FileSaver.js and updated version from adipro
 *  Imported extended fetch method from VineFetchFix directly into the project
 
 ##### [2025-10-24] - Version 0.11.27
