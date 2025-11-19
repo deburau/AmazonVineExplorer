@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.28.3
+// @version      0.11.28.4
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -369,9 +369,10 @@ async function parseTileData(tile) {
     await waitForHtmlElementPromise('.vvp-item-product-title-container', _div_vpp_item_tile_content);
     const _div_vvp_item_product_title_container = _div_vpp_item_tile_content.getElementsByClassName('vvp-item-product-title-container')[0];
 
+    var _div_vvp_item_product_title_container_a;
     if (!_isPrerelease) {
         await waitForHtmlElementPromise('a', _div_vvp_item_product_title_container);
-        const _div_vvp_item_product_title_container_a = _div_vvp_item_product_title_container.getElementsByTagName('a')[0];
+        _div_vvp_item_product_title_container_a = _div_vvp_item_product_title_container.getElementsByTagName('a')[0];
     }
 
     await waitForHtmlElementPromise('.a-button-inner', _div_vpp_item_tile_content);
