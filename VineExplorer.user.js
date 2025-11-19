@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.28.2
+// @version      0.11.28.3
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -557,16 +557,22 @@ async function createTileFromProduct(product, btnID, cb) {
         _tile.setAttribute('data-recommendation-id', product.data_recommendation_id);
         _tile.setAttribute('data-img-url', fixProductImageUrl(product.data_img_url));
         _tile.setAttribute('style', (product.notSeenCounter > 0) ? SETTINGS.CssProductRemovalTag : (product.isFav) ? SETTINGS.CssProductNewTag : (product.isNew) ? SETTINGS.CssProductNewTag : SETTINGS.CssProductDefault);
+        const _spanTruncateHtml = `
+            <span class="a-truncate" data-a-word-break="normal" data-a-max-rows="2" data-a-overflow-marker="&amp;hellip;" style="line-height: 1.3em !important; max-height: 2.6em;" data-a-recalculate="false" data-a-updated="true">
+                <span class="a-truncate-full a-offscreen">${product.description_full}</span>
+                <span class="a-truncate-cut" aria-hidden="true" style="height: 2.6em;">${product.description_short}</span>
+            </span>
+        `;
+        const _itemProductTitleContainerHtml = product.link ? `
+            <a class="a-link-normal" target="_blank" rel="noopener" href="${product.link}">
+                ${_spanTruncateHtml}
+            </a>
+        ` : _spanTruncateHtml;
         _tile.innerHTML =`
             <div class="vvp-item-tile-content">
                 <img alt="${product.data_img_alt}" src="${fixProductImageUrl(product.data_img_url)}">
                 <div class="vvp-item-product-title-container">
-                    <a class="a-link-normal" target="_blank" rel="noopener" href="${product.link}">
-                        <span class="a-truncate" data-a-word-break="normal" data-a-max-rows="2" data-a-overflow-marker="&amp;hellip;" style="line-height: 1.3em !important; max-height: 2.6em;" data-a-recalculate="false" data-a-updated="true">
-                            <span class="a-truncate-full a-offscreen">${product.description_full}</span>
-                            <span class="a-truncate-cut" aria-hidden="true" style="height: 2.6em;">${product.description_short}</span>
-                        </span>
-                    </a>
+                    ${_itemProductTitleContainerHtml}
                 </div>
                 <span class="a-button a-button-primary vvp-details-btn" id="a-autoid-${_btnAutoID}">
                     <span class="a-button-inner">
@@ -2777,7 +2783,7 @@ function updateNewProductsBtn() {
                         }
                         if (SETTINGS.GotifyUrl) {
                             const url = SETTINGS.GotifyUrl + 'message?token=' + SETTINGS.GotifyToken;
-                            const bodyFormData = {
+                            const bodyFormData =  _prod.link ? {
                                 title: `Amazon Vine Explorer - ${AVE_VERSION}`,
                                 message: `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \nMatched key: ${_currKey}`,
                                 priority: 5,
@@ -2788,6 +2794,15 @@ function updateNewProductsBtn() {
                                     'client::notification': {
                                         click: { url: window.location.origin + _prod.link },
                                         bigImageUrl: fixProductImageUrl(_prod.data_img_url)
+                                    }
+                                }
+                            } : {
+                                title: `Amazon Vine Explorer - ${AVE_VERSION}`,
+                                message: `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \nMatched key: ${_currKey}`,
+                                priority: 5,
+                                extras: {
+                                    'client::display': {
+                                        "contentType": "text/markdown"
                                     }
                                 }
                             };
