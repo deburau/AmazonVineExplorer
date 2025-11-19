@@ -1,9 +1,29 @@
+function initInjectScript() {
+    if (document.getElementById('fetchfix')) {
+        console.warn('[CF] | Custom Fetch already injected');
+        return;
+    }
+    var scriptTag = document.createElement("script");
+    scriptTag.id = 'fetchfix';
+    // Inject the infinite loading wheel fix into the page context
+    scriptTag.innerHTML = newFetch;
+    scriptTag.onload = function () {
+        this.remove();
+    };
+    (document.head || document.documentElement).appendChild(scriptTag);
+    console.log('[CF] | Custom Fetch injected');
+}
+
+
+const newFetch = `
+(function(){
+const origFetch = window.fetch;
 var extHelper_LastParentVariant = null;
 var extHelper_responseData = {};
 var extHelper_postData = {};
 
-async function vineFetch(...args) {
-    let response = await fetch(...args);
+window.fetch = async (...args) => {
+    let response = await origFetch(...args);
     let lastParent = extHelper_LastParentVariant;
 
     const url = args[0] || "";
@@ -139,3 +159,6 @@ async function vineFetch(...args) {
 
     return response;
 };
+})();
+`;
+initInjectScript();
