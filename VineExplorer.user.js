@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.28.1
+// @version      0.11.28.2
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -357,6 +357,9 @@ async function parseTileData(tile) {
         return _ret;
     }
 
+    await waitForHtmlElementPromise('.vvp-item-badges', tile);
+    const _isPrerelease = tile.getElementsByClassName('vvp-badge-prerelease').length > 0;
+
     await waitForHtmlElementPromise('.vvp-item-tile-content', tile);
     const _div_vpp_item_tile_content = tile.getElementsByClassName('vvp-item-tile-content')[0];
 
@@ -366,8 +369,10 @@ async function parseTileData(tile) {
     await waitForHtmlElementPromise('.vvp-item-product-title-container', _div_vpp_item_tile_content);
     const _div_vvp_item_product_title_container = _div_vpp_item_tile_content.getElementsByClassName('vvp-item-product-title-container')[0];
 
-    await waitForHtmlElementPromise('a', _div_vvp_item_product_title_container);
-    const _div_vvp_item_product_title_container_a = _div_vvp_item_product_title_container.getElementsByTagName('a')[0];
+    if (!_isPrerelease) {
+        await waitForHtmlElementPromise('a', _div_vvp_item_product_title_container);
+        const _div_vvp_item_product_title_container_a = _div_vvp_item_product_title_container.getElementsByTagName('a')[0];
+    }
 
     await waitForHtmlElementPromise('.a-button-inner', _div_vpp_item_tile_content);
     const _div_vpp_item_tile_content_button_inner = _div_vpp_item_tile_content.getElementsByClassName('a-button-inner')[0];
@@ -381,14 +386,18 @@ async function parseTileData(tile) {
     _newProduct.data_recommendation_id = _id;
     _newProduct.data_img_url = tile.getAttribute('data-img-url');
     _newProduct.data_img_alt = _div_vpp_item_tile_content_img.getAttribute('alt') || "";
-    _newProduct.link = _div_vvp_item_product_title_container_a.getAttribute('href');
-    _newProduct.description_full = _div_vvp_item_product_title_container_a.getElementsByClassName('a-truncate-full')[0].textContent;
+
+    if (!_isPrerelease) {
+        _newProduct.link = _div_vvp_item_product_title_container_a.getAttribute('href');
+    }
+
+    _newProduct.description_full = _div_vvp_item_product_title_container.getElementsByClassName('a-truncate-full')[0].textContent;
+    _newProduct.description_short = _div_vvp_item_product_title_container.getElementsByClassName('a-truncate-cut')[0].textContent;
 
     _newProduct.data_asin = _div_vpp_item_tile_content_button_inner_input.getAttribute('data-asin');
     _newProduct.data_recommendation_type = _div_vpp_item_tile_content_button_inner_input.getAttribute('data-recommendation-type');
     _newProduct.data_asin_is_parent = (_div_vpp_item_tile_content_button_inner_input.getAttribute('data-is-parent-asin') == 'true');
     _newProduct.data_is_pre_release = (_div_vpp_item_tile_content_button_inner_input.getAttribute('data-is-pre-release') == 'true');
-    _newProduct.description_short = _div_vvp_item_product_title_container_a.getElementsByClassName('a-truncate-cut')[0].textContent;
 
     // If short description is empty, try to fetch it with retries
     if (_newProduct.description_short == '') {
@@ -399,7 +408,7 @@ async function parseTileData(tile) {
 
         while (_timeLoopCounter++ < _maxLoops) {
             await new Promise(res => setTimeout(res, _halfdelay + Math.round(Math.random() * _halfdelay * 2)));
-            const _short = _div_vvp_item_product_title_container_a.getElementsByClassName('a-truncate-cut')[0].textContent;
+            const _short = _div_vvp_item_product_title_container.getElementsByClassName('a-truncate-cut')[0].textContent;
             if (_short != "") {
                 _newProduct.description_short = _short;
                 return _newProduct;
