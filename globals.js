@@ -6,7 +6,7 @@ const AVE_VERSION = (GM_info?.script?.version)
 const AVE_TITLE = (GM_info?.script?.name);
 const SECONDS_PER_DAY = 86400;
 const SECONDS_PER_WEEK = 604800;
-const SITE_IS_VINE = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/vine\//.test(window.location.href);
+const SITE_IS_VINE = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/vine\/vine-items/.test(window.location.href);
 const SITE_IS_SHOPPING = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/(?!vine)(?!gp\/video)(?!music)/.test(window.location.href);
 const AVE_SESSION_ID = generateSessionID();
 
@@ -632,7 +632,7 @@ async function fastStyleChanges() {
                 if (activeButtonId == "vvp-items-button--seller" || activeButtonId == "vvp-all-items-button") {
                     waitForHtmlElement('nav.a-text-center', (elem) => {
                         if (!elem) return;
-                        
+
                         var clonedDiv = elem.cloneNode(true);
                         //clonedDiv.style.marginTop = '-25px';
                         clonedDiv.style.marginBottom = '10px';
