@@ -11,6 +11,7 @@ class Product {
     data_asin;
     data_asin_is_parent;
     data_is_pre_release;
+    data_is_featured;
     data_childs;
     data_estimated_tax;
     data_estimated_tax_prize;

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.28.4
+// @version      0.11.28.5
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -359,6 +359,7 @@ async function parseTileData(tile) {
 
     await waitForHtmlElementPromise('.vvp-item-badges', tile);
     const _isPrerelease = tile.getElementsByClassName('vvp-badge-prerelease').length > 0;
+    const _isFeatured = tile.getElementsByClassName('vvp-badge-featured').length > 0;
 
     await waitForHtmlElementPromise('.vvp-item-tile-content', tile);
     const _div_vpp_item_tile_content = tile.getElementsByClassName('vvp-item-tile-content')[0];
@@ -387,6 +388,7 @@ async function parseTileData(tile) {
     _newProduct.data_recommendation_id = _id;
     _newProduct.data_img_url = tile.getAttribute('data-img-url');
     _newProduct.data_img_alt = _div_vpp_item_tile_content_img.getAttribute('alt') || "";
+    _newProduct.data_is_featured = _isFeatured;
 
     if (!_isPrerelease) {
         _newProduct.link = _div_vvp_item_product_title_container_a.getAttribute('href');

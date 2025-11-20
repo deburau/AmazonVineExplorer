@@ -25,7 +25,7 @@ const PAGE_LOAD_TIMESTAMP = Date.now();
 // Obsolete sobald die Datenbank über Tampermonkey läuft
 const DATABASE_NAME = 'VineVoiceExplorer';
 const DATABASE_OBJECT_STORE_NAME = `${DATABASE_NAME}_Objects`;
-const DATABASE_VERSION = 3;
+const DATABASE_VERSION = 4;
 
 // Make some things accessable from console
 unsafeWindow.ave = {};
@@ -410,10 +410,11 @@ function toTimestamp(unixTimestamp) {
     * @param {string} selector querySelector
     * @param {function} cb Callback Function
     * @param {object} [altDocument] Alternativ document root
+    * @param {number} [timeout] Timeout in milliseconds
     */
-async function waitForHtmlElement(selector, cb, altDocument = document) {
-    if (typeof(selector) != 'string') throw new Error('waitForHtmlElement(): selector is not defined or is not type of string');
-    if (typeof(cb) != 'function') throw new Error('waitForHtmlElement(): cb is not defined or is not type of string');
+async function waitForHtmlElement(selector, cb, altDocument = document, timeout = 10000) {
+    if (typeof (selector) !== 'string') throw new Error('waitForHtmlElement(): selector is not defined or is not type of string');
+    if (typeof (cb) !== 'function') throw new Error('waitForHtmlElement(): cb is not defined or is not type of string');
 
     if (altDocument.querySelector(selector)) {
         cb(altDocument.querySelector(selector));
@@ -432,15 +433,17 @@ async function waitForHtmlElement(selector, cb, altDocument = document) {
         childList: true,
         subtree: true
     });
+
+    const timeoutId = setTimeout(() => {
+        _observer.disconnect();
+        cb(null); // or cb(new Error('Timeout: element not found'));
+    }, timeout);
 }
 
 // Wrap waitForHtmlElement in a Promise to use it with async/await
 async function waitForHtmlElementPromise(selector, altDocument = document, timeout = 10000) {
     return new Promise((resolve, reject) => {
-        waitForHtmlElement(selector, resolve, altDocument);
-        setTimeout(() => {
-            reject(new Error(`Timeout waiting for element: ${selector}`));
-        }, timeout); // 10 seconds timeout default
+        waitForHtmlElement(selector, resolve, altDocument, timeout);
     });
 }
 
