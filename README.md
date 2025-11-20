@@ -35,6 +35,7 @@ This script enhances the experience on the Amazon Vine website. However, it does
 *  Added _isFeatured to product class
    !!! You might have to restart yout browser !!!
 *  Fix exceptions when elements not found
+*  Handle badges when creating product tiles
 
 ##### [2025-11-13] - Version 0.11.28
 *  Fix [deburau/AmazonVineExplorer#54](https://github.com/deburau/AmazonVineExplorer/issues/54)

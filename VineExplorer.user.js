@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.28.10
+// @version      0.11.28.11
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -571,8 +571,20 @@ async function createTileFromProduct(product, btnID, cb) {
                 ${_spanTruncateHtml}
             </a>
         ` : _spanTruncateHtml;
+        var _itemBadgesHtml = '';
+        if (product.data_is_pre_release || product.data_is_featured) {
+            _itemBadgesHtml += '<div class="vvp-item-badges">';
+            if (product.data_is_pre_release) {
+                _itemBadgesHtml += '<span class="vvp-badge-prerelease">Vorabversion</span>';
+            }
+            if (product.data_is_featured) {
+                _itemBadgesHtml += '<span class="vvp-badge-featured">Empfohlen</span>';
+            }
+            _itemBadgesHtml += '</div>';
+        }
         _tile.innerHTML =`
             <div class="vvp-item-tile-content">
+                ${_itemBadgesHtml}
                 <img alt="${product.data_img_alt}" src="${fixProductImageUrl(product.data_img_url)}">
                 <div class="vvp-item-product-title-container">
                     ${_itemProductTitleContainerHtml}
