@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.28.14
+// @version      0.11.28.15
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -607,6 +607,8 @@ async function createTileFromProduct(product, btnID, cb) {
         _tile.prepend(createTimeSeenElement(product, btnID));
         _tile.prepend(createShareElement(product, btnID));
         waitForHtmlElement('.vvp-item-product-title-container', (_elem) => {
+            if (!_.elem) return;
+
             insertHtmlElementAfter(_elem, createTaxInfoElement(product, btnID));
         }, _tile)
         // insertHtmlElementAfter((_tile.getElementsByClassName('vvp-item-product-title-container')[0]), createTaxInfoElement(product, btnID));
@@ -1092,6 +1094,8 @@ function getTilesFromURL(url, cb = (tilesArray) => {}) {
             const _doc = _parser.parseFromString(response.responseText, "text/html");
             lastGetTilesFromURLQuerry = Date.now();
             waitForHtmlElement('#vvp-items-grid', (itemsContainer) => {
+                if (!itemsContainer) return;
+                
                 if (SETTINGS.DebugLevel > 10) console.log('getTileFromURL(): itemsContainer:', itemsContainer);
                 // cb(itemsContainer.getElementsByClassName('vvp-item-tile'));
                 const _retArr = [];
@@ -1208,10 +1212,14 @@ function addTileEventhandlers(_currTile) {
     }
 
     waitForHtmlElement('.ave-favorite-star', (elem) => {
+        if (!elem) return;
+
         elem.addEventListener('click', (event) => {favStarEventhandlerClick(event, _data)});
     }, _currTile);
 
     waitForHtmlElement('.ave-share', (elem) => {
+        if (!elem) return;
+
         elem.addEventListener('click', (event) => {shareEventHandlerClick(event, _data)});
     }, _currTile);
 }
@@ -2979,6 +2987,8 @@ function addStyleToTile(_currTile, _product) {
     _currTile.prepend(createShareElement(_product));
     // insertHtmlElementAfter((_currTile.getElementsByClassName('vvp-item-product-title-container')[0]), createTaxInfoElement(_product));
     waitForHtmlElement('.vvp-item-product-title-container', (_elem) => {
+        if (!_elem) return;
+
         insertHtmlElementAfter(_elem, createTaxInfoElement(_product));
     }, _currTile)
 
