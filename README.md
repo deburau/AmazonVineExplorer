@@ -36,7 +36,6 @@ This script enhances the experience on the Amazon Vine website. However, it does
    !!! You might have to restart yout browser !!!
 *  Fix exceptions when elements not found
 *  Handle badges when creating product tiles
-*  Fix vine site detection to include .../vine-items, do not start AVE on account, orders etc.
 
 ##### [2025-11-13] - Version 0.11.28
 *  Fix [deburau/AmazonVineExplorer#54](https://github.com/deburau/AmazonVineExplorer/issues/54)
