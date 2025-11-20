@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.28.7
+// @version      0.11.28.8
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1271,6 +1271,8 @@ function addAveSettingsTab(){
 
 function addAVESettingsMenu(){
     waitForHtmlElement('.a-tab-container.vvp-tab-set-container', (_tabContainer) => {
+        if (!_tabContainer) return;
+
         //const _tabContainer = document.body.querySelector('.a-tab-container.vvp-tab-set-container');
 
         const _boxContainer = document.createElement('div');
