@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.28.15
+// @version      0.11.28.16
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1169,9 +1169,11 @@ function updateTileStyle(prod) {
             _favStar.style.color = (prod.isFav) ? SETTINGS.FavStarColorChecked : 'white'; // SETTINGS.FavStarColorChecked = Gelb;
 
             const _taxValue = prod.data_estimated_tax_prize;
-            if (typeof(_taxValue) == 'number') {
+            if (typeof (_taxValue) == 'number') {
                 const _taxValueElem = _tile.querySelector('.ave-taxinfo-text');
-                _taxValueElem.innerText = (_taxValueElem.innerText).replace('--.--', _taxValue);
+                if (_taxValueElem) {
+                    _taxValueElem.innerText = (_taxValueElem.innerText).replace('--.--', _taxValue);
+                }
             }
             return;
         }
