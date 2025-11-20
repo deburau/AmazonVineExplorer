@@ -33,6 +33,8 @@ This script enhances the experience on the Amazon Vine website. However, it does
 *  Next fix [deburau/AmazonVineExplorer#54](https://github.com/deburau/AmazonVineExplorer/issues/54)
 *  Handle case when product link is not present for prerelease products
 *  Added _isFeatured to product class
+   !!! You might have to restart yout browser !!!
+*  Fix exception in fastStyleChanges() when element not found
 
 ##### [2025-11-13] - Version 0.11.28
 *  Fix [deburau/AmazonVineExplorer#54](https://github.com/deburau/AmazonVineExplorer/issues/54)

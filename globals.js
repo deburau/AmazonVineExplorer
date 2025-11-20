@@ -436,6 +436,7 @@ async function waitForHtmlElement(selector, cb, altDocument = document, timeout 
 
     const timeoutId = setTimeout(() => {
         _observer.disconnect();
+        console.warn(`Timeout: element ${selector} not found`);
         cb(null); // or cb(new Error('Timeout: element not found'));
     }, timeout);
 }
@@ -528,92 +529,98 @@ async function fastStyleChanges() {
     if (SITE_IS_VINE) {
         if (SETTINGS.EnableFullWidth) {
             waitForHtmlElement('.vvp-body', (elem) => {
-                elem.style.maxWidth = '100%';
+                if (elem) elem.style.maxWidth = '100%';
             });
         }
 
         if (SETTINGS.DisableAmazonNavbar) {
             waitForHtmlElement('#navbar-main', (elem) => {
-                elem.style.display = 'none';
+                if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
 
             waitForHtmlElement('#skiplink', (elem) => {
-                elem.style.display = 'none';
+                if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
 
             waitForHtmlElement('#vvp-logo-link > img', (elem) => {
-                elem.style.display = 'none';
+                if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
 
             waitForHtmlElement('#vvp-header', (elem) => {
-                elem.style.marginTop = '0';
-                elem.style.marginBottom = '0';
-                //elem.style.display = 'none';
-                // elem.style.visibility = 'hidden';
+                if (elem) {
+                    elem.style.marginTop = '0';
+                    elem.style.marginBottom = '0';
+                    // elem.style.display = 'none';
+                    // elem.style.visibility = 'hidden';
+                }
             });
 
             waitForHtmlElement('.a-container.vvp-body > .a-section:not(#vvp-header)', (elem) => {
-                elem.style.display = 'none';
+                if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
 
             waitForHtmlElement('.a-tab-container.vvp-tab-set-container', (elem) => {
-                elem.style.marginTop = '0';
-                //elem.style.display = 'none';
+                if (elem) elem.style.marginTop = '0';
+                // elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableCategories) {
             waitForHtmlElement('#vvp-browse-nodes-container', (elem) => {
-                elem.style.display = 'none';
-                //elem.style.visibility = 'hidden';
+                if (elem) elem.style.display = 'none';
+                //if (elem) elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableSuggestions) {
             //rhf-frame
             waitForHtmlElement('.copilot-secure-display', (elem) => {
-                elem.style.display = 'none';
+                if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableFooter) {
             waitForHtmlElement('#navFooter', (elem) => {
-                elem.style.display = 'none';
-                elem.style.visibility = 'hidden';
+                if (elem) {
+                    elem.style.display = 'none';
+                    elem.style.visibility = 'hidden';
+                }
             });
         }
 
         if (SETTINGS.DisableBtnPotLuck) {
             waitForHtmlElement('#vvp-items-button--recommended', (elem) => {
-                elem.style.display = 'none';
+                if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableBtnLastChance) {
             waitForHtmlElement('#vvp-items-button--all', (elem) => {
-                elem.style.display = 'none';
+                if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableBtnSeller) {
             waitForHtmlElement('#vvp-items-button--seller', (elem) => {
-                elem.style.display = 'none';
+                if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.EnableTopLogoChange) {
             waitForHtmlElement('#vvp-logo-link > img', (elem) => {
-                elem.src = 'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_notification_image.png';
-                elem.style.height = '100px';
+                if (elem) {
+                    elem.src = 'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_notification_image.png';
+                    elem.style.height = '100px';
+                }
             });
 
         }
@@ -650,15 +657,17 @@ async function fastStyleChanges() {
         if (SETTINGS.DisableSuggestionsShopping) {
             //rhf-frame
             waitForHtmlElement('#rhf', (elem) => {
-                elem.style.display = 'none';
+                if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableFooterShopping) {
             waitForHtmlElement('#navFooter', (elem) => {
-                elem.style.display = 'none';
-                elem.style.visibility = 'hidden';
+                if (elem) {
+                    elem.style.display = 'none';
+                    elem.style.visibility = 'hidden';
+                }
             });
         }
     }
