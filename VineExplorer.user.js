@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.28.13
+// @version      0.11.28.14
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -102,8 +102,11 @@ let database;
             }
             addAveSettingsTab();
             addAVESettingsMenu();
-            waitForHtmlElement('.vvp-details-btn', () => {
+            waitForHtmlElement('.vvp-details-btn', (elem) => {
+                if (!elem) return;
+
                 if (_execLock) return;
+
                 _execLock = true;
                 addBranding();
                 detectCurrentPageType();
@@ -118,8 +121,11 @@ let database;
                     }
                 }, 100);
             });
-            waitForHtmlElement('.vvp-no-offers-msg', () => { // Empty Page ?!?!
+            waitForHtmlElement('.vvp-no-offers-msg', (elem) => { // Empty Page ?!?!
+                if (!elem) return;
+
                 if (_execLock) return;
+
                 _execLock = true;
                 if(SETTINGS.DarkMode){
                     waitForHtmlElement('body', () => {
