@@ -631,6 +631,8 @@ async function fastStyleChanges() {
                 console.log('EnablePaginationTop: Active menu button ID:', activeButtonId);
                 if (activeButtonId == "vvp-items-button--seller" || activeButtonId == "vvp-all-items-button") {
                     waitForHtmlElement('nav.a-text-center', (elem) => {
+                        if (!elem) return;
+                        
                         var clonedDiv = elem.cloneNode(true);
                         //clonedDiv.style.marginTop = '-25px';
                         clonedDiv.style.marginBottom = '10px';
