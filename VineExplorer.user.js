@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.28.17
+// @version      0.11.28.18
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -607,7 +607,7 @@ async function createTileFromProduct(product, btnID, cb) {
         _tile.prepend(createTimeSeenElement(product, btnID));
         _tile.prepend(createShareElement(product, btnID));
         waitForHtmlElement('.vvp-item-product-title-container', (_elem) => {
-            if (!_.elem) return;
+            if (!_elem) return;
 
             insertHtmlElementAfter(_elem, createTaxInfoElement(product, btnID));
         }, _tile)
