@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.28.16
+// @version      0.11.28.17
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -579,7 +579,7 @@ async function createTileFromProduct(product, btnID, cb) {
         ` : _spanTruncateHtml;
         var _itemBadgesHtml = '';
         if (product.data_is_pre_release || product.data_is_featured) {
-            _itemBadgesHtml += '<div class="vvp-item-badges">';
+            _itemBadgesHtml += '<div class="vvp-item-badges" style="margin-top: 20px;">';
             if (product.data_is_pre_release) {
                 _itemBadgesHtml += '<span class="vvp-badge-prerelease">Vorabversion</span>';
             }
@@ -2972,11 +2972,11 @@ function addStyleToTile(_currTile, _product) {
         _currTile.classList.add('ave-element-saved');
     } else {
         let _style = SETTINGS.CssProductDefault;
-        if(_product.isNew) {
+        if (_product.isNew) {
             _style = SETTINGS.CssProductNewTag;
             _currTile.classList.add('ave-element-new');
         }
-        if(_product.isFav) {
+        if (_product.isFav) {
             _style = SETTINGS.CssProductFavTag;
             _currTile.classList.add('ave-element-fav');
         }
@@ -2992,8 +2992,12 @@ function addStyleToTile(_currTile, _product) {
         if (!_elem) return;
 
         insertHtmlElementAfter(_elem, createTaxInfoElement(_product));
-    }, _currTile)
+    }, _currTile);
+    waitForHtmlElement('.vvp-item-badges', (_itemBadge) => {
+        if (!_itemBadge) return;
 
+        _itemBadge.style.marginTop = '20px';
+    }, _currTile);
 }
 
 async function requestProductDetails(prod) {
