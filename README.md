@@ -28,7 +28,7 @@ This script enhances the experience on the Amazon Vine website. However, it does
 
 ## Changelog Deburau
 
-##### [2025-11-19] - Version 0.11.29
+##### [2026-01-07] - Version 0.11.29
 *  Fix: waitForHtmlElement() now has a default timeout of 10 seconds to avoid all sorts of errors, mainly out of memory and styles not applied
 *  Next fix [deburau/AmazonVineExplorer#54](https://github.com/deburau/AmazonVineExplorer/issues/54)
 *  Handle case when product link is not present for prerelease products
