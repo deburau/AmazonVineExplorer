@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.29.1
+// @version      0.11.29.2
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2762,7 +2762,7 @@ function updateNewProductsBtn() {
             if (SETTINGS.UnseenItemsNotificationThreshold > 0 &&
                 _prodArrLength >= SETTINGS.UnseenItemsNotificationThreshold &&
                 _btnBadge.innerText < SETTINGS.UnseenItemsNotificationThreshold) {
-                gotifyNotification(`![](Amazon Vine Explorer has ${_prodArrLength} new products)`
+                gotifyNotification(`Amazon Vine Explorer has ${_prodArrLength} new products`
                 );
             }
 
