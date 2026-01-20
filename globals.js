@@ -238,6 +238,8 @@ SETTINGS_USERCONFIG_DEFINES.push({key: 'SearchBarInputDelay', type: 'number', mi
 SETTINGS_USERCONFIG_DEFINES.push({key: 'IdlePeriodAfterScan', type: 'number', min: 0, max: 1440, name: 'Idle period after a scan', description: 'Number of minutes to wait until next scan starts'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'HoursBeforeCleanup', type: 'number', min: 0, max: 168, name: 'Number of hours to wait before items get removed from the database', description: 'If an item was not seen this many hours during full background scans, it will be removed from the database. For a value of zero, the items will be removed as soon as they where not seen during a scan.'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'MaxItemsPerPage', type: 'number', min: 20, max: 1000, name: 'Maximum items per page', description: 'Maximum items that will show up one one page'});
+SETTINGS_USERCONFIG_DEFINES.push({key: 'UnseenItemsNotificationThreshold', type: 'number', min: 0, max: 1000, name: 'Number of unseen items to trigger a unseen items notification', description: 'If greater than zero, a notification is sent if the number of unseen item exeeds this number'});
+SETTINGS_USERCONFIG_DEFINES.push({key: 'NewItemsNotificationThreshold', type: 'number', min: 0, max: 1000, name: 'Number of new items to trigger a new items notification', description: 'If greater than zero, a notification is sent if a fast scan reveals more than this many items'});
 
 SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Colors and Styles', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorNewProducts', type: 'color', name: 'Button Color New Products', description: ''});
@@ -309,6 +311,8 @@ class SETTINGS_DEFAULT {
     PageLoadMinDelay = 750;
     DebugLevel = 0;
     MaxItemsPerPage = 500;
+    UnseenItemsNotificationThreshold = 0;
+    NewItemsNotificationThreshold = 0
     FetchRetryTime = 50;
     FetchRetryMaxTime = 5000;
     BackGroundScanDelayPerPage = 6000;

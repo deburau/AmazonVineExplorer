@@ -2759,6 +2759,13 @@ function updateNewProductsBtn() {
         if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Got Database Response: ${_prodArrLength} New Items`);
 
         if (_prodArrLength > 0) {
+            if (SETTINGS.UnseenItemsNotificationThreshold > 0 &&
+                _prodArrLength >= SETTINGS.UnseenItemsNotificationThreshold &&
+                _btnBadge.innerText < SETTINGS.UnseenItemsNotificationThreshold) {
+                gotifyNotification(`![](Amazon Vine Explorer has ${_prodArrLength} new products)`
+                );
+            }
+
             _btnBadge.style.display = 'inline-block';
             _btnBadge.innerText = _prodArrLength;
             document.title = `${_prodArrLength} | ${_pageTitle}`;
@@ -2816,45 +2823,15 @@ function updateNewProductsBtn() {
                             });
                         }
                         if (SETTINGS.GotifyUrl) {
-                            const url = SETTINGS.GotifyUrl + 'message?token=' + SETTINGS.GotifyToken;
-                            const bodyFormData =  _prod.link ? {
-                                title: `Amazon Vine Explorer - ${AVE_VERSION}`,
-                                message: `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \nMatched key: ${_currKey}`,
-                                priority: 5,
-                                extras: {
-                                    'client::display': {
-                                        "contentType": "text/markdown"
-                                    },
-                                    'client::notification': {
-                                        click: { url: window.location.origin + _prod.link },
-                                        bigImageUrl: fixProductImageUrl(_prod.data_img_url)
-                                    }
-                                }
-                            } : {
-                                title: `Amazon Vine Explorer - ${AVE_VERSION}`,
-                                message: `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \nMatched key: ${_currKey}`,
-                                priority: 5,
-                                extras: {
-                                    'client::display': {
-                                        "contentType": "text/markdown"
-                                    }
-                                }
-                            };
-                            console.log('bodyFormData:', JSON.stringify(bodyFormData));
-                            GM.xmlHttpRequest({
-                                method: 'POST',
-                                url: url,
-                                data: JSON.stringify(bodyFormData),
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                onload: function (response) {
-                                    console.log('Response:', response.responseText);
-                                },
-                                onerror: function (err) {
-                                    console.error('Error:', err);
-                                }
-                            });
+                            if (_prod.link) {
+                                gotifyNotification(
+                                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \nMatched key: ${_currKey}`,
+                                    _prod);
+                            } else {
+                                gotifyNotification(
+                                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \nMatched key: ${_currKey}`
+                                );
+                            }
                         }
                         _notifyed = true;
                         _prod.isNotified = true;
@@ -2908,6 +2885,48 @@ function desktopNotifikation(title, message, image = null, requireInteraction = 
             }
         });
     }
+}
+
+function gotifyNotification(message, prod = null) {
+    const url = SETTINGS.GotifyUrl + 'message?token=' + SETTINGS.GotifyToken;
+    const bodyFormData = prod ? {
+        title: `Amazon Vine Explorer - ${AVE_VERSION}`,
+        message: message,
+        priority: 5,
+        extras: {
+            'client::display': {
+                "contentType": "text/markdown"
+            },
+            'client::notification': {
+                click: { url: window.location.origin + prod.link },
+                bigImageUrl: fixProductImageUrl(prod.data_img_url)
+            }
+        }
+    } : {
+        title: `Amazon Vine Explorer - ${AVE_VERSION}`,
+        message: message,
+        priority: 5,
+        extras: {
+            'client::display': {
+                "contentType": "text/markdown"
+            }
+        }
+    };
+    console.log('bodyFormData:', JSON.stringify(bodyFormData));
+    GM.xmlHttpRequest({
+        method: 'POST',
+        url: url,
+        data: JSON.stringify(bodyFormData),
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        onload: function (response) {
+            console.log('Response:', response.responseText);
+        },
+        onerror: function (err) {
+            console.error('Error:', err);
+        }
+    });
 }
 
 function getContrastColor(hexColor) {

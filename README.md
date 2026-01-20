@@ -42,6 +42,9 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-01-20] - Version 0.11.30
+*  New setting to trigger a unseen items notification if the number of unseen items exeeds the configured number
+
 ##### [2026-01-07] - Version 0.11.29
 *  Fix: waitForHtmlElement() now has a default timeout of 10 seconds to avoid all sorts of errors, mainly out of memory and styles not applied
 *  Next fix [deburau/AmazonVineExplorer#54](https://github.com/deburau/AmazonVineExplorer/issues/54)
