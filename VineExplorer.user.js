@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.29.3
+// @version      0.11.29.4
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2550,7 +2550,7 @@ function initBackgroundScan() {
                             let _fastTimeIntervalSec = (SETTINGS.BackGroundScanDelayPerPage + SETTINGS.BackGroundScannerRandomness / 2) * 15 / 1000;
                             if (_fastTimeIntervalSec < 30) _fastTimeIntervalSec = 30
 
-                            if (_lastDropSec < _fastTimeIntervalSec * 10) {
+                            if (_lastDropSec > _fastTimeIntervalSec * 10) {
                                 localStorage.setItem('AVE_LAST_DROP', Date.now());
 
                                 if (SETTINGS.GotifyUrl) {
