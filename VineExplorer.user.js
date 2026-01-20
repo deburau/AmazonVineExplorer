@@ -2762,8 +2762,12 @@ function updateNewProductsBtn() {
             if (SETTINGS.UnseenItemsNotificationThreshold > 0 &&
                 _prodArrLength >= SETTINGS.UnseenItemsNotificationThreshold &&
                 _btnBadge.innerText < SETTINGS.UnseenItemsNotificationThreshold) {
-                gotifyNotification(`Amazon Vine Explorer has ${_prodArrLength} new products`
-                );
+                if (SETTINGS.GotifyUrl) {
+                    gotifyNotification(`Amazon Vine Explorer has ${_prodArrLength} new products`);
+                }
+                if (SETTINGS.EnableDesktopNotifikation) {
+                    desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `Amazon Vine Explorer has ${_prodArrLength} new products`);
+                }
             }
 
             _btnBadge.style.display = 'inline-block';
