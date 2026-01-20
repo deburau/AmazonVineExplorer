@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.29.2
+// @version      0.11.29.3
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2366,6 +2366,7 @@ function initBackgroundScan() {
                         localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_STAGE', localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE'));
                         localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', 0);
                         localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', 0);
+                        localStorage.setItem('AVE_NEW_COUNT', 0);
                     } else {
                         localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
                     }
@@ -2540,6 +2541,28 @@ function initBackgroundScan() {
                         const _lastBackGroundScanStage = localStorage.getItem('AVE_LAST_BACKGROUND_SCAN_STAGE') || 0;
                         const _lastScanPageCurrent = localStorage.getItem('AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT') || 0;
                         const _scanPageCurrent = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT') || 0;
+                        const _newCount = (newCount || 0) + (localStorage.getItem('AVE_NEW_COUNT') || 0);
+                        localStorage.setItem('AVE_NEW_COUNT', _newCount);
+
+                        if (SETTINGS.NewItemsNotificationThreshold > 0 && _newCount >= SETTINGS.NewItemsNotificationThreshold) {
+                            let _lastDropMS = Date.now() - (localStorage.getItem('AVE_LAST_DROP') || 0);
+                            let _lastDropSec = _lastDropMS / 1000;
+                            let _fastTimeIntervalSec = (SETTINGS.BackGroundScanDelayPerPage + SETTINGS.BackGroundScannerRandomness / 2) * 15 / 1000;
+                            if (_fastTimeIntervalSec < 30) _fastTimeIntervalSec = 30
+
+                            if (_lastDropSec < _fastTimeIntervalSec * 10) {
+                                localStorage.setItem('AVE_LAST_DROP', Date.now());
+
+                                if (SETTINGS.GotifyUrl) {
+                                    gotifyNotification(`Possible new product drop starting, Amazon Vine Explorer has ${_newCount} new products`);
+                                }
+
+                                if (SETTINGS.EnableDesktopNotifikation) {
+                                    desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `Possible new product drop starting, Amazon Vine Explorer has ${_newCount} new products`);
+                                }
+                            }
+                        }
+
                         if (_backGroundScanStage > 1) {
                             _stopFastScan = true;
                         }
