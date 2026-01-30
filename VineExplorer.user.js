@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.30
+// @version      0.11.30.1
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1772,6 +1772,10 @@ function createSettingsMenuElement(dat){
         _elem.appendChild(_elem_spacer_horizontal);
         _elem.appendChild(_elem_spacer_title);
     } else if (dat.type == 'keywords') {
+        if (SETTINGS[dat.key].length > 0) {
+            SETTINGS[dat.key].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        }
+
         _elem.classList.remove('ave-settings-item');
         _elem.classList.add('ave-keyword-wrapper');
         _elem.innerHTML = `<h4>${dat.name}</h4>`;
