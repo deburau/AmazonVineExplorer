@@ -240,6 +240,7 @@ SETTINGS_USERCONFIG_DEFINES.push({key: 'HoursBeforeCleanup', type: 'number', min
 SETTINGS_USERCONFIG_DEFINES.push({key: 'MaxItemsPerPage', type: 'number', min: 20, max: 1000, name: 'Maximum items per page', description: 'Maximum items that will show up one one page'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'UnseenItemsNotificationThreshold', type: 'number', min: 0, max: 1000, name: 'Number of unseen items to trigger a unseen items notification', description: 'If greater than zero, a notification is sent if the number of unseen item exeeds this number'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'NewItemsNotificationThreshold', type: 'number', min: 0, max: 1000, name: 'Number of new items to trigger a possible drop starting notification', description: 'If greater than zero, a notification is sent if a fast scan reveals more than this many items'});
+SETTINGS_USERCONFIG_DEFINES.push({key: 'NewItemsNotificationRepititionMinutes', type: 'number', min: 0, max: 1440, name: 'Number of new minutes to wait before a new possible drop starting notification', description: 'Number of minues to wait before another possible drop notification is sent'});
 
 SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Colors and Styles', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorNewProducts', type: 'color', name: 'Button Color New Products', description: ''});
@@ -312,7 +313,8 @@ class SETTINGS_DEFAULT {
     DebugLevel = 0;
     MaxItemsPerPage = 500;
     UnseenItemsNotificationThreshold = 0;
-    NewItemsNotificationThreshold = 0
+    NewItemsNotificationThreshold = 0;
+    NewItemsNotificationRepititionMinutes = 30;
     FetchRetryTime = 50;
     FetchRetryMaxTime = 5000;
     BackGroundScanDelayPerPage = 6000;

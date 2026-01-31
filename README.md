@@ -44,6 +44,7 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ##### [2026-01-31] - Version 0.11.31
 *  Desktop Notification Highlight Keywords are sorted
+*  Time to wait between possible new drop starting notification is configurable
 
 ##### [2026-01-21] - Version 0.11.30
 *  New setting to trigger a unseen items notification if the number of unseen items exeeds the configured number.
