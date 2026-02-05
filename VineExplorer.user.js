@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.30.3
+// @version      0.11.30.4
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2787,11 +2787,27 @@ function updateNewProductsBtn() {
             if (SETTINGS.UnseenItemsNotificationThreshold > 0 &&
                 _prodArrLength >= SETTINGS.UnseenItemsNotificationThreshold &&
                 _btnBadge.innerText < SETTINGS.UnseenItemsNotificationThreshold) {
-                if (SETTINGS.GotifyUrl) {
-                    gotifyNotification(`Amazon Vine Explorer has ${_prodArrLength} new products`);
+
+                let _shouldNotify = true;
+
+                if (SETTINGS.UnseenItemsNotificationRepitionMinutes > 0) {
+                    let _lastUnseenMS = Date.now() - (localStorage.getItem('AVE_LAST_UNSEEN_NOTIFICATION') || 0);
+                    let _lastUnseenMinutes = _lastUnseenMS / 1000 / 60;
+
+                    if (_lastUnseenMinutes < SETTINGS.UnseenItemsNotificationRepitionMinutes) {
+                        _shouldNotify = false;
+                    }
                 }
-                if (SETTINGS.EnableDesktopNotifikation) {
-                    desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `Amazon Vine Explorer has ${_prodArrLength} new products`);
+
+                if (_shouldNotify) {
+                    localStorage.setItem('AVE_LAST_UNSEEN_NOTIFICATION', Date.now());
+
+                    if (SETTINGS.GotifyUrl) {
+                        gotifyNotification(`Amazon Vine Explorer has ${_prodArrLength} new products`);
+                    }
+                    if (SETTINGS.EnableDesktopNotifikation) {
+                        desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `Amazon Vine Explorer has ${_prodArrLength} new products`);
+                    }
                 }
             }
 

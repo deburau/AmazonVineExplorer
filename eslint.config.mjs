@@ -48,10 +48,11 @@ export default [
         waitForHtmlElementPromise: 'readonly',
         findActiveMenuButton: 'readonly',
         delay: 'readonly',
-        fastStyleChanges: 'readonly',
+fastStyleChanges: 'readonly',
         generateSessionID: 'readonly',
         addBranding: 'readonly',
         saveAs: 'readonly',
+        UnseenItemsNotificationRepitionMinutes: 'readonly',
         // Browser built-ins not already in globals.browser should be here if needed
         // But the ones listed like localStorage, console, etc. are typically in globals.browser
         // Explicitly listing them again if not covered or for clarity:
