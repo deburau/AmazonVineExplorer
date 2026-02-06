@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.30.15
+// @version      0.11.30.16
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1326,10 +1326,11 @@ function addAVESettingsMenu(){
 
         if (localStorage.getItem('AVE_OPEN_SETTINGS_TAB') === '1') {
             localStorage.removeItem('AVE_OPEN_SETTINGS_TAB');
-            const _settingsTab = document.getElementById('vvp-ave-settings-tab');
-            if (_settingsTab) {
-                _settingsTab.click();
-            }
+            waitForHtmlElement('#vvp-ave-settings-tab', (_settingsTab) => {
+                if (_settingsTab) {
+                    _settingsTab.click();
+                }
+            });
         }
 
         _contentContainer.innerHTML = `
