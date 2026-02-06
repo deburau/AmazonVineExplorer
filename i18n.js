@@ -58,6 +58,10 @@ const I18N = {
 };
 
 function detectLanguage() {
+    if (!SETTINGS || typeof SETTINGS.UI_LANGUAGE === 'undefined') {
+        console.warn('SETTINGS not yet available, using fallback language: de');
+        return 'de';
+    }
     const userLang = SETTINGS.UI_LANGUAGE || 'de';
     if (userLang === 'de' || userLang === 'en') return userLang;
     return 'de';
