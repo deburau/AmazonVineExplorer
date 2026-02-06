@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.30.16
+// @version      0.11.30.17
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1271,6 +1271,21 @@ function updateAutoScanScreenText(text = '') {
     _elem.textContent = text;
 }
 
+function populateSettingsContainer() {
+    const _settingsContent = document.body.querySelector('[data-a-name="ave-settings"]');
+    if (!_settingsContent) return;
+    const _settingsContainer = _settingsContent.querySelector('#ave-settings-container');
+    if (!_settingsContainer) return;
+    if (_settingsContainer.getAttribute('data-ave-populated') === '1') return;
+
+    _settingsContainer.innerHTML = '';
+    for (const elem of SETTINGS_USERCONFIG_DEFINES) {
+        if (SETTINGS.DebugLevel > 1) console.log('Creating Settings Menu Element: ', elem);
+        _settingsContainer.appendChild(createSettingsMenuElement(elem));
+    }
+    _settingsContainer.setAttribute('data-ave-populated', '1');
+}
+
 function addAveSettingsTab(){
     waitForHtmlElement('.vvp-tab-set-container > ul', (_upperButtonsContainer) => {
         if (!_upperButtonsContainer) return;
@@ -1293,12 +1308,7 @@ function addAveSettingsTab(){
             const _settingsContent = document.body.querySelector('[data-a-name="ave-settings"]');
             _settingsContent.classList.remove('a-hidden');
 
-            const _settingsContainer = _settingsContent.querySelector('#ave-settings-container');
-            if (SETTINGS.DebugLevel > 1) console.log(_settingsContainer);
-            for (const elem of SETTINGS_USERCONFIG_DEFINES) {
-                if (SETTINGS.DebugLevel > 1) console.log('Creating Settings Menu Element: ', elem);
-                _settingsContainer.appendChild(createSettingsMenuElement(elem));
-            }
+            populateSettingsContainer();
 
         });
 
@@ -1580,6 +1590,10 @@ font-weight: bold;
 
 </div>
     `;
+
+        waitForHtmlElement('#ave-settings-container', () => {
+            populateSettingsContainer();
+        }, _contentContainer);
     })
 }
 
