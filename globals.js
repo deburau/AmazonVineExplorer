@@ -26,6 +26,10 @@ const DATABASE_NAME = 'VineVoiceExplorer';
 const DATABASE_OBJECT_STORE_NAME = `${DATABASE_NAME}_Objects`;
 const DATABASE_VERSION = 4;
 
+// Make some things accessible from console
+unsafeWindow.ave = {};
+const ave_eventhandler = new AVE_EVENTHANDLER();
+
 class AVE_EVENTHANDLER {
 
     /**
