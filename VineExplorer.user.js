@@ -26,6 +26,7 @@
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @require      globals.js
+// @require      i18n.js
 // @require      class_db_handler.js
 // @require      class_product.js
 // @require      vine_fetch.js
@@ -43,6 +44,8 @@ let currentMainPage;
 
 loadSettings();
 fastStyleChanges();
+
+let AVE_UI_LANG = LANG;
 
 let searchInputTimeout;
 let backGroundScanTimeout;
@@ -91,7 +94,7 @@ let aveShareData = localStorage.getItem('ave-share-details');
                 <span class="a-button a-button-primary vvp-details-btn" id="a-autoid-0">
                 <span class="a-button-inner">
                 <input data-asin="${_data.asin}" data-is-parent-asin="${_data.isParentAsin}" data-is-pre-release="${_data.data_is_pre_release ?? false}" data-recommendation-id="${_data.recommendationId}" data-recommendation-type="VENDOR_TARGETED" class="a-butt[...]
-                <span class="a-button-text" aria-hidden="true" id="a-autoid-0-announce">Weitere Details
+                <span class="a-button-text" aria-hidden="true" id="a-autoid-0-announce">${t('buttons.moreDetails')}
                 </span>
                 </span>
                 </span>
@@ -462,7 +465,7 @@ function addLeftSideButtons(forceClean) {
 
     _div.appendChild(document.createElement('p')); // A bit of Space above our Buttons
 
-    const _setAllSeenBtn = createButton('Seite als gesehen markieren','ave-btn-allseen',  `width: 240px; background-color: ${SETTINGS.BtnColorMarkCurrSiteAsSeen};`, () => {
+    const _setAllSeenBtn = createButton(t('buttons.markPageAsSeen'),'ave-btn-allseen',  `width: 240px; background-color: ${SETTINGS.BtnColorMarkCurrSiteAsSeen};`, () => {
 
         if (SETTINGS.DebugLevel > 10) console.log('Clicked All Seen Button');
         markAllCurrentSiteProductsAsSeen();
@@ -471,7 +474,7 @@ function addLeftSideButtons(forceClean) {
     _div.appendChild(_setAllSeenBtn);
 
     if(SETTINGS.EnableBtnMarkAllAsSeen) {
-        const _setAllSeenDBBtn = createButton('Alle als gesehen markieren','ave-btn-db-allseen', `left: 0; width: 240px; background-color: ${SETTINGS.BtnColorMarkAllAsSeen};`, () => {
+        const _setAllSeenDBBtn = createButton(t('buttons.markAllAsSeen'),'ave-btn-db-allseen', `left: 0; width: 240px; background-color: ${SETTINGS.BtnColorMarkAllAsSeen};`, () => {
 
             if (SETTINGS.DebugLevel > 10) console.log('Clicked All Seen Button');
             setTimeout(() => {
@@ -490,7 +493,7 @@ function addLeftSideButtons(forceClean) {
         _div.appendChild(_setAllSeenDBBtn);
     }
 
-    const _backToTopBtn = createButton('Zum Seitenanfang','ave-btn-backtotop',  `width: 240px; background-color: ${SETTINGS.BtnColorBackToTop};`, () => {
+    const _backToTopBtn = createButton(t('buttons.backToTop'),'ave-btn-backtotop',  `width: 240px; background-color: ${SETTINGS.BtnColorBackToTop};`, () => {
 
         if (SETTINGS.DebugLevel > 10) console.log('Clicked back to Top Button');
         window.scrollTo(0, 0);
@@ -555,7 +558,7 @@ function createButton(text, id, style, clickHandler){
         if (clickHandler) {
             clickHandler(ev);
         } else {
-            alert('\r\nHier gibt es nix zu sehen.\r\nZumindest noch nicht :P');
+            alert(t('notifications.nothingToSee'));
         }
     });
     return _btnSpan;
@@ -582,14 +585,14 @@ async function createTileFromProduct(product, btnID, cb) {
                 ${_spanTruncateHtml}
             </a>
         ` : _spanTruncateHtml;
-        var _itemBadgesHtml = '';
+var _itemBadgesHtml = '';
         if (product.data_is_pre_release || product.data_is_featured) {
             _itemBadgesHtml += '<div class="vvp-item-badges" style="margin-top: 20px;">';
             if (product.data_is_pre_release) {
-                _itemBadgesHtml += '<span class="vvp-badge-prerelease">Vorabversion</span>';
+                _itemBadgesHtml += `<span class="vvp-badge-prerelease">${t('badges.preRelease')}</span>`;
             }
             if (product.data_is_featured) {
-                _itemBadgesHtml += '<span class="vvp-badge-featured">Empfohlen</span>';
+                _itemBadgesHtml += `<span class="vvp-badge-featured">${t('badges.featured')}</span>`;
             }
             _itemBadgesHtml += '</div>';
         }
@@ -603,7 +606,7 @@ async function createTileFromProduct(product, btnID, cb) {
                 <span class="a-button a-button-primary vvp-details-btn" id="a-autoid-${_btnAutoID}">
                     <span class="a-button-inner">
                         <input data-asin="${product.data_asin}" data-is-parent-asin="${product.data_asin_is_parent}" data-is-pre-release="${product.data_is_pre_release ?? false}" data-recommendation-id="${product.data_recommendation_id}" data-recommendation-type="${product.data_recommendation_type}" class="a-button-input" type="submit" aria-labelledby="a-autoid-${_btnAutoID}-announce">
-                        <span class="a-button-text" aria-hidden="true" id="a-autoid-${_btnAutoID}-announce">Weitere Details</span>
+                        <span class="a-button-text" aria-hidden="true" id="a-autoid-${_btnAutoID}-announce">${t('buttons.moreDetails')}</span>
                     </span>
                 </span>
             </div>
@@ -728,18 +731,18 @@ const urlParams = new URLSearchParams(window.location.search);
         if(pageParam == null){pageParam = 1}
         let page = ""
 
-        switch(queueParam){
+switch(queueParam){
             case PAGETYPE.OROGINAL_POTLUCK:
-                queueParam = "Mein FSE"
-                page = `Seite: ${pageParam}`
+                queueParam = t('share.myFSE')
+                page = `${t('share.page')} ${pageParam}`
                 break;
             case PAGETYPE.ORIGINAL_LAST_CHANCE:
-                queueParam = "Verfügbar für Alle"
-                page = `Seite: ${pageParam}`
+                queueParam = t('share.availableAll')
+                page = `${t('share.page')} ${pageParam}`
                 break;
             case PAGETYPE.ORIGINAL_SELLER:
-                queueParam = "Zusätzliche Artikel"
-                page = `Seite: ${pageParam}`
+                queueParam = t('share.additional')
+                page = `${t('share.page')} ${pageParam}`
                 break;
             default:
                 queueParam = ""
@@ -773,10 +776,10 @@ const inputRect = event.target.getBoundingClientRect();
         avePopup.style.opacity = '0';
         avePopup.style.transition = "opacity 0.2s ease-in-out";
 
-        navigator.clipboard.writeText(shareText).then(() => {
-            avePopup.innerText = "Text wurde in die Zwischenablage kopiert."
+navigator.clipboard.writeText(shareText).then(() => {
+            avePopup.innerText = t('notifications.copySuccess');
         }).catch(err => {
-            avePopup.innerText = `Fehler beim Kopieren in die Zwischenablage: ${err}`
+            avePopup.innerText = `${t('notifications.copyError')}${err}`;
         });
 
         document.body.appendChild(avePopup);
@@ -1276,7 +1279,7 @@ function addAveSettingsTab(){
         _upperSettingsButton.id = 'vvp-ave-settings-tab';
         _upperSettingsButton.classList = 'a-tab-heading';
         _upperSettingsButton.role = 'presentation';
-        _upperSettingsButton.innerHTML += `<a role="tab" aria-selected="false" tabindex="-1">AVE Einstellungen</a>`;
+        _upperSettingsButton.innerHTML += `<a role="tab" aria-selected="false" tabindex="-1">${t('buttons.settingsTab')}</a>`;
 
         _upperSettingsButton.addEventListener('click',function(){
             const _upperButtons = document.body.querySelectorAll('.a-tab-container.vvp-tab-set-container > ul > li');
@@ -1562,7 +1565,7 @@ font-weight: bold;
 }
     </style>
 
-    <div id="ave-settings-header" style="margin-bottom: 10px"><h3>Einstellungen ${AVE_TITLE} - Version ${AVE_VERSION}</h3></div>
+    <div id="ave-settings-header" style="margin-bottom: 10px"><h3>${t('settings.header', AVE_TITLE, AVE_VERSION)}</h3></div>
     <div id="ave-settings-container" class="ave-settings-container">
 
 

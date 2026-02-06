@@ -3,10 +3,15 @@ import pluginJs from "@eslint/js";
 
 
 export default [
+{
+    files: ["VineExplorer.user.js", "class_db_handler.js", "vine_fetch.js", "class_product.js", "i18n.js"],
+    rules: {
+      'no-redeclare': 'off'
+    }
+  },
   {
-    files: ["globals.js"],
+    files: ["vine_fetch.js"],
     languageOptions: {
-      sourceType: "commonjs",
       globals: {
         ...globals.browser,
         GM_info: 'readonly',
@@ -98,62 +103,10 @@ export default [
         ave: 'readonly',
         getCountry: 'readonly',
         vineFetch: 'readonly',
-        database: 'readonly',
-      },
-      ecmaVersion: "latest"
-    },
-    rules: {
-      'no-unused-vars': ['error', {
-        varsIgnorePattern: '^(SECONDS_PER_DAY|SECONDS_PER_WEEK|INIT_AUTO_SCAN|AUTO_SCAN_|PAGE_LOAD_TIMESTAMP|database|DATABASE_|loadSettings|saveSettings|unixTimeStamp|toUnixTimestamp|toTimestamp|delay|fastStyleChanges|timeoutId|_c)',
-        argsIgnorePattern: '^(_.*|unused|event|cb|timeout|mutations|reject|c)',
-      }],
-      'no-redeclare': 'off',
-    }
-  },
-  {
-    files: ["VineExplorer.user.js", "class_db_handler.js", "vine_fetch.js", "class_product.js"],
-    languageOptions: {
-    sourceType: "commonjs",
-      globals: {
-        ...globals.browser,
-        AVE_IS_THIS_SESSION_MASTER: 'writable',
-        DB_HANDLER: 'writable',
-        SETTINGS: 'writable',
-        AVE_VERSION: 'readonly',
-        AVE_TITLE: 'readonly',
-        SECONDS_PER_DAY: 'readonly',
-        SECONDS_PER_WEEK: 'readonly',
-        SITE_IS_VINE: 'readonly',
-        SITE_IS_SHOPPING: 'readonly',
-        AVE_SESSION_ID: 'readonly',
-        INIT_AUTO_SCAN: 'readonly',
-        AUTO_SCAN_IS_RUNNING: 'readonly',
-        AUTO_SCAN_PAGE_CURRENT: 'readonly',
-        AUTO_SCAN_PAGE_MAX: 'readonly',
-        PAGE_LOAD_TIMESTAMP: 'readonly',
-        DATABASE_NAME: 'readonly',
-        DATABASE_OBJECT_STORE_NAME: 'readonly',
-        DATABASE_VERSION: 'readonly',
-        Product: 'readonly',
-        SETTINGS_USERCONFIG_DEFINES: 'readonly',
-        SETTINGS_DEFAULT: 'readonly',
-        GM_info: 'readonly',
-        GM_getValue: 'readonly',
-        GM_setValue: 'readonly',
-        GM: 'readonly',
-        "GM.getValue": 'readonly',
-        "GM.setValue": 'readonly',
-        "GM.xmlHttpRequest": 'readonly',
-        unsafeWindow: 'readonly',
-        ave_eventhandler: 'readonly',
-        loadSettings: 'readonly',
-        saveSettings: 'readonly',
-        unixTimeStamp: 'readonly',
-        toUnixTimestamp: 'readonly',
-        toTimestamp: 'readonly',
-        waitForHtmlElement: 'readonly',
-        waitForHtmlElementPromise: 'readonly',
-        findActiveMenuButton: 'readonly',
+database: 'readonly',
+        AVE_UI_LANG: 'readonly',
+        LANG: 'readonly',
+        t: 'readonly',
         delay: 'readonly',
         fastStyleChanges: 'readonly',
         generateSessionID: 'readonly',
@@ -260,14 +213,20 @@ export default [
         vineFetch: 'readonly',
         database: 'readonly',
       },
-      ecmaVersion: "latest"
+ecmaVersion: "latest"
     },
     rules: {
       'no-unused-vars': ['error', {
         varsIgnorePattern: '^(exportDatabase$|_parseStartTime|vineFetch|DB_HANDLER)',
-        argsIgnorePattern: '^(_.*|unused|event|cb|timeout|elm|ev|reject|ret|_href)',
+        argsIgnorePattern: '^(_.*|unused|event|cb|timeout|elm|ev|reject|ret|_href|elm|ev|reject|ret)',
+        args: 'none',
       }],
+      'no-redeclare': 'off',
     }
+  },
+  {
+    files: ["i18n.js"],
+    rules: ['off']
   },
   pluginJs.configs.recommended
 ];

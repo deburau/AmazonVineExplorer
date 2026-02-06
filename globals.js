@@ -229,6 +229,7 @@ SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableBtnPotLuck', type: 'bool', name: 
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableBtnLastChance', type: 'bool', name: 'Disable Button Last Chance', description: 'Disables the Section Button Last Chance(VFA)'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableBtnSeller', type: 'bool', name: 'Disable Button Seller', description: 'Disables the Section Button Seller(ZA)'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableTopLogoChange', type: 'bool', name: 'Enable Top Logo Change', description: 'Enables the Change of the top logo to our AVE Logo'});
+SETTINGS_USERCONFIG_DEFINES.push({key: 'UI_LANGUAGE', type: 'select', options: ['de', 'en'], name: 'UI Language', description: 'Choose your preferred language for the UI'});
 
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableBtnAll', type: 'bool', name: 'Enable Button All Products', description: 'Enable &quot;All Products&quot; Button'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnablePaginationTop', type: 'bool', name: 'Enable Pagination on top', description: 'Enable Pagination to be displayed on top for ZA page' });
@@ -308,10 +309,11 @@ class SETTINGS_DEFAULT {
     EnableDesktopNotifikation = false;
     EnableAutoMarkFavorite = false;
     EnableCleanupFavorites = false;
-    EnableBtnAll = true;
+EnableBtnAll = true;
     EnablePaginationTop = true;
     EnableBtnMarkAllAsSeen = true;
     ShowFirstSeen = false;
+    UI_LANGUAGE = 'de';
 
     BtnColorFavorites = '#ffe143';
     BtnColorFavoritesBadge = '#ff4343';
