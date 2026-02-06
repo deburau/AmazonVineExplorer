@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.30.12
+// @version      0.11.30.13
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1567,7 +1567,7 @@ font-weight: bold;
 }
     </style>
 
-    <div id="ave-settings-header" style="margin-bottom: 10px"><h3>${translate('settings.header', (title, version) => `Einstellungen ${title} - Version ${version}`, AVE_TITLE, AVE_VERSION)}</h3></div>
+    <div id="ave-settings-header" style="margin-bottom: 10px"><h3>${typeof t === 'function' ? t('settings', 'header', AVE_TITLE, AVE_VERSION) : `Einstellungen ${AVE_TITLE} - Version ${AVE_VERSION}`}</h3></div>
     <div id="ave-settings-container" class="ave-settings-container">
 
 
@@ -1793,6 +1793,9 @@ _elem_item_left_input.addEventListener('change', (event) => {
             console.log('This is a Select Input', event);
             SETTINGS[dat.key] = event.target.value;
             SETTINGS.save();
+            if (dat.key === 'UI_LANGUAGE') {
+                window.location.reload();
+            }
         })
         _elem_item_left.appendChild(_elem_item_left_input);
         _elem.appendChild(_elem_item_left);

@@ -59,7 +59,6 @@ const I18N = {
 
 function detectLanguage() {
     if (!SETTINGS || typeof SETTINGS.UI_LANGUAGE === 'undefined') {
-        console.warn('SETTINGS not yet available, using fallback language: de');
         return 'de';
     }
     const userLang = SETTINGS.UI_LANGUAGE || 'de';
@@ -67,14 +66,13 @@ function detectLanguage() {
     return 'de';
 }
 
-const LANG = detectLanguage();
-
 function t(category, key, ...args) {
-    if (!I18N[LANG] || !I18N[LANG][category]) {
+    const lang = detectLanguage();
+    if (!I18N[lang] || !I18N[lang][category]) {
         console.warn(`Translation missing for category: ${category}`);
         return key || '';
     }
-    const message = I18N[LANG][category][key];
+    const message = I18N[lang][category][key];
     if (!message) {
         console.warn(`Translation missing for key: ${category}.${key}`);
         return key || '';
