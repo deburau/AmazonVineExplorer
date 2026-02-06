@@ -48,6 +48,7 @@ Do not try to install it using copy and paste, as the requirements then could no
 *  Time to wait between unseen items notification is configurable
 *  Time to wait between possible new drop starting notification is configurable
 *  Removed unused code
+*  Fixed critical bugs and reduced ESLint errors from 53 to 29
 
 ##### [2026-01-21] - Version 0.11.30
 *  New setting to trigger a unseen items notification if the number of unseen items exeeds the configured number.
