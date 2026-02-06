@@ -1769,6 +1769,40 @@ _elem_item_left_input.addEventListener('change', (event) => {
 
         _elem.appendChild(_elem_item_right);
 
+    } else if (dat.type == 'select') {
+        // Select dropdown for multiple options
+        const _elem_item_left = document.createElement('div');
+        _elem_item_left.classList.add('ave-item-left');
+        const _elem_item_left_input = document.createElement('select');
+        _elem_item_left_input.className = 'ave-input-number';
+        _elem_item_left_input.style.width = '300px';
+        _elem_item_left_input.style.height = '21px';
+        _elem_item_left_input.setAttribute('ave-data-key', dat.key);
+
+        if (dat.options && Array.isArray(dat.options)) {
+            dat.options.forEach((opt) => {
+                const _option = document.createElement('option');
+                _option.value = opt;
+                _option.textContent = opt;
+                _option.selected = opt === SETTINGS[dat.key];
+                _elem_item_left_input.appendChild(_option);
+            });
+        }
+
+        _elem_item_left_input.addEventListener('change', (event) => {
+            console.log('This is a Select Input', event);
+            SETTINGS[dat.key] = event.target.value;
+            SETTINGS.save();
+        })
+        _elem_item_left.appendChild(_elem_item_left_input);
+        _elem.appendChild(_elem_item_left);
+
+        const _elem_item_right = document.createElement('div');
+        _elem_item_right.classList.add('ave-item-right');
+        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${(dat.description && dat.description != '') ? dat.description : dat.name}">${dat.name}</label>`;
+
+        _elem.appendChild(_elem_item_right);
+
     } else if (dat.type == 'title'){
         const _elem_spacer_horizontal = document.createElement('hr');
         _elem_spacer_horizontal.style.width = '100%';
@@ -1843,7 +1877,7 @@ _elem_item_left_input.addEventListener('change', (event) => {
     return _elem;
 }
 
-function createSettingsKeywordsTableElement(dat, index, entry){
+function componentToHex(c) {
     const _tableRow = document.createElement('tr');
     _tableRow.setAttribute('index', index);
     const _tableRow_td1 = document.createElement('td');
