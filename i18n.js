@@ -22,7 +22,7 @@ const I18N = {
             myFSE: 'Mein FSE',
             availableAll: 'Verfügbar für Alle',
             additional: 'Zusätzliche Artikel',
-            page: 'Seite',
+            page: 'Seite:',
         },
         settings: {
             header: (title, version) => `Einstellungen ${title} - Version ${version}`
@@ -49,7 +49,7 @@ const I18N = {
             myFSE: 'My FSE',
             availableAll: 'Available for All',
             additional: 'Additional Items',
-            page: 'Page',
+            page: 'Page:',
         },
         settings: {
             header: (title, version) => `Settings ${title} - Version ${version}`
