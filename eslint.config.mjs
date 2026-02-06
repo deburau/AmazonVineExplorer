@@ -151,6 +151,12 @@ waitForHtmlElement: 'readonly',
 requestProductDetails: 'readonly',
         init: 'readonly',
         sort_by_key: 'readonly',
+        ave: 'readonly',
+        getCountry: 'readonly',
+        vineFetch: 'readonly',
+        database: 'readonly',
+        delay: 'readonly',
+        fastStyleChanges: 'readonly',
       }
     }
   },

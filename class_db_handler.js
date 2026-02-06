@@ -131,7 +131,7 @@ class DB_HANDLER {
                 }
             }
         };
-        _request.onerror = (event) => { cb([]); throw new Error(`DB_HANDLER.#checkForDuplicatedAsin: ${event.target.error.name}`); };
+        _request.onerror = (event) => { throw new Error(`DB_HANDLER.#checkForDuplicatedAsin: ${event.target.error.name}`); };
     };
 
     /**

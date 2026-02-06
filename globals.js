@@ -4,8 +4,6 @@ if (window.top != window.self) return; //don't run on frames or iframes
 // Constants Needed for some things
 const AVE_VERSION = (GM_info?.script?.version)
 const AVE_TITLE = (GM_info?.script?.name);
-const SECONDS_PER_DAY = 86400;
-const SECONDS_PER_WEEK = 604800;
 const SITE_IS_VINE = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/vine\//.test(window.location.href);
 const SITE_IS_SHOPPING = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/(?!vine)(?!gp\/video)(?!music)/.test(window.location.href);
 const AVE_SESSION_ID = generateSessionID();
@@ -15,16 +13,11 @@ const AVE_SESSION_ID = generateSessionID();
  */
 let AVE_IS_THIS_SESSION_MASTER = false;
 
-// Obsolete sobald der Backgroundscan läuft
-const INIT_AUTO_SCAN = (localStorage.getItem('AVE_INIT_AUTO_SCAN') == 'true') ? true : false;
-const AUTO_SCAN_IS_RUNNING = (localStorage.getItem('AVE_AUTO_SCAN_IS_RUNNING') == 'true') ? true : false;
-const AUTO_SCAN_PAGE_CURRENT = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_CURRENT')) || -1
-const AUTO_SCAN_PAGE_MAX = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_MAX')) || -1
-const PAGE_LOAD_TIMESTAMP = Date.now();
-
 // Obsolete sobald die Datenbank über Tampermonkey läuft
 const DATABASE_NAME = 'VineVoiceExplorer';
+// eslint-disable-next-line no-unused-vars
 const DATABASE_OBJECT_STORE_NAME = `${DATABASE_NAME}_Objects`;
+// eslint-disable-next-line no-unused-vars
 const DATABASE_VERSION = 4;
 
 // Make some things accessable from console
@@ -143,8 +136,14 @@ unsafeWindow.ave.addBranding = addBranding;
 setTimeout(() => {
     if (!localStorage.getItem('AVE_SESSIONS')) {
         localStorage.setItem("AVE_SESSIONS", JSON.stringify([{id: AVE_SESSION_ID, ts: Date.now()}]));
-    } else {
-        const _sessions = JSON.parse(localStorage.AVE_SESSIONS);
+} else {
+        let _sessions;
+        try {
+            _sessions = JSON.parse(localStorage.AVE_SESSIONS);
+        } catch (error) {
+            console.error('Error parsing sessions:', error);
+            _sessions = [];
+        }
         let _isMasterInstance = SITE_IS_VINE;
         for (const _session of _sessions) {
             if (_session.master) _isMasterInstance = false;
@@ -156,7 +155,13 @@ setTimeout(() => {
     }
 
     setInterval(() => { //
-        const _sessions = JSON.parse(localStorage.getItem('AVE_SESSIONS', '[]'))
+        let _sessions;
+        try {
+            _sessions = JSON.parse(localStorage.getItem('AVE_SESSIONS', '[]'));
+        } catch (error) {
+            console.error('Error parsing sessions in interval:', error);
+            _sessions = [];
+        }
         let _noValidMaster = false;
         let _ownIndex = -1;
         for (let i = 0; i < _sessions.length; i++) {
@@ -265,10 +270,19 @@ SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableSuggestionsShopping', type: 'bool
 SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Settings for Developers and Testers', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DebugLevel', type: 'number', min: 0, max: 15, name: 'Debuglevel', description: ''});
 
-SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'RESET SETTINGS TO DEFAULT', bgColor: 'rgb(255,128,0)', description: 'It does what it says', btnClick: () => {SETTINGS.reset(); window.location.href = window.location.href} });
+SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'RESET SETTINGS TO DEFAULT', bgColor: 'rgb(255,128,0)', description: 'It does what it says', btnClick: () => {
+    SETTINGS.reset();
+    /* eslint-disable-next-line no-self-assign */
+    window.location.href = window.location.href;
+}});
 SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DATABSE EXPORT >>>', bgColor: 'lime', description: 'Export the entire Database', btnClick: () => {exportDatabase();}});
 SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DATABSE IMPORT <<<', bgColor: 'yellow', description: 'Clear the current database and import data from an earlier exported file. Data is imported as is, i.e. there is no validation. Please wait for the completion notification after clicking the button', btnClick: () => {importDatabase();}});
-SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DELETE DATABSE', bgColor: 'rgb(255,0,0)', description: 'A USER DOES NOT NEED TO DO THIS ! ITS ONLY FOR DEVELOPMENT PURPOSES', btnClick: () => {database.deleteDatabase().then(() => {window.location.href = window.location.href})}});
+SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DELETE DATABSE', bgColor: 'rgb(255,0,0)', description: 'A USER DOES NOT NEED TO DO THIS ! ITS ONLY FOR DEVELOPMENT PURPOSES', btnClick: () => {
+    database.deleteDatabase().then(() => {
+        /* eslint-disable-next-line no-self-assign */
+        window.location.href = window.location.href;
+    });
+}});
 
 class SETTINGS_DEFAULT {
     EnableFullWidth = true;
@@ -429,7 +443,7 @@ async function waitForHtmlElement(selector, cb, altDocument = document, timeout 
         return;
     }
 
-    const _observer = new MutationObserver(mutations => {
+    const _observer = new MutationObserver(() => {
         if (altDocument.querySelector(selector)) {
             _observer.disconnect();
             cb(altDocument.querySelector(selector));
@@ -442,10 +456,10 @@ async function waitForHtmlElement(selector, cb, altDocument = document, timeout 
         subtree: true
     });
 
-    const timeoutId = setTimeout(() => {
+const timeoutId = setTimeout(() => {
         _observer.disconnect();
         console.warn(`Timeout: element ${selector} not found`);
-        cb(null); // or cb(new Error('Timeout: element not found'));
+        cb(null);
     }, timeout);
 }
 

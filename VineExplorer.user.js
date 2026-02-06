@@ -52,7 +52,7 @@ let BackGroundScanIsRunning = false;
 // Make some things accessable from console
 unsafeWindow.ave = {
     classes: [
-        DB_HANDLER = DB_HANDLER
+        DB_HANDLER
     ],
     config: SETTINGS,
     event: ave_eventhandler,
@@ -65,9 +65,9 @@ let database;
 
         let _execLock = false;
         console.log('Lets Check where we are....');
-        if (SITE_IS_VINE){
+if (SITE_IS_VINE){
             console.log('We are on Amazon Vine'); // We are on the amazon vine site
-            if(SETTINGS.DarkMode){
+            if(SETTINGS && SETTINGS.DarkMode){
                 waitForHtmlElement('body', () => {
                     injectDarkMode();
                 })
@@ -75,9 +75,15 @@ let database;
 
             const urlParams = new URLSearchParams(window.location.search);
             const aveData = urlParams.get('vine-data');
-            let aveShareData = localStorage.getItem('ave-share-details');
+let aveShareData = localStorage.getItem('ave-share-details');
             if(aveData || aveShareData){
-                let _data = aveShareData ? JSON.parse(aveShareData) : (aveData ? JSON.parse(aveData) : null);
+                let _data;
+                try {
+                    _data = aveShareData ? JSON.parse(aveShareData) : (aveData ? JSON.parse(aveData) : null);
+                } catch (error) {
+                    console.error('Error parsing JSON:', error);
+                    return;
+                }
                 waitForHtmlElement('body', () => {
                     let aveShareElementTmp = document.createElement('div');
                     aveShareElementTmp.style.display = "none";
@@ -142,11 +148,17 @@ let database;
             });
             useEnrollmentData();
 
-            function useEnrollmentData() {
+function useEnrollmentData() {
                 const urlParams = new URLSearchParams(window.location.search);
                 const aveData = urlParams.get('vine-data');
                 if (aveData) {
-                    const enrollmentData = JSON.parse(decodeURIComponent(aveData));
+                    let enrollmentData;
+                    try {
+                        enrollmentData = JSON.parse(decodeURIComponent(aveData));
+                    } catch (error) {
+                        console.error('Error parsing enrollment data:', error);
+                        return;
+                    }
                     localStorage.setItem('ave-share-details', JSON.stringify(enrollmentData));
                     window.open(`${window.location.origin}/vine/vine-items`, '_blank');
                 }
@@ -441,6 +453,7 @@ function reloadPageWithSubpageTarget(target) {
 
 function addLeftSideButtons(forceClean) {
     const _nodesContainer = document.getElementById('vvp-browse-nodes-container');
+    if (!_nodesContainer) return;
 
     if (forceClean) _nodesContainer.innerHTML = '';
 
@@ -550,7 +563,7 @@ function createButton(text, id, style, clickHandler){
 
 async function createTileFromProduct(product, btnID, cb) {
     if (!product && SETTINGS.DebugLevel > 10) console.error(`createTileFromProduct got no valid product element`);
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve, _reject) => {
         const _btnAutoID = btnID || Math.round(Math.random() * 10000);
 
         const _tile = document.createElement('div');
@@ -742,8 +755,7 @@ ${_data.tax}
 
 ${newUrl}`
 
-        const cursorPosition = event.target.selectionStart;
-        const inputRect = event.target.getBoundingClientRect();
+const inputRect = event.target.getBoundingClientRect();
 
         const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
         const scrollY = window.pageYOffset || document.documentElement.scrollTop;
@@ -1023,7 +1035,7 @@ function createNewSite(type, data) {
         }
         case PAGETYPE.ALL:{
             currentMainPage = PAGETYPE.ALL;
-            createInfiniteScrollSite(currentMainPage,(tilesContainer) => {
+            createInfiniteScrollSite(currentMainPage,(_tilesContainer) => {
                 const _baseUrl = (/(http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items)/.exec(window.location.href))[1];
                 const _preloadPages = ['potluck', 'last_chance', 'encore']
                 infiniteScrollLastPreloadedPage = 1;
@@ -1069,7 +1081,7 @@ function createNewSite(type, data) {
 
 
 let lastGetTilesFromURLQuerry = 0;
-function getTilesFromURL(url, cb = (tilesArray) => {}) {
+function getTilesFromURL(url, cb = (_tilesArray) => {}) {
     if (lastGetTilesFromURLQuerry + SETTINGS.PageLoadMinDelay > Date.now()) {
         const _delay =  Math.max(1, lastGetTilesFromURLQuerry + SETTINGS.PageLoadMinDelay - Date.now());
         console.warn(`getTilesFromURL() DELAYED for ${_delay}ms`)
@@ -1095,8 +1107,8 @@ function getTilesFromURL(url, cb = (tilesArray) => {}) {
                 }
                 cb(_retArr);
 
-                const _paginationData = getPageinationData();
-                if (_paginationData) infiniteScrollMaxPreloadPage = _pageinationData.maxPage;
+const _paginationData = getPageinationData();
+                if (_paginationData) infiniteScrollMaxPreloadPage = _paginationData.maxPage;
             }, _doc);
         }
     })
@@ -1239,8 +1251,13 @@ function showAutoScanScreen(text) {
     _text.style.textAlign = 'center';
     _text.style.fontSize = '50px'; // Ändere die Schriftgröße hier
     _text.style.lineHeight = "1";
-    _text.style.zIndex = '1001';
-    _text.innerHTML = `<p id="ave-autoscan-text">${text}</p>`;
+_text.style.zIndex = '1001';
+    const _autoScanText = document.getElementById('ave-autoscan-text');
+    if (!_autoScanText) {
+        _text.innerHTML = `<p id="ave-autoscan-text">${text}</p>`;
+    } else {
+        _autoScanText.textContent = text;
+    }
 
     document.body.appendChild(_overlay);
     document.body.appendChild(_text);
@@ -1598,8 +1615,8 @@ function createSettingsMenuElement(dat){
         _elem_item_left_input.style.width = '300px';
         _elem_item_left_input.setAttribute('ave-data-key', dat.key);
         _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
+_elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
         _elem_item_left_input.addEventListener('change', (event) => {
-            const _value = event.target.value;
             console.log('This is a Password Value Input', event);
 
             SETTINGS[dat.key] = event.target.value;
@@ -1625,8 +1642,7 @@ function createSettingsMenuElement(dat){
         _elem_item_left_input.style.width = '300px';
         _elem_item_left_input.setAttribute('ave-data-key', dat.key);
         _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
-        _elem_item_left_input.addEventListener('change', (event) => {
-            const _value = event.target.value;
+_elem_item_left_input.addEventListener('change', (event) => {
             console.log('This is a URL Value Input', event);
 
             let _url = event.target.value;
@@ -1879,7 +1895,7 @@ function colorToHex(color) {
 
 }
 
-ave.colorToHex = colorToHex;
+unsafeWindow.ave.colorToHex = colorToHex;
 
 function addDBCleaningSymbol(){
     const _cleaningDiv = document.createElement('div');
@@ -2199,8 +2215,12 @@ function readFile(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
 
-        reader.onload = (event) => {
-            resolve(JSON.parse(event.target.result));
+reader.onload = (event) => {
+            try {
+                resolve(JSON.parse(event.target.result));
+            } catch (error) {
+                reject(error);
+            }
         };
 
         reader.onerror = (error) => {
@@ -2552,7 +2572,7 @@ function backGroundTileScanner(url, cb) {
     if (SETTINGS.DebugLevel > 10) console.log(`Called backgroundTileScanner(${url})`);
     const _iconLoading = addLoadingSymbol();
     const _iframeDoc = document.querySelector('#ave-iframe-backgroundloader').contentWindow.document;
-    ave.backGroundIFrame = _iframeDoc;
+    unsafeWindow.ave.backGroundIFrame = _iframeDoc;
     _iframeDoc.location.href = url;
     const _loopDelay = setInterval(() => {
         if (SETTINGS.DebugLevel > 10) console.log(`backgroundTileScanner(): check if we have tiles to read...`);
@@ -2663,11 +2683,12 @@ function stickElementToTopScrollEVhandler(elemID, dist) {
             document.documentElement.scrollHeight - window.innerHeight
         );
 
-        requestAnimationFrame(() => {
+requestAnimationFrame(() => {
             const _elemRect = _elem.getBoundingClientRect();
 
             const _elemInitialTop = parseInt(_elem.getAttribute('ave-data-default-top'));
-            if (!_elemInitialTop) {_elem.setAttribute('ave-data-default-top', (window.scrollY + _elemRect.top)); return;}
+            if (!_elemInitialTop) {_elem.setAttribute('ave-data-default-top', (window.scrollY + _elemRect.top));}
+            if (!_elem || !_elemRect) return;
 
             if (SETTINGS.DebugLevel > 10) console.log(`### scrollY:${window.scrollY} maxScrollHeigt ${maxScrollHeight} initialTop: ${_elemInitialTop}`);
 
@@ -2844,11 +2865,11 @@ function desktopNotifikation(title, message, image = null, requireInteraction = 
         });
 
         _notification.onclick = onClick;
-    } else {
+} else {
         Notification.requestPermission().then(function(permission) {
             if (permission === 'granted') {
                 console.log('Berechtigung für Benachrichtigungen erhalten!');
-                desktopNotifikation(title, message, icon, onclick);
+                desktopNotifikation(title, message);
             }
         });
     }
@@ -2987,68 +3008,35 @@ function addStyleToTile(_currTile, _product) {
 }
 
 async function requestProductDetails(prod) {
-    return new Promise(async (resolve, reject) => {
-        if (prod.data_asin_is_parent) {// Lets get the Childs first
-            vineFetch(`${window.location.origin}/vine/api/recommendations/${prod.id}`.replace(/#/g, '%23')).then(r => r.json()).then(async (res) => {
-                if (res.error) {
-                    if (res.error.exceptionType == 'ITEM_NOT_IN_ENROLLMENT') {
-                        prod.forceRemove = true;
-                        resolve(prod);
-                    } else {
-                        console.error('requestProductDetails():ERROR:', res.error);
-                        reject(res.error.exceptionType);
-                    }
-                }
-                const _data = res.result;
-                if (SETTINGS.DebugLevel > 1) console.log('DATA:', _data)
-                prod.data_childs = _data.variations || [];
-                resolve(prod);
-                //
-                // avoid getting temporarily blocked
-                // thank you Olum-hack
-                //
-                // const _promArray = new Array();
-                // prod.data_estimated_tax_prize = prod.data_estimated_tax_prize || 0;
-                // for (const _child of prod.data_childs) {
-                //     _promArray.push(vineFetch(`${window.location.origin}/vine/api/recommendations/${(prod.id).replace(/#/g, '%23')}/item/${_child.asin}`.replace(/#/g, '%23')).then(r => r.json()).then((childData) => {
-                //         console.log('CHILD_DATA:', childData);
-                //         if (!childData.error) {
-
-                //             // Copy over all returned datapoints od child asin
-                //             for (const _datapoint of Object.keys(childData.result)) {
-                //                 _child[_datapoint] = childData.result[_datapoint];
-                //             }
-
-                //             if (prod.data_estimated_tax_prize < _child.taxValue) {
-                //                 prod.data_estimated_tax_prize = _child.taxValue;
-                //                 prod.data_tax_currency = _child.taxCurrency;
-                //             }
-                //         }
-                //     }))
-                // }
-                // Promise.all(_promArray).then((values) => {
-                //     console.log('All fetches returned: ', values);
-                //     resolve(prod);
-                // });
-            })
-        } else {
-            vineFetch(`${window.location.origin}/vine/api/recommendations/${prod.id}/item/${prod.data_asin}`.replace(/#/g, '%23')).then(r => r.json()).then(ret => {
-                if (SETTINGS.DebugLevel > 1) console.log('RETURN:', ret);
-                if (ret.error) {
-                    reject(ret.error.exceptionType) // => "ITEM_NOT_IN_ENROLLMENT"
-                } else {
-                    const data = ret.result;
-                    prod.data_feature_bullets = data.featureBullets;
-                    prod.data_contributors = data.byLineContributors;
-                    prod.data_catalogSize = data.catalogSize;
-                    prod.data_tax_currency = data.taxCurrency;
-                    prod.data_estimated_tax_prize = data.taxValue;
-                    prod.data_limited_quantity = data.limitedQuantity;
-                    resolve(prod);
-                }
-            })
+    if (prod.data_asin_is_parent) {
+        const res = await vineFetch(`${window.location.origin}/vine/api/recommendations/${prod.id}`.replace(/#/g, '#')).then(r => r.json());
+        if (res.error) {
+            if (res.error.exceptionType == 'ITEM_NOT_IN_ENROLLMENT') {
+                prod.forceRemove = true;
+            } else {
+                console.error('requestProductDetails():ERROR:', res.error);
+                throw res.error.exceptionType;
+            }
         }
-    })
+        const _data = res.result;
+        if (SETTINGS.DebugLevel > 1) console.log('DATA:', _data);
+        prod.data_childs = _data.variations || [];
+        return prod;
+    } else {
+        const ret = await vineFetch(`${window.location.origin}/vine/api/recommendations/${prod.id}/item/${prod.data_asin}`.replace(/#/g, '%23')).then(r => r.json());
+        if (SETTINGS.DebugLevel > 1) console.log('RETURN:', ret);
+        if (ret.error) {
+            throw ret.error.exceptionType;
+        }
+        const data = ret.result;
+        prod.data_feature_bullets = data.featureBullets;
+        prod.data_contributors = data.byLineContributors;
+        prod.data_catalogSize = data.catalogSize;
+        prod.data_tax_currency = data.taxCurrency;
+        prod.data_estimated_tax_prize = data.taxValue;
+        prod.data_limited_quantity = data.limitedQuantity;
+        return prod;
+    }
 }
 
 function init(hasTiles) {
@@ -3134,10 +3122,10 @@ if (hasTiles) addLeftSideButtons();
 
     // Modify Pageination if exists
     const _paginationContainers = document.querySelectorAll('.a-pagination');
-    _paginationContainers.forEach(_pageinationContainer => {
-        if (SETTINGS.DebugLevel > 10) console.log('Manipulating Pageination');
+_paginationContainers.forEach(_paginationContainer => {
+        if (SETTINGS.DebugLevel > 10) console.log('Manipulating Pagination');
 
-        const _nextBtn = _pageinationContainer.lastChild;
+        const _nextBtn = _paginationContainer.lastChild;
         const _isNextBtnDisabled = _nextBtn.classList.contains('a-disabled');
         const _nextBtnLink = _nextBtn.lastChild.getAttribute('href');
         const _btn = _nextBtn.cloneNode(true);
@@ -3178,8 +3166,8 @@ if (hasTiles) addLeftSideButtons();
             });
         })
 
-        _pageinationContainer.appendChild(_btn);
-        _pageinationContainer.appendChild(_AveNextArrow);
+        _paginationContainer.appendChild(_btn);
+        _paginationContainer.appendChild(_AveNextArrow);
     });
 }
 
