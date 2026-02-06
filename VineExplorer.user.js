@@ -1324,6 +1324,14 @@ function addAVESettingsMenu(){
         _boxContainer.appendChild(_contentContainer);
         _tabContainer.appendChild(_boxContainer);
 
+        if (localStorage.getItem('AVE_OPEN_SETTINGS_TAB') === '1') {
+            localStorage.removeItem('AVE_OPEN_SETTINGS_TAB');
+            const _settingsTab = document.getElementById('vvp-ave-settings-tab');
+            if (_settingsTab) {
+                _settingsTab.click();
+            }
+        }
+
         _contentContainer.innerHTML = `
     <style>
     :root {
@@ -1792,6 +1800,7 @@ _elem_item_left_input.addEventListener('change', (event) => {
             SETTINGS[dat.key] = event.target.value;
             SETTINGS.save();
             if (dat.key === 'UI_LANGUAGE') {
+                localStorage.setItem('AVE_OPEN_SETTINGS_TAB', '1');
                 window.location.reload();
             }
         })
@@ -1800,7 +1809,11 @@ _elem_item_left_input.addEventListener('change', (event) => {
 
         const _elem_item_right = document.createElement('div');
         _elem_item_right.classList.add('ave-item-right');
-        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${(dat.description && dat.description != '') ? dat.description : dat.name}">${dat.name}</label>`;
+        const _labelName = dat.key === 'UI_LANGUAGE'
+            ? translate('settings', 'languageLabel', 'Sprache')
+            : dat.name;
+        const _labelDescription = (dat.description && dat.description != '') ? dat.description : _labelName;
+        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${_labelDescription}">${_labelName}</label>`;
 
         _elem.appendChild(_elem_item_right);
 
