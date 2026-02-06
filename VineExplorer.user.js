@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.30.17
+// @version      0.11.30.18
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1906,7 +1906,7 @@ _elem_item_left_input.addEventListener('change', (event) => {
     return _elem;
 }
 
-function componentToHex(c) {
+function createSettingsKeywordsTableElement(dat, index, entry){
     const _tableRow = document.createElement('tr');
     _tableRow.setAttribute('index', index);
     const _tableRow_td1 = document.createElement('td');
