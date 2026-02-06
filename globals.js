@@ -4,9 +4,7 @@ if (window.top != window.self) return; //don't run on frames or iframes
 // Constants Needed for some things
 const AVE_VERSION = (GM_info?.script?.version)
 const AVE_TITLE = (GM_info?.script?.name);
-// eslint-disable-next-line no-unused-vars
 const SECONDS_PER_DAY = 86400;
-// eslint-disable-next-line no-unused-vars
 const SECONDS_PER_WEEK = 604800;
 const SITE_IS_VINE = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/vine\//.test(window.location.href);
 const SITE_IS_SHOPPING = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/(?!vine)(?!gp\/video)(?!music)/.test(window.location.href);
@@ -17,26 +15,16 @@ const AVE_SESSION_ID = generateSessionID();
  */
 let AVE_IS_THIS_SESSION_MASTER = false;
 
-// eslint-disable-next-line no-unused-vars
 const INIT_AUTO_SCAN = (localStorage.getItem('AVE_INIT_AUTO_SCAN') == 'true') ? true : false;
-// eslint-disable-next-line no-unused-vars
 const AUTO_SCAN_IS_RUNNING = (localStorage.getItem('AVE_AUTO_SCAN_IS_RUNNING') == 'true') ? true : false;
-// eslint-disable-next-line no-unused-vars
 const AUTO_SCAN_PAGE_CURRENT = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_CURRENT')) || -1
-// eslint-disable-next-line no-unused-vars
 const AUTO_SCAN_PAGE_MAX = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_MAX')) || -1
-// eslint-disable-next-line no-unused-vars
 const PAGE_LOAD_TIMESTAMP = Date.now();
 
 // Obsolete sobald die Datenbank über Tampermonkey läuft
 const DATABASE_NAME = 'VineVoiceExplorer';
-// eslint-disable-next-line no-unused-vars
 const DATABASE_OBJECT_STORE_NAME = `${DATABASE_NAME}_Objects`;
-// eslint-disable-next-line no-unused-vars
 const DATABASE_VERSION = 4;
-
-// Make some things accessable from console
-unsafeWindow.ave = {};
 
 class AVE_EVENTHANDLER {
 
