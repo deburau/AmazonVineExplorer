@@ -25,7 +25,8 @@ const I18N = {
             page: 'Seite:',
         },
         settings: {
-            header: (title, version) => `Einstellungen ${title} - Version ${version}`
+            header: (title, version) => `Einstellungen ${title} - Version ${version}`,
+            languageLabel: 'Sprache'
         }
     },
     en: {
@@ -52,7 +53,8 @@ const I18N = {
             page: 'Page:',
         },
         settings: {
-            header: (title, version) => `Settings ${title} - Version ${version}`
+            header: (title, version) => `Settings ${title} - Version ${version}`,
+            languageLabel: 'Language'
         }
     }
 };
