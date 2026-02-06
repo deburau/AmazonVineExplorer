@@ -18,17 +18,15 @@ class Product {
     data_tax_currency;
     data_contributors;
     data_feature_bullets;
-    data_limited_quantity;
+data_limited_quantity;
     data_catalogSize;
     real_prize;
     isFav = 0;
     isNew = 1;
     isNotified = false;
-    gotRemoved = false;
     ts_firstSeen = unixTimeStamp();
     ts_lastSeen = unixTimeStamp();
     notSeenCounter = 0;
-    order_success = false;
     generated_short = false;
     gotFromDB = undefined;
     constructor(id) {

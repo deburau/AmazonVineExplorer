@@ -328,20 +328,7 @@ class DB_HANDLER {
     };
 
 
-    /**
-     * Get all keys from Database
-     * @async
-     * @returns {Promise<string[]>}
-     */
-    async getAllKeys() {
-        return new Promise((resolve, reject) => {
-            const _request = this.#getStore().getAllKeys();
-            _request.onsuccess = (event) => { resolve(event.target.result); };
-            _request.onerror = (event) => { reject(`DB_HANDLER.getAllKeys(): ${event.target.error.name}`) };
-        })
-    };
-
-    /**
+/**
      * Get all new "unseen" products from Database
      * @async
      * @returns {Promise<Product[]>}
@@ -458,20 +445,7 @@ class DB_HANDLER {
         })
     }
 
-    /**
-    * Returns the total number of records.
-    * @async
-    * @returns {Promise<Number>}
-    */
-    async count() {
-        return new Promise((resolve, reject) => {
-            const _request = this.#getStore().count();
-            _request.onsuccess = (event) => { resolve(event.target.result); };
-            _request.onerror = (event) => { reject(`DB_HANDLER.count(): ${event.target.error.name}`); };
-        });
-    }
-
-    /**
+/**
     * Deletes the entire database.
     * @async
     * @returns {Promise<void>}

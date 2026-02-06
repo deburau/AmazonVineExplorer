@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.30.4
+// @version      0.11.30.5
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -47,7 +47,6 @@ fastStyleChanges();
 let searchInputTimeout;
 let backGroundScanTimeout;
 
-let TimeouteScrollTilesBufferArray = [];
 let BackGroundScanIsRunning = false;
 
 // Make some things accessable from console
@@ -483,14 +482,7 @@ function addLeftSideButtons(forceClean) {
         if (SETTINGS.DebugLevel > 10) console.log('Clicked back to Top Button');
         window.scrollTo(0, 0);
     });
-    _div.appendChild(_backToTopBtn);
-
-    // const _clearDBBtn = createButton('Datenbank Bereinigen', 'background-color: orange;', () => {
-    //     if (SETTINGS.DebugLevel > 10) console.log('Clicked clear DB Button');
-    //     cleanUpDatabase();
-    // });
-
-    // _nodesContainer.appendChild(_clearDBBtn);
+_div.appendChild(_backToTopBtn);
 }
 
 function markAllCurrentSiteProductsAsSeen(cb = () => {}) {
@@ -701,12 +693,11 @@ function createShareElement(prod, index = Math.round(Math.random()* 10000)) {
     _shareElement.textContent = '🔗';
     _shareElement.style.float = 'left';
     _shareElement.style.display = 'flex';
-    _shareElement.style.margin = '0';
+_shareElement.style.margin = '0';
     _shareElement.style.cursor = 'pointer';
     return _shareElement;
 }
 
-let run = 0;
 function shareEventHandlerClick(event, _data){
     if(_data.recommendation_id){
         if (SETTINGS.DebugLevel > 1) console.log("[AVE]",_data);
@@ -718,9 +709,8 @@ function shareEventHandlerClick(event, _data){
         }))}`;
 
 
-        const urlParams = new URLSearchParams(window.location.search);
-        let queueParam = currentMainPage;
-        //let queueParam = urlParams.get('queue');
+const urlParams = new URLSearchParams(window.location.search);
+    let queueParam = currentMainPage;
         let pageParam = urlParams.get('page');
         if(pageParam == null){pageParam = 1}
         let page = ""
@@ -1195,7 +1185,6 @@ function initTileEventHandlers() {
 
 function addTileEventhandlers(_currTile) {
     if (SETTINGS.DebugLevel > 10) console.log('Tile Event Handler');
-    // const _favStar = _currTile.querySelector('.ave-favorite-star');
     const _btn = _currTile.querySelector('.vvp-details-btn input');
 
     const _data = new Object()
@@ -1811,13 +1800,10 @@ function createSettingsMenuElement(dat){
             _table.innerHTML = '';
             for (let i = 0; i < SETTINGS[dat.key].length; i++) {
                 _table.appendChild(createSettingsKeywordsTableElement(dat, i, SETTINGS[dat.key][i]));
-            }
+}
         })
-        // const _elem_keyword_input_button = document.createElement('button');
-        // _elem_keyword_input_button.innerText = '+';
         _elem_keyword_input_label.appendChild(_elem_keyword_input_input);
         _elem_keyword_input.appendChild(_elem_keyword_input_label);
-        // _elem_keyword_input.appendChild(_elem_keyword_input_button);
         _elem.appendChild(_elem_keyword_input);
 
         const _elem_keyword_list = document.createElement('div');
@@ -1859,70 +1845,6 @@ function createSettingsKeywordsTableElement(dat, index, entry){
     _tableRow_td2.innerText = entry;
     _tableRow.appendChild(_tableRow_td2);
     return _tableRow;
-}
-
-function addOverlays() { // Old Settings Code
-    const _overlayBackground = document.createElement('div');
-    _overlayBackground.style.position = 'fixed';
-    _overlayBackground.style.backgroundColor = '#000000b0';
-    _overlayBackground.style.zIndex = '1750';
-    _overlayBackground.style.width = '100%';
-    _overlayBackground.style.height = '100%';
-    _overlayBackground.style.top = '0';
-
-    document.body.appendChild(_overlayBackground);
-
-    const _settingsDiv = document.createElement('div');
-    _settingsDiv.style.position = 'fixed';
-    _settingsDiv.style.zIndex = '1750';
-    _settingsDiv.style.width = '100%';
-    _settingsDiv.style.height = '100%';
-    _settingsDiv.style.top = '0';
-    _settingsDiv.style.display = 'flex';
-    _settingsDiv.style.justifyContent = 'center';
-    _settingsDiv.style.alignItems = 'center';
-
-    _settingsDiv.innerHTML = `
-    <style>
-    .ave-setting {
-    padding: 0 0 7px;
-    }
-    </style>
-    <div style="background-color: white;border-radius: 8px;width: 50%;min-width: 250px;height: 75%;overflow: hidden;">
-      <div id="settingsInner"width: 100%; height: 100%;"> <!--- Inner Start -->
-        <div id="settingsNav" style="background-color: #F0F2F2;border-bottom: 1px solid #D5D9D9;display: flex;height: 50px;align-items: center;padding: 0 24px;"> <!--- Nav Start -->
-         <div style="color: #444;font-size: 16px;font-weight: 700;">Amazon Vine Explorer Einstellungen</div>
-         <div style="color: #444;margin-left: auto;width: 50px;height: 50px;display: flex;justify-content: center;align-items: center;font-weight: 600;font-size: larger;cursor: pointer;transform: translate(50%, 0);">
-           <i class="a-icon a-icon-close"></i>
-         </div>
-        </div> <!--- Nav End -->
-        <div style="padding: 16px 24px;color: #0F111"> <!--- Content Start -->
-        <div class="ave-setting">
-          <input type="number" value="${SETTINGS.DebugLevel}" onchange="console.log('Setting Changed')"> - Debug Level
-        </div>
-        <div class="ave-setting">
-        <input type="checkbox" checked="${SETTINGS.EnableFullWidth}" onchange="console.log('Setting Changed')"> - Full Width
-        </div>
-        <div class="ave-setting">
-        <input type="checkbox" checked="${SETTINGS.DisableFooter}" onchange="console.log('Setting Changed')"> - Disable Footer
-        </div>
-        <div class="ave-setting">
-        <input type="checkbox" checked="${SETTINGS.DisableSuggestions}" onchange="console.log('Setting Changed')"> - Disable Suggestions
-        </div>
-        <div class="ave-setting">
-        <input type="checkbox" checked="${SETTINGS.DisableFooterShopping}" onchange="console.log('Setting Changed')"> - Disable Footer Shopping
-        </div>
-        <div class="ave-setting">
-        <input type="checkbox" checked="${SETTINGS.DisableSuggestionsShopping}" onchange="console.log('Setting Changed')"> - Disable Suggestions Shopping
-        </div>
-        </div> <!--- Content End -->
-        <div> <!--- Footer Start -->
-        </div> <!--- Footer End -->
-      </div> <!--- Inner End -->
-    </div>
-`
-
-    document.body.appendChild(_settingsDiv);
 }
 
 function componentToHex(c) {
@@ -3181,8 +3103,7 @@ function init(hasTiles) {
     // Searchbar
     const _searchBarSpan = document.createElement('span');
     _searchBarSpan.setAttribute('class', 'ave-search-container');
-    _searchBarSpan.style.cssText = `margin-left: 0.5em;`;
-    // _searchBarSpan.innerHTML = `<input type="text" style="width: 30em;" placeholder="Suche Vine Produkte" name="ave-search">`;
+_searchBarSpan.style.cssText = `margin-left: 0.5em;`;
 
     const _searchBarInput = document.createElement('input');
     _searchBarInput.setAttribute('type', 'search');
@@ -3207,11 +3128,7 @@ function init(hasTiles) {
     _searchBarSpan.appendChild(_searchBarInput);
     _searchbarContainer.appendChild(_searchBarSpan);
 
-    // Deactivatet due to Bugs
-    // Manual Autoscan and Backgroundscan can not run together, so don´t create the button
-    //if (!SETTINGS.EnableBackgroundScan) _searchbarContainer.appendChild(createNavButton('ave-btn-updateDB', 'Update Database', 'ave-btn-updateDB-text',SETTINGS.BtnColorUpdateDB, () => {localStorage.setItem('AVE_INIT_AUTO_SCAN', true); window.location.href = "vine-items?queue=encore";}));
-
-    if (hasTiles) addLeftSideButtons();
+if (hasTiles) addLeftSideButtons();
 
     if (SETTINGS.EnableBackgroundScan) initBackgroundScan();
 

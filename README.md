@@ -42,11 +42,12 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
-##### [05.02.2026] - Version 0.11.31
+##### [06.02.2026] - Version 0.11.31
 
 *  Desktop Notification Highlight Keywords are sorted
 *  Time to wait between unseen items notification is configurable
 *  Time to wait between possible new drop starting notification is configurable
+*  Removed unused code
 
 ##### [2026-01-21] - Version 0.11.30
 *  New setting to trigger a unseen items notification if the number of unseen items exeeds the configured number.
