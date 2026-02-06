@@ -28,10 +28,8 @@ const DATABASE_VERSION = 4;
 
 // Make some things accessible from console
 unsafeWindow.ave = {};
-const ave_eventhandler = new AVE_EVENTHANDLER();
 
 class AVE_EVENTHANDLER {
-
     /**
     * AVE Eventhandler
     * A very basic and simple eventhandler/wrapper
@@ -57,6 +55,7 @@ class AVE_EVENTHANDLER {
         unsafeWindow.addEventListener(eventName, cb);
     }
 }
+
 const ave_eventhandler = new AVE_EVENTHANDLER();
 
 function addBranding() {
