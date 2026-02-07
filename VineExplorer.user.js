@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.30.19
+// @version      0.11.30.20
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1598,6 +1598,13 @@ font-weight: bold;
 }
 
 function createSettingsMenuElement(dat){
+    const _labelKey = dat.key || dat.name;
+    const _labelName = translate('settingsLabels', _labelKey, dat.name || '');
+    const _labelDescription = translate('settingsDescriptions', _labelKey, dat.description || _labelName || '');
+    const _inputPlaceholder = dat.inputPlaceholder
+        ? translate('settingsPlaceholders', _labelKey, dat.inputPlaceholder)
+        : '';
+
     const _elem = document.createElement('div');
     if (dat.key) _elem.setAttribute('ave-config-key', dat.key);
     _elem.classList.add('ave-settings-item');
@@ -1627,7 +1634,7 @@ function createSettingsMenuElement(dat){
 
         const _elem_item_right = document.createElement('div');
         _elem_item_right.classList.add('ave-item-right');
-        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${(dat.description && dat.description != '') ? dat.description : dat.name}">${dat.name}</label>`
+        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${_labelDescription}">${_labelName}</label>`
 
         _elem.appendChild(_elem_item_right);
 
@@ -1654,7 +1661,7 @@ _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
 
         const _elem_item_right = document.createElement('div');
         _elem_item_right.classList.add('ave-item-right');
-        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${(dat.description && dat.description != '') ? dat.description : dat.name}">${dat.name}</label>`
+        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${_labelDescription}">${_labelName}</label>`
 
         _elem.appendChild(_elem_item_right);
 
@@ -1686,7 +1693,7 @@ _elem_item_left_input.addEventListener('change', (event) => {
 
         const _elem_item_right = document.createElement('div');
         _elem_item_right.classList.add('ave-item-right');
-        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${(dat.description && dat.description != '') ? dat.description : dat.name}">${dat.name}</label>`
+        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${_labelDescription}">${_labelName}</label>`
 
         _elem.appendChild(_elem_item_right);
 
@@ -1735,7 +1742,7 @@ _elem_item_left_input.addEventListener('change', (event) => {
 
         const _elem_item_right = document.createElement('div');
         _elem_item_right.classList.add('ave-item-right');
-        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${(dat.description && dat.description != '') ? dat.description : dat.name}">${dat.name}</label>`
+        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${_labelDescription}">${_labelName}</label>`
 
         _elem.appendChild(_elem_item_right);
 
@@ -1747,7 +1754,7 @@ _elem_item_left_input.addEventListener('change', (event) => {
 
 
         const _elem_item_left_input_label  = document.createElement('label');
-        _elem_item_left_input_label.setAttribute('data-ave-tooltip', (dat.description && dat.description != '') ? dat.description : dat.name);
+        _elem_item_left_input_label.setAttribute('data-ave-tooltip', _labelDescription);
         _elem_item_left_input_label.setAttribute('class', 'a-button');
         _elem_item_left_input_label.style.width = "250px";
         if (dat.bgColor) _elem_item_left_input_label.style.backgroundColor = dat.bgColor;
@@ -1756,7 +1763,7 @@ _elem_item_left_input.addEventListener('change', (event) => {
         _elem_item_left_input.className = 'ave-input-button';
 
         // _elem_item_left_input.setAttribute('ave-data-key', dat.key);
-        _elem_item_left_input.innerText = dat.name;
+        _elem_item_left_input.innerText = _labelName;
         //_elem_item_left_input.setAttribute('data-ave-tooltip',dat.description);
         _elem_item_left_input.addEventListener('click', (event) => {console.log('This is a button Input', event); if(dat.btnClick) dat.btnClick();})
 
@@ -1837,7 +1844,7 @@ _elem_item_left_input.addEventListener('change', (event) => {
         _elem_spacer_horizontal.style.width = '100%';
 
         const _elem_spacer_title = document.createElement('h4');
-        _elem_spacer_title.textContent = dat.name;
+        _elem_spacer_title.textContent = _labelName;
 
         _elem.style.height = 'fit-content';
         _elem.style.display = 'flex';
@@ -1851,19 +1858,19 @@ _elem_item_left_input.addEventListener('change', (event) => {
 
         _elem.classList.remove('ave-settings-item');
         _elem.classList.add('ave-keyword-wrapper');
-        _elem.innerHTML = `<h4>${dat.name}</h4>`;
+        _elem.innerHTML = `<h4>${_labelName}</h4>`;
         const _elem_keyword_input = document.createElement('div');
         _elem_keyword_input.innerHTML = '<span></span>';
         _elem_keyword_input.classList.add('ave-keyword-input');
 
 
         const _elem_keyword_input_label = document.createElement('label');
-        _elem_keyword_input_label.setAttribute('data-ave-tooltip', dat.description);
+        _elem_keyword_input_label.setAttribute('data-ave-tooltip', _labelDescription);
 
         const _elem_keyword_input_input = document.createElement('textarea');
         _elem_keyword_input_input.setAttribute('cols', 70);
         _elem_keyword_input_input.setAttribute('rows', 1);
-        _elem_keyword_input_input.setAttribute('placeholder', dat.inputPlaceholder);
+        _elem_keyword_input_input.setAttribute('placeholder', _inputPlaceholder || dat.inputPlaceholder);
         _elem_keyword_input_input.addEventListener('change', (elm, ev) => {
             if (SETTINGS.DebugLevel > 1) console.log('EVENTHANDLER CHANGE:', elm, 'event:', ev);
             const _value = elm.target.value.trim();

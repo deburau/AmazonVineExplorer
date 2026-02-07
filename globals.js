@@ -218,7 +218,7 @@ window.onbeforeunload = function () {
 
 // All Config Options that should shown to the User
 const SETTINGS_USERCONFIG_DEFINES = [];
-SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Amazon Vine', description: 'Tooltip Description of this Setting'});
+SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Amazon Vine', description: 'Tooltip Description of this Setting', key: 'TITLE_AMAZON_VINE'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'UI_LANGUAGE', type: 'select', options: ['de', 'en'], name: 'UI Language', description: 'Choose your preferred language for the UI'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableFullWidth', type: 'bool', name: 'Enable Full Width', description: 'Uses the full width of the display'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DarkMode', type: 'bool', name: 'Enable Dark Mode (reload required atm)', description: 'Switches between Amazon Light Theme and AVE Dark Mode (reload required atm)'});
@@ -255,7 +255,7 @@ SETTINGS_USERCONFIG_DEFINES.push({key: 'UnseenItemsNotificationRepitionMinutes',
 SETTINGS_USERCONFIG_DEFINES.push({key: 'NewItemsNotificationThreshold', type: 'number', min: 0, max: 1000, name: 'Number of new items to trigger a possible drop starting notification', description: 'If greater than zero, a notification is sent if a fast scan reveals more than this many items'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'NewItemsNotificationRepititionMinutes', type: 'number', min: 0, max: 1440, name: 'Number of new minutes to wait before a new possible drop starting notification', description: 'Number of minues to wait before another possible drop notification is sent'});
 
-SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Colors and Styles', description: ''});
+SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Colors and Styles', description: '', key: 'TITLE_COLORS'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorNewProducts', type: 'color', name: 'Button Color New Products', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorNewProductsBadge', type: 'color', name: 'Button Color New Products Badge', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorMarkCurrSiteAsSeen', type: 'color', name: 'Button Color Mark Current Site As Seen', description: ''});
@@ -270,21 +270,21 @@ SETTINGS_USERCONFIG_DEFINES.push({key: 'FavStarColorChecked', type: 'color', nam
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DarkModeBackgroundColor', type: 'color', name: 'Dark Mode Background Color', description: ''});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DarkModeColor', type: 'color', name: 'Dark Mode Text Color', description: ''});
 
-SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Amazon Shopping', description: ''});
+SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Amazon Shopping', description: '', key: 'TITLE_SHOPPING'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableFooterShopping', type: 'bool', name: 'Disable Footer', description: 'Disables the Footer of the Amazon Shopping Page'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableSuggestionsShopping', type: 'bool', name: 'Disable Suggestions', description: 'Disables the Suggestions of the Amazon Shopping Page'});
 
-SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Settings for Developers and Testers', description: ''});
+SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Settings for Developers and Testers', description: '', key: 'TITLE_DEV'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DebugLevel', type: 'number', min: 0, max: 15, name: 'Debuglevel', description: ''});
 
-SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'RESET SETTINGS TO DEFAULT', bgColor: 'rgb(255,128,0)', description: 'It does what it says', btnClick: () => {
+SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'RESET SETTINGS TO DEFAULT', bgColor: 'rgb(255,128,0)', description: 'It does what it says', key: 'BUTTON_RESET_SETTINGS', btnClick: () => {
     SETTINGS.reset();
     /* eslint-disable-next-line no-self-assign */
     window.location.href = window.location.href;
 }});
-SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DATABSE EXPORT >>>', bgColor: 'lime', description: 'Export the entire Database', btnClick: () => {exportDatabase();}});
-SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DATABSE IMPORT <<<', bgColor: 'yellow', description: 'Clear the current database and import data from an earlier exported file. Data is imported as is, i.e. there is no validation. Please wait for the completion notification after clicking the button', btnClick: () => {importDatabase();}});
-SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DELETE DATABSE', bgColor: 'rgb(255,0,0)', description: 'A USER DOES NOT NEED TO DO THIS ! ITS ONLY FOR DEVELOPMENT PURPOSES', btnClick: () => {
+SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DATABSE EXPORT >>>', bgColor: 'lime', description: 'Export the entire Database', key: 'BUTTON_DB_EXPORT', btnClick: () => {exportDatabase();}});
+SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DATABSE IMPORT <<<', bgColor: 'yellow', description: 'Clear the current database and import data from an earlier exported file. Data is imported as is, i.e. there is no validation. Please wait for the completion notification after clicking the button', key: 'BUTTON_DB_IMPORT', btnClick: () => {importDatabase();}});
+SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DELETE DATABSE', bgColor: 'rgb(255,0,0)', description: 'A USER DOES NOT NEED TO DO THIS ! ITS ONLY FOR DEVELOPMENT PURPOSES', key: 'BUTTON_DB_DELETE', btnClick: () => {
     database.deleteDatabase().then(() => {
         /* eslint-disable-next-line no-self-assign */
         window.location.href = window.location.href;
