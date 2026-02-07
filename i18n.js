@@ -18,6 +18,8 @@ const I18N = {
             nothingToSee: 'Hier gibt es nix zu sehen.\nZumindest noch nicht :P',
             copySuccess: 'Text wurde in die Zwischenablage kopiert.',
             copyError: 'Fehler beim Kopieren in die Zwischenablage:',
+            unseenItemsTitle: (version) => `Amazon Vine Explorer - ${version}`,
+            unseenItemsBody: (count) => `Es wurden ${count} neue Eintraege gefunden`,
         },
         share: {
             myFSE: 'Mein FSE',
@@ -171,6 +173,8 @@ const I18N = {
             nothingToSee: 'Nothing to see here.\nAt least not yet :P',
             copySuccess: 'Text copied to clipboard',
             copyError: 'Error copying to clipboard:',
+            unseenItemsTitle: (version) => `Amazon Vine Explorer - ${version}`,
+            unseenItemsBody: (count) => `${count} new entries found`,
         },
         share: {
             myFSE: 'My FSE',

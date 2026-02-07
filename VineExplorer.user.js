@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.30.24
+// @version      0.11.30.25
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2788,9 +2788,10 @@ function updateNewProductsBtn() {
         if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Got Database Response: ${_prodArrLength} New Items`);
 
         if (_prodArrLength > 0) {
+            const _badgeCount = parseInt((_btnBadge && _btnBadge.innerText) ? _btnBadge.innerText : '0', 10) || 0;
             if (SETTINGS.UnseenItemsNotificationThreshold > 0 &&
                 _prodArrLength >= SETTINGS.UnseenItemsNotificationThreshold &&
-                _btnBadge.innerText < SETTINGS.UnseenItemsNotificationThreshold) {
+                _badgeCount < SETTINGS.UnseenItemsNotificationThreshold) {
 
                 let _shouldNotify = true;
 
@@ -2807,10 +2808,13 @@ function updateNewProductsBtn() {
                     localStorage.setItem('AVE_LAST_UNSEEN_NOTIFICATION', Date.now());
 
                     if (SETTINGS.GotifyUrl) {
-                        gotifyNotification(`Amazon Vine Explorer has ${_prodArrLength} new products`);
+                        gotifyNotification(translate('notifications', 'unseenItemsBody', `Es wurden ${_prodArrLength} neue Eintraege gefunden`, _prodArrLength));
                     }
                     if (SETTINGS.EnableDesktopNotifikation) {
-                        desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `Amazon Vine Explorer has ${_prodArrLength} new products`);
+                        desktopNotifikation(
+                            translate('notifications', 'unseenItemsTitle', `Amazon Vine Explorer - ${AVE_VERSION}`, AVE_VERSION),
+                            translate('notifications', 'unseenItemsBody', `Es wurden ${_prodArrLength} neue Eintraege gefunden`, _prodArrLength)
+                        );
                     }
                 }
             }
