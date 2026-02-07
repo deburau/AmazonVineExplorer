@@ -1,5 +1,4 @@
 'use strict';
-
 const I18N = {
     de: {
         buttons: {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.30.23
+// @version      0.11.30.24
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1619,8 +1619,6 @@ function createSettingsMenuElement(dat){
         _elem_item_left_label_input.type = 'checkbox';
         _elem_item_left_label_input.className = 'ave-input-binary';
         _elem_item_left_label_input.setAttribute('ave-data-key', dat.key);
-        // _elem_item_left_label_input.setAttribute('checked', SETTINGS[dat.key])
-        // _elem_item_left_label_input.value = `${SETTINGS[dat.key]}`;
         _elem_item_left_label_input.checked = SETTINGS[dat.key];
         _elem_item_left_label_input.addEventListener('click', (event) => {console.log('This is a Boolean Value Input', event); SETTINGS[dat.key] = event.target.checked; SETTINGS.save();})
 
@@ -1706,7 +1704,6 @@ _elem_item_left_input.addEventListener('change', (event) => {
         _elem_item_left_input.className = 'ave-input-number';
         _elem_item_left_input.setAttribute('ave-data-key', dat.key);
         _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
-        //_elem_item_left_input.setAttribute('onInput', 'this.style.width = "calc(" + (this.value.length + 1) + "ch + 30px)";')
         if (!isNaN(dat.min)) _elem_item_left_input.setAttribute('min', dat.min);
         if (!isNaN(dat.max)) _elem_item_left_input.setAttribute('max', dat.max);
         _elem_item_left_input.addEventListener('change', (event) => {
@@ -1762,21 +1759,12 @@ _elem_item_left_input.addEventListener('change', (event) => {
         _elem_item_left_input.type = 'button';
         _elem_item_left_input.className = 'ave-input-button';
 
-        // _elem_item_left_input.setAttribute('ave-data-key', dat.key);
         _elem_item_left_input.innerText = _labelName;
-        //_elem_item_left_input.setAttribute('data-ave-tooltip',dat.description);
         _elem_item_left_input.addEventListener('click', (event) => {console.log('This is a button Input', event); if(dat.btnClick) dat.btnClick();})
 
         _elem_item_left_input_label.appendChild(_elem_item_left_input);
         _elem_item_left.appendChild(_elem_item_left_input_label);
         _elem.appendChild(_elem_item_left);
-
-        // const _elem_item_right = document.createElement('div');
-        // _elem_item_right.classList.add('ave-item-right');
-        // _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${dat.description}">${dat.name}</label>`
-
-        // _elem.appendChild(_elem_item_right);
-
 
     } else if (dat.type == 'color') {
 
@@ -1920,8 +1908,7 @@ function createSettingsKeywordsTableElement(dat, index, entry){
     const _tableRow_td1_button = document.createElement('button');
     _tableRow_td1_button.innerHTML = `<i class="a-icon a-icon-close"></i>`;
     _tableRow_td1_button.setAttribute('ave-data-keyword', entry);
-    _tableRow_td1_button.addEventListener('click', (elm, ev) =>{
-        // console.log('DELETE_BTN:: ', elm)
+        _tableRow_td1_button.addEventListener('click', (elm, ev) =>{
         SETTINGS[dat.key].splice(index, 1);
         SETTINGS.save();
         const _table = document.getElementById(dat.key);

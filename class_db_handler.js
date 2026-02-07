@@ -126,7 +126,6 @@ class DB_HANDLER {
                     return false;
                 } else {
                     // Keine Duplikate gefunden, Sie können den Index jetzt als eindeutig markieren
-                    // const uniqueIndex = _storeOS.createIndex('data_asin', 'data_asin', { unique: true });
                     return true;
                 }
             }

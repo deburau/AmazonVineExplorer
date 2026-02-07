@@ -108,7 +108,6 @@ function addBranding() {
     _text.style.position = 'fixed';
     _text.style.bottom = '10px';
     _text.style.left = '10px';
-    // _text.style.transform = 'translate(-50%, -50%)';
     _text.style.color = 'blue'; // Textfarbe
     _text.style.backgroundColor = (_isMasterSession) ? 'rgba(218, 247, 166, .75)': 'rgba(255, 100, 100, .75)';
     _text.style.textAlign = 'left';
