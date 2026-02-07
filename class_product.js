@@ -1,5 +1,6 @@
 // eslint-disable-next-line no-unused-vars
 
+// Product data model persisted in IndexedDB.
 class Product {
     id;
     link;
@@ -27,6 +28,7 @@ data_limited_quantity;
     isNotified = false;
     ts_firstSeen = unixTimeStamp();
     ts_lastSeen = unixTimeStamp();
+    // Incremented when a product is not observed during scans.
     notSeenCounter = 0;
     generated_short = false;
     gotFromDB = undefined;

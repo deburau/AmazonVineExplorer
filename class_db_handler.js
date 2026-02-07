@@ -24,7 +24,7 @@ class DB_HANDLER {
         // Note: do NOT call async code here!
     }
 
-    // The async static initializer
+    // Async initializer avoids running async code in the constructor.
     static async init(dbName, storeName, version) {
         const instance = new DB_HANDLER(dbName, storeName, version);
         await instance.#init();
@@ -60,6 +60,7 @@ class DB_HANDLER {
                 resolve(event.target.result);
             }
 
+            // Schema migration and index maintenance happen here.
             _request.onupgradeneeded = (event) => {
                 console.log(`DB_HANDLER: Database has to be created or Updated`);
                 console.log(JSON.stringify(event, null, 4));
@@ -136,6 +137,7 @@ class DB_HANDLER {
     /**
      * Fires the Event ave-database-changed when any writeaccess has happend
      */
+    // Debounced change event to avoid flooding listeners on batch writes.
     #fireDataChangedEvent() {
         if (this.#eventDelayTimeout) clearTimeout(this.#eventDelayTimeout);
         this.#eventDelayTimeout = setTimeout(() => {

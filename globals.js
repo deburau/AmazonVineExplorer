@@ -8,6 +8,7 @@ const SECONDS_PER_DAY = 86400;
 const SECONDS_PER_WEEK = 604800;
 const SITE_IS_VINE = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/vine\//.test(window.location.href);
 const SITE_IS_SHOPPING = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/(?!vine)(?!gp\/video)(?!music)/.test(window.location.href);
+// Session id is used for multi-tab master/slave coordination.
 const AVE_SESSION_ID = generateSessionID();
 
 /**
@@ -15,6 +16,7 @@ const AVE_SESSION_ID = generateSessionID();
  */
 let AVE_IS_THIS_SESSION_MASTER = false;
 
+// Persisted scan state from previous runs (used by auto-scan logic).
 const INIT_AUTO_SCAN = (localStorage.getItem('AVE_INIT_AUTO_SCAN') == 'true') ? true : false;
 const AUTO_SCAN_IS_RUNNING = (localStorage.getItem('AVE_AUTO_SCAN_IS_RUNNING') == 'true') ? true : false;
 const AUTO_SCAN_PAGE_CURRENT = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_CURRENT')) || -1
@@ -56,12 +58,14 @@ class AVE_EVENTHANDLER {
     }
 }
 
+// Shared event bus for cross-file coordination.
 const ave_eventhandler = new AVE_EVENTHANDLER();
 
 function addBranding() {
     // sometimes document.body is null. I don't know why, but at least, it does not throw an error then
     if (!document?.body) return;
 
+    // Master session shows a distinct badge to avoid duplicate background work.
     const _isMasterSession = AVE_IS_THIS_SESSION_MASTER && SITE_IS_VINE;
 
     const _oldElem = document.getElementById('ave-branding-text');
@@ -138,6 +142,7 @@ function addBranding() {
 
 unsafeWindow.ave.addBranding = addBranding;
 
+// Small randomized delay reduces race conditions when multiple tabs start.
 setTimeout(() => {
     if (!localStorage.getItem('AVE_SESSIONS')) {
         localStorage.setItem("AVE_SESSIONS", JSON.stringify([{id: AVE_SESSION_ID, ts: Date.now()}]));
@@ -159,6 +164,7 @@ setTimeout(() => {
         addBranding();
     }
 
+    // Heartbeat: keep session list fresh and elect a master when needed.
     setInterval(() => { //
         let _sessions;
         try {

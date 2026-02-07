@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.30.25
+// @version      0.11.30.26
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -42,6 +42,7 @@ console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
  */
 let currentMainPage;
 
+// Translation wrapper with a fallback string for early-load timing.
 const translate = (category, key, fallback, ...args) => typeof t === 'function' ? t(category, key, ...args) : fallback;
 
 loadSettings();
@@ -62,10 +63,12 @@ unsafeWindow.ave = {
 };
 
 let database;
+// Async bootstrap to avoid blocking document-start and to keep DB init isolated.
 (async () => {
     try {
         database = await DB_HANDLER.init(DATABASE_NAME, DATABASE_OBJECT_STORE_NAME, DATABASE_VERSION);
 
+        // Prevent duplicate initialization when multiple DOM targets appear.
         let _execLock = false;
         console.log('Lets Check where we are....');
 if (SITE_IS_VINE){
@@ -110,6 +113,7 @@ let aveShareData = localStorage.getItem('ave-share-details');
             }
             addAveSettingsTab();
             addAVESettingsMenu();
+            // Wait until tiles exist before initializing UI and page state.
             waitForHtmlElement('.vvp-details-btn', (elem) => {
                 if (!elem) return;
 
@@ -129,6 +133,7 @@ let aveShareData = localStorage.getItem('ave-share-details');
                     }
                 }, 100);
             });
+            // Alternate init path for empty pages (no offers).
             waitForHtmlElement('.vvp-no-offers-msg', (elem) => { // Empty Page ?!?!
                 if (!elem) return;
 
@@ -1271,6 +1276,7 @@ function updateAutoScanScreenText(text = '') {
     _elem.textContent = text;
 }
 
+// Populate settings only once per render to avoid duplicates on re-open.
 function populateSettingsContainer() {
     const _settingsContent = document.body.querySelector('[data-a-name="ave-settings"]');
     if (!_settingsContent) return;
@@ -1334,6 +1340,7 @@ function addAVESettingsMenu(){
         _boxContainer.appendChild(_contentContainer);
         _tabContainer.appendChild(_boxContainer);
 
+        // After a language change reload, restore the settings tab view.
         if (localStorage.getItem('AVE_OPEN_SETTINGS_TAB') === '1') {
             localStorage.removeItem('AVE_OPEN_SETTINGS_TAB');
             waitForHtmlElement('#vvp-ave-settings-tab', (_settingsTab) => {
@@ -1591,6 +1598,7 @@ font-weight: bold;
 </div>
     `;
 
+        // Ensure the container exists before populating controls.
         waitForHtmlElement('#ave-settings-container', () => {
             populateSettingsContainer();
         }, _contentContainer);
@@ -2789,6 +2797,7 @@ function updateNewProductsBtn() {
 
         if (_prodArrLength > 0) {
             const _badgeCount = parseInt((_btnBadge && _btnBadge.innerText) ? _btnBadge.innerText : '0', 10) || 0;
+            // Threshold/cooldown gate for "new entries" notifications.
             if (SETTINGS.UnseenItemsNotificationThreshold > 0 &&
                 _prodArrLength >= SETTINGS.UnseenItemsNotificationThreshold &&
                 _badgeCount < SETTINGS.UnseenItemsNotificationThreshold) {

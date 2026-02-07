@@ -1,4 +1,5 @@
 'use strict';
+// Flat i18n dictionary for UI strings (DE/EN).
 const I18N = {
     de: {
         buttons: {
@@ -312,6 +313,7 @@ const I18N = {
     }
 };
 
+// Resolve current UI language from settings, with a safe fallback.
 function detectLanguage() {
     if (!SETTINGS || typeof SETTINGS.UI_LANGUAGE === 'undefined') {
         return 'de';
@@ -321,6 +323,7 @@ function detectLanguage() {
     return 'de';
 }
 
+// Translation lookup with optional formatter functions.
 function t(category, key, ...args) {
     const lang = detectLanguage();
     if (!I18N[lang] || !I18N[lang][category]) {

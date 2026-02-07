@@ -1,13 +1,14 @@
 var extHelper_LastParentVariant = null;
 var extHelper_responseData = {};
 var extHelper_postData = {};
+// Wrapper to intercept Vine API calls and enrich data.
 async function vineFetch(...args) {
     let response = await fetch(...args);
     let lastParent = extHelper_LastParentVariant;
 
     const url = args[0] || "";
 
-    // Handle orders
+    // Handle orders to capture parent/child ASIN context.
     if (url.startsWith("api/voiceOrders")) {
         // parse post body safely
         try {
@@ -55,7 +56,7 @@ async function vineFetch(...args) {
         return response;
     }
 
-    // Handle recommendations
+    // Handle recommendations to extract ETV and variant details.
     if (url.startsWith("api/recommendations")) {
         try {
             extHelper_responseData = await response.clone().json();
