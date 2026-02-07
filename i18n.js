@@ -130,7 +130,25 @@ const I18N = {
             BUTTON_RESET_SETTINGS: 'Setzt alle Einstellungen auf Standard zurück',
             BUTTON_DB_EXPORT: 'Exportiert die komplette Datenbank',
             BUTTON_DB_IMPORT: 'Löscht die Datenbank und importiert eine Datei (ohne Validierung)',
-            BUTTON_DB_DELETE: 'Nur zu Entwicklungszwecken: löscht die komplette Datenbank'
+            BUTTON_DB_DELETE: 'Nur zu Entwicklungszwecken: löscht die komplette Datenbank',
+            TITLE_AMAZON_VINE: '',
+            TITLE_COLORS: '',
+            TITLE_SHOPPING: '',
+            TITLE_DEV: '',
+            BtnColorNewProducts: 'Farbe für den Button "Neue Einträge"',
+            BtnColorNewProductsBadge: 'Farbe für das Badge "Neue Einträge"',
+            BtnColorMarkCurrSiteAsSeen: 'Farbe für den Button "Seite als gesehen"',
+            BtnColorMarkAllAsSeen: 'Farbe für den Button "Alle als gesehen"',
+            BtnColorBackToTop: 'Farbe für den Button "Nach oben"',
+            BtnColorUpdateDB: 'Farbe für den Button "Datenbank aktualisieren"',
+            BtnColorAllProducts: 'Farbe für den Button "Alle Produkte"',
+            BtnColorFavorites: 'Farbe für den Button "Favoriten"',
+            BtnColorFavoritesBadge: 'Farbe für das Badge "Favoriten"',
+            FavStarColorDefault: 'Farbe für den Favoritenstern (aus)',
+            FavStarColorChecked: 'Farbe für den Favoritenstern (an)',
+            DarkModeBackgroundColor: 'Hintergrundfarbe für Dark Mode',
+            DarkModeColor: 'Textfarbe für Dark Mode',
+            DebugLevel: ''
         },
         settingsPlaceholders: {
             DesktopNotifikationKeywords: 'Gib deine Highlight-Keywords ein, eins pro Zeile, und klick außerhalb'
@@ -265,7 +283,25 @@ const I18N = {
             BUTTON_RESET_SETTINGS: 'Resets settings to defaults',
             BUTTON_DB_EXPORT: 'Export the entire Database',
             BUTTON_DB_IMPORT: 'Clear database and import data (no validation)',
-            BUTTON_DB_DELETE: 'Delete the entire database (dev only)'
+            BUTTON_DB_DELETE: 'Delete the entire database (dev only)',
+            TITLE_AMAZON_VINE: '',
+            TITLE_COLORS: '',
+            TITLE_SHOPPING: '',
+            TITLE_DEV: '',
+            BtnColorNewProducts: 'Color for the "New Entries" button',
+            BtnColorNewProductsBadge: 'Color for the "New Entries" badge',
+            BtnColorMarkCurrSiteAsSeen: 'Color for the "Mark page as seen" button',
+            BtnColorMarkAllAsSeen: 'Color for the "Mark all as seen" button',
+            BtnColorBackToTop: 'Color for the "Back to top" button',
+            BtnColorUpdateDB: 'Color for the "Update Database" button',
+            BtnColorAllProducts: 'Color for the "All Products" button',
+            BtnColorFavorites: 'Color for the "Favorites" button',
+            BtnColorFavoritesBadge: 'Color for the "Favorites" badge',
+            FavStarColorDefault: 'Color for the favorite star (unchecked)',
+            FavStarColorChecked: 'Color for the favorite star (checked)',
+            DarkModeBackgroundColor: 'Background color for Dark Mode',
+            DarkModeColor: 'Text color for Dark Mode',
+            DebugLevel: ''
         },
         settingsPlaceholders: {
             DesktopNotifikationKeywords: 'Type in your highlight keywords one per line and click outside to submit'
