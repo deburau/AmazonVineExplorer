@@ -131,10 +131,10 @@ const I18N = {
             BUTTON_DB_EXPORT: 'Exportiert die komplette Datenbank',
             BUTTON_DB_IMPORT: 'Löscht die Datenbank und importiert eine Datei (ohne Validierung)',
             BUTTON_DB_DELETE: 'Nur zu Entwicklungszwecken: löscht die komplette Datenbank',
-            TITLE_AMAZON_VINE: '',
-            TITLE_COLORS: '',
-            TITLE_SHOPPING: '',
-            TITLE_DEV: '',
+            TITLE_AMAZON_VINE: 'Einstellungen für Amazon Vine',
+            TITLE_COLORS: 'Farben und Styles',
+            TITLE_SHOPPING: 'Einstellungen für Amazon Shopping',
+            TITLE_DEV: 'Einstellungen für Entwickler und Tester',
             BtnColorNewProducts: 'Farbe für den Button "Neue Einträge"',
             BtnColorNewProductsBadge: 'Farbe für das Badge "Neue Einträge"',
             BtnColorMarkCurrSiteAsSeen: 'Farbe für den Button "Seite als gesehen"',
@@ -148,7 +148,7 @@ const I18N = {
             FavStarColorChecked: 'Farbe für den Favoritenstern (an)',
             DarkModeBackgroundColor: 'Hintergrundfarbe für Dark Mode',
             DarkModeColor: 'Textfarbe für Dark Mode',
-            DebugLevel: ''
+            DebugLevel: 'Debug-Ausgabe-Level (0-15)'
         },
         settingsPlaceholders: {
             DesktopNotifikationKeywords: 'Gib deine Highlight-Keywords ein, eins pro Zeile, und klick außerhalb'
@@ -284,10 +284,10 @@ const I18N = {
             BUTTON_DB_EXPORT: 'Export the entire Database',
             BUTTON_DB_IMPORT: 'Clear database and import data (no validation)',
             BUTTON_DB_DELETE: 'Delete the entire database (dev only)',
-            TITLE_AMAZON_VINE: '',
-            TITLE_COLORS: '',
-            TITLE_SHOPPING: '',
-            TITLE_DEV: '',
+            TITLE_AMAZON_VINE: 'Settings for Amazon Vine',
+            TITLE_COLORS: 'Colors and styles settings',
+            TITLE_SHOPPING: 'Settings for Amazon Shopping',
+            TITLE_DEV: 'Settings for developers and testers',
             BtnColorNewProducts: 'Color for the "New Entries" button',
             BtnColorNewProductsBadge: 'Color for the "New Entries" badge',
             BtnColorMarkCurrSiteAsSeen: 'Color for the "Mark page as seen" button',
@@ -301,7 +301,7 @@ const I18N = {
             FavStarColorChecked: 'Color for the favorite star (checked)',
             DarkModeBackgroundColor: 'Background color for Dark Mode',
             DarkModeColor: 'Text color for Dark Mode',
-            DebugLevel: ''
+            DebugLevel: 'Debug output level (0-15)'
         },
         settingsPlaceholders: {
             DesktopNotifikationKeywords: 'Type in your highlight keywords one per line and click outside to submit'
