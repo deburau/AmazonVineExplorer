@@ -173,8 +173,6 @@ class DB_HANDLER {
             _request.onerror = (event) => {
                 if (`${event.target.error}`.includes('data_asin')) {
                     console.error('Tryed to ADD New Product with existing ASIN ???', obj);
-                    // reject(event.target.error);
-                    // return;
                 }
 
                 reject(`DB_HANDLER.add(): ${event.target.error}`);
@@ -226,7 +224,6 @@ class DB_HANDLER {
                                 if (_prod) {
                                     if (SETTINGS.DebugLevel > 1) console.debug(`got object with ID "${id}" and ASIN "${_data_asin}": "${_prod}"`);
                                 // } else {
-                                //     console.warn(`object with ID "${id}" and ASIN "${_data_asin}" not found`);
                                 }
 
                                 _resolve(_prod);
@@ -271,18 +268,14 @@ class DB_HANDLER {
         return new Promise((resolve, reject) => {
             if (SETTINGS.DebugLevel > 1) console.log('Called DB_HANDLER:update()');
             if (typeof (obj) != 'object') reject('DB_HANDLER.update(): obj is not defined or is not type of object');
-            // console.log('Called DB_HANDLER:update() Stage 2');
 
             const _request = this.#getStore(true).put(obj);
-            // console.log('Called DB_HANDLER:update() Stage 3');
 
             _request.onerror = (event) => {
-                // console.log('DB_HANDLER:update() --> had an Error');
                 reject(event.target.error);
             };
 
             _request.onsuccess = (event) => {
-                // console.log('Called DB_HANDLER:update() --> success');
                 this.#fireDataChangedEvent();
                 resolve();
             }

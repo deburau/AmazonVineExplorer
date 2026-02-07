@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.11.30.26
+// @version      0.11.30.27
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -310,11 +310,14 @@ function injectDarkMode() {
     document.body.classList.add('ave-color','ave-background-color');
 }
 
+/**
+ * Append buffered tiles and prefetch additional pages when near the bottom.
+ * Guards are used to avoid concurrent fetches and duplicate appends.
+ */
 function handleInfiniteScroll() {
     if (SETTINGS.DebugLevel > 10) console.log('Called handleInfiniteScroll()');
     if (!inifiniteScrollBlockAppend) {
         inifiniteScrollBlockAppend = true;
-        // setTimeout(async ()=> {},10);
         appendInfiniteScrollTiles(()=>{inifiniteScrollBlockAppend = false;})
     }
 
@@ -350,6 +353,10 @@ function getUrlParameter(name) {
     return _urlParams.get(name);
 }
 
+/**
+ * Detect the current Vine queue based on URL parameters.
+ * Sets currentMainPage for downstream navigation logic.
+ */
 function detectCurrentPageType(){
     if (/http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items$/.test(window.location.href)) {
         currentMainPage = PAGETYPE.ORIGINAL_LAST_CHANCE;
@@ -361,12 +368,13 @@ function detectCurrentPageType(){
         currentMainPage = PAGETYPE.ORIGINAL_SELLER;
     }
 
-    // alert(`currentMainPage is: ${currentMainPage}`);
-
-    // getUrlParameter('ave-subpage');
-
 }
 
+/**
+ * Parse tile metadata and sync with IndexedDB.
+ * @param {Element} tile
+ * @returns {Promise<Product>}
+ */
 async function parseTileData(tile) {
     if (SETTINGS.DebugLevel > 12) console.log(`Called parseTileData(`, tile, ')');
 
@@ -624,7 +632,6 @@ var _itemBadgesHtml = '';
 
             insertHtmlElementAfter(_elem, createTaxInfoElement(product, btnID));
         }, _tile)
-        // insertHtmlElementAfter((_tile.getElementsByClassName('vvp-item-product-title-container')[0]), createTaxInfoElement(product, btnID));
         if (cb) cb(_tile);
         resolve(_tile);
     })
@@ -953,7 +960,6 @@ async function appendInfiniteScrollTiles(cb = ()=>{}){
     if (SETTINGS.DebugLevel > 10) console.log('appendInfiniteScrollTiles(): ', infiniteScrollTilesBufferArray);
     const _tilesContainer = document.getElementById('vvp-items-grid');
 
-    // setTimeout(async () => {
     let _stopCreation = false;
     let _createdCount = 0;
     while (infiniteScrollTilesBufferArray.length > 0 && !_stopCreation) {
@@ -1107,7 +1113,6 @@ function getTilesFromURL(url, cb = (_tilesArray) => {}) {
                 if (!itemsContainer) return;
                 
                 if (SETTINGS.DebugLevel > 10) console.log('getTileFromURL(): itemsContainer:', itemsContainer);
-                // cb(itemsContainer.getElementsByClassName('vvp-item-tile'));
                 const _retArr = [];
                 const _elemArr = itemsContainer.querySelectorAll('.vvp-item-tile');
                 for (let i = 0; i < _elemArr.length; i++){
@@ -1115,7 +1120,7 @@ function getTilesFromURL(url, cb = (_tilesArray) => {}) {
                 }
                 cb(_retArr);
 
-const _paginationData = getPageinationData();
+                const _paginationData = getPageinationData();
                 if (_paginationData) infiniteScrollMaxPreloadPage = _paginationData.maxPage;
             }, _doc);
         }
@@ -1198,7 +1203,6 @@ function initTileEventHandlers() {
     for(let i = 0; i < _tileLength; i++) {
         if (SETTINGS.DebugLevel > 10) console.log(`Adding Eventhandler to Tile ${i}`);
         const _currTile = _tiles[i];
-        //console.log('init');
         addTileEventhandlers(_currTile);
     }
 }
@@ -1277,6 +1281,9 @@ function updateAutoScanScreenText(text = '') {
 }
 
 // Populate settings only once per render to avoid duplicates on re-open.
+/**
+ * Fill the settings container with controls defined in SETTINGS_USERCONFIG_DEFINES.
+ */
 function populateSettingsContainer() {
     const _settingsContent = document.body.querySelector('[data-a-name="ave-settings"]');
     if (!_settingsContent) return;
@@ -1292,6 +1299,9 @@ function populateSettingsContainer() {
     _settingsContainer.setAttribute('data-ave-populated', '1');
 }
 
+/**
+ * Inject the AVE settings tab into the Vine navigation bar.
+ */
 function addAveSettingsTab(){
     waitForHtmlElement('.vvp-tab-set-container > ul', (_upperButtonsContainer) => {
         if (!_upperButtonsContainer) return;
@@ -1322,6 +1332,9 @@ function addAveSettingsTab(){
     })
 }
 
+/**
+ * Build the settings panel container and insert it into the tab set.
+ */
 function addAVESettingsMenu(){
     waitForHtmlElement('.a-tab-container.vvp-tab-set-container', (_tabContainer) => {
         if (!_tabContainer) return;
@@ -1605,6 +1618,11 @@ font-weight: bold;
     })
 }
 
+/**
+ * Create a settings UI element based on its definition.
+ * @param {object} dat
+ * @returns {Element}
+ */
 function createSettingsMenuElement(dat){
     const _labelKey = dat.key || dat.name;
     const _labelName = translate('settingsLabels', _labelKey, dat.name || '');
@@ -2487,43 +2505,6 @@ function initBackgroundScan() {
                         _scanFinished();
                         break;
 
-                        // if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.2 with _subStage: ', _subStage);
-                        // database.getAll().then((products) => {
-                        //     const _needUpdate = [];
-                        //     const _randCount = Math.round(Math.random() * 4);
-                        //     for (const _prod of products) {
-                        //         if (_needUpdate.length < _randCount) {
-                        //             if (typeof(_prod.data_estimated_tax_prize) != 'number') _needUpdate.push(_prod);
-                        //         } else {
-                        //             break;
-                        //         }
-                        //     }
-
-                        //     const _promises = [];
-
-                        //     for (const _prod of _needUpdate) {
-                        //         requestProductDetails(_prod).then((_newProd) => {
-                        //             _promises.push(database.update(_newProd));
-                        //         });
-                        //     }
-
-                        //     Promise.all(_promises).then(() => {
-                        //         _scanFinished();
-                        //         _subStage++;
-                        //     }).catch(() => {
-                        //         console.error('There was an error while updating an product in database');
-                        //         _scanFinished();
-                        //         _subStage++;
-                        //     });
-                        // });
-
-                        // if (_subStage++ >= 10)
-                        // {
-                        //     _subStage = 0;
-                        //     _backGroundScanStage++;
-                        //     _scanFinished();
-                        // }
-                        // break;
                     }
                     case 3: {
                         cleanUpDatabase();
@@ -2773,6 +2754,9 @@ requestAnimationFrame(() => {
 
 let lastDesktopNotifikationTimestamp = 0;
 
+/**
+ * Update the favorites badge count in the navigation bar.
+ */
 function updateFavoritesBtn(){
     database.getFavEntries().then((favArr) => {
         const _btnFavBadge = document.getElementById('ave-fav-items-btn-badge');
@@ -2786,6 +2770,9 @@ function updateFavoritesBtn(){
     });
 }
 
+/**
+ * Update the "new entries" badge and trigger threshold notifications.
+ */
 function updateNewProductsBtn() {
     if (AUTO_SCAN_IS_RUNNING) return;
     if (SETTINGS.DebugLevel > 1) console.log('Called updateNewProductsBtn()');
