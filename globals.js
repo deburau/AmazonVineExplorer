@@ -219,6 +219,7 @@ window.onbeforeunload = function () {
 // All Config Options that should shown to the User
 const SETTINGS_USERCONFIG_DEFINES = [];
 SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Amazon Vine', description: 'Tooltip Description of this Setting'});
+SETTINGS_USERCONFIG_DEFINES.push({key: 'UI_LANGUAGE', type: 'select', options: ['de', 'en'], name: 'UI Language', description: 'Choose your preferred language for the UI'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableFullWidth', type: 'bool', name: 'Enable Full Width', description: 'Uses the full width of the display'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DarkMode', type: 'bool', name: 'Enable Dark Mode (reload required atm)', description: 'Switches between Amazon Light Theme and AVE Dark Mode (reload required atm)'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableAmazonNavbar', type: 'bool', name: 'Disable Amazon Navbar', description: 'Disables the Amazon Navbar'});
@@ -229,7 +230,6 @@ SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableBtnPotLuck', type: 'bool', name: 
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableBtnLastChance', type: 'bool', name: 'Disable Button Last Chance', description: 'Disables the Section Button Last Chance(VFA)'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableBtnSeller', type: 'bool', name: 'Disable Button Seller', description: 'Disables the Section Button Seller(ZA)'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableTopLogoChange', type: 'bool', name: 'Enable Top Logo Change', description: 'Enables the Change of the top logo to our AVE Logo'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'UI_LANGUAGE', type: 'select', options: ['de', 'en'], name: 'UI Language', description: 'Choose your preferred language for the UI'});
 
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableBtnAll', type: 'bool', name: 'Enable Button All Products', description: 'Enable &quot;All Products&quot; Button'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnablePaginationTop', type: 'bool', name: 'Enable Pagination on top', description: 'Enable Pagination to be displayed on top for ZA page' });
