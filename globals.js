@@ -240,6 +240,7 @@ SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableBtnAll', type: 'bool', name: 'Enab
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnablePaginationTop', type: 'bool', name: 'Enable Pagination on top', description: 'Enable Pagination to be displayed on top for ZA page' });
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableBackgroundScan', type: 'bool', name: 'Enable Background Scan', description: 'Enables the Background scan, if disabled you will find a Button for Autoscan on the Vine Website'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableInfiniteScrollLiveQuerry', type: 'bool', name: 'Enable Infiniti Scroll Live Querry', description: 'If enabled the Products of the All Products Page will get querryd from Amazon directls otherwise they will get loaded from Database(faster)'});
+SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableInfiniteSpinnerFix', type: 'bool', name: 'Fix Infinite Spinner', description: 'Repairs malformed product variation data that can leave Amazon Vine loading indefinitely'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableDesktopNotifikation', type: 'bool', name: 'Enable Desktop Notifications', description: 'Enable Desktop Notifications if new Products are detected'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableAutoMarkFavorite', type: 'bool', name: 'Enable auto marking product as favotite', description: 'If a new product matches a highlight keyword it is automatically marked as favorite'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableCleanupFavorites', type: 'bool', name: 'Also remove favorites when cleaning up products', description: 'If enabled, favorite products will also be removed during the cleanup process based on the defined criteria.'});
@@ -311,6 +312,7 @@ class SETTINGS_DEFAULT {
     EnableTopLogoChange = true;
     EnableBackgroundScan = true;
     EnableInfiniteScrollLiveQuerry = false;
+    EnableInfiniteSpinnerFix = true;
     EnableDesktopNotifikation = false;
     EnableAutoMarkFavorite = false;
     EnableCleanupFavorites = false;
