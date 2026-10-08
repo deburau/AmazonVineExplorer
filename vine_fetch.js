@@ -1,141 +1,233 @@
 var extHelper_LastParentVariant = null;
-var extHelper_responseData = {};
-var extHelper_postData = {};
-// Wrapper to intercept Vine API calls and enrich data.
+const extHelper_processedRecommendationResponses = new WeakSet();
+const extHelper_pageWindow = typeof unsafeWindow !== 'undefined' && unsafeWindow ? unsafeWindow : window;
+const extHelper_fetchHookKey = '__aveInfiniteSpinnerFixFetchHooked';
+
+function extHelper_getRequestUrl(input) {
+    try {
+        const urlValue = typeof input === 'string' ? input :
+            (input && typeof input.url === 'string' ? input.url :
+                (input && typeof input.href === 'string' ? input.href : String(input)));
+        return new URL(urlValue, extHelper_pageWindow.location.href);
+    } catch {
+        return null;
+    }
+}
+
+function extHelper_isVineApiRequest(input, endpoint) {
+    const requestUrl = extHelper_getRequestUrl(input);
+    if (!requestUrl || requestUrl.origin !== extHelper_pageWindow.location.origin) return false;
+    return new RegExp(`/api/${endpoint}(?:/|$)`).test(requestUrl.pathname);
+}
+
+function extHelper_isSpinnerFixEnabled() {
+    try {
+        if (typeof GM_getValue === 'function') {
+            const storedSettings = GM_getValue('AVE_SETTINGS', {});
+            if (storedSettings && typeof storedSettings.EnableInfiniteSpinnerFix === 'boolean') {
+                return storedSettings.EnableInfiniteSpinnerFix;
+            }
+        }
+    } catch {
+        // Use the loaded AVE setting when synchronous userscript storage is unavailable.
+    }
+    return typeof SETTINGS === 'undefined' || SETTINGS.EnableInfiniteSpinnerFix !== false;
+}
+
+function extHelper_formatDimensionValue(value) {
+    if (typeof value !== 'string') return value;
+
+    let formatted = value;
+    if (!/[a-z0-9]$/i.test(formatted)) formatted += 'fixed';
+    formatted = formatted.replace(/([:)])([^\s])/g, '$1 $2');
+    formatted = formatted.replace(/(\s[/])/g, '/');
+    return formatted;
+}
+
+function extHelper_repairRecommendationData(responseData) {
+    const variations = responseData && responseData.result && responseData.result.variations;
+    if (!Array.isArray(variations)) return 0;
+
+    const dimensionEntries = variations.map((variation) => {
+        const dimensions = variation && variation.dimensions;
+        return dimensions && typeof dimensions === 'object' && !Array.isArray(dimensions) ? Object.entries(dimensions) : [];
+    });
+    const templateEntries = dimensionEntries.reduce((best, current) => current.length > best.length ? current : best, []);
+    const templateKeys = templateEntries.map(([key]) => key);
+    const hasIncompleteDimensions = dimensionEntries.some((entries) => entries.length < templateKeys.length);
+    const combineDimensions = hasIncompleteDimensions && templateKeys.length > 1;
+    let fixed = 0;
+
+    if (combineDimensions) {
+        variations.forEach((variation, index) => {
+            if (!variation || typeof variation !== 'object') return;
+            const entries = dimensionEntries[index];
+            if (entries.length === 0) {
+                variation.dimensions = { variation: variation && variation.asin ? variation.asin : 'N/A' };
+            } else {
+                const valuesByKey = new Map(entries.filter(([key]) => templateKeys.includes(key)));
+                const unmatchedEntries = entries.filter(([key]) => !templateKeys.includes(key));
+                const availableKeys = templateKeys.filter((key) => !valuesByKey.has(key));
+                unmatchedEntries.forEach(([key, value], entryIndex) => {
+                    const targetKey = availableKeys[entryIndex];
+                    if (targetKey) valuesByKey.set(targetKey, value);
+                });
+                const values = templateKeys.map((key) => extHelper_formatDimensionValue(valuesByKey.get(key) ?? 'N/A'));
+                variation.dimensions = { variation: values.join(', ') };
+            }
+            fixed++;
+        });
+        return fixed;
+    }
+
+    variations.forEach((variation, index) => {
+        if (!variation || typeof variation !== 'object') return;
+        const entries = dimensionEntries[index];
+        if (entries.length === 0) {
+            variation.dimensions = { asin_no: variation && variation.asin ? variation.asin : '' };
+            fixed++;
+            return;
+        }
+
+        const normalizedDimensions = {};
+        const knownEntries = entries.filter(([key]) => templateKeys.includes(key));
+        const unmatchedEntries = entries.filter(([key]) => !templateKeys.includes(key));
+        knownEntries.forEach(([key, value]) => {
+            const formattedValue = extHelper_formatDimensionValue(value);
+            normalizedDimensions[key] = formattedValue;
+            if (formattedValue !== value) fixed++;
+        });
+        const availableKeys = templateKeys.filter((key) => !Object.prototype.hasOwnProperty.call(normalizedDimensions, key));
+        unmatchedEntries.forEach(([key, value], entryIndex) => {
+            const normalizedKey = availableKeys[entryIndex] || key;
+            const formattedValue = extHelper_formatDimensionValue(value);
+            normalizedDimensions[normalizedKey] = formattedValue;
+            if (normalizedKey !== key || formattedValue !== value) fixed++;
+        });
+
+        if (Object.keys(normalizedDimensions).some((key, keyIndex) => key !== entries[keyIndex][0])) {
+            variation.dimensions = normalizedDimensions;
+        } else if (entries.some(([key, value]) => normalizedDimensions[key] !== value)) {
+            variation.dimensions = normalizedDimensions;
+        }
+    });
+
+    return fixed;
+}
+
+async function extHelper_repairRecommendationResponse(response) {
+    if (extHelper_processedRecommendationResponses.has(response) || !extHelper_isSpinnerFixEnabled()) return response;
+    extHelper_processedRecommendationResponses.add(response);
+
+    if (response.type === 'opaque' || !response.ok || response.status !== 200) return response;
+
+    try {
+        const responseData = await response.clone().json();
+        const fixed = extHelper_repairRecommendationData(responseData);
+        if (fixed === 0) return response;
+
+        const headers = new extHelper_pageWindow.Headers(response.headers);
+        ['content-length', 'content-encoding', 'content-md5', 'content-range', 'transfer-encoding'].forEach((name) => headers.delete(name));
+        const repairedResponse = new extHelper_pageWindow.Response(JSON.stringify(responseData), {
+            headers,
+            status: response.status,
+            statusText: response.statusText,
+        });
+        extHelper_processedRecommendationResponses.add(repairedResponse);
+        extHelper_pageWindow.postMessage({ type: 'infiniteWheelFixed', text: `${fixed} variation(s) fixed.` }, '*');
+        return repairedResponse;
+    } catch {
+        return response;
+    }
+}
+
+function extHelper_installRecommendationFetchHook() {
+    if (extHelper_pageWindow[extHelper_fetchHookKey] || typeof extHelper_pageWindow.fetch !== 'function') return;
+
+    const originalFetch = extHelper_pageWindow.fetch;
+    const hookedFetch = async function(...args) {
+        const response = await originalFetch.apply(this, args);
+        if (!extHelper_isVineApiRequest(args[0], 'recommendations') || !extHelper_isSpinnerFixEnabled()) return response;
+        return extHelper_repairRecommendationResponse(response);
+    };
+
+    try {
+        extHelper_pageWindow.fetch = hookedFetch;
+        extHelper_pageWindow[extHelper_fetchHookKey] = true;
+    } catch (error) {
+        console.warn('[AVE] Could not install the recommendation response hook.', error);
+    }
+}
+
+extHelper_installRecommendationFetchHook();
+
 async function vineFetch(...args) {
-    let response = await fetch(...args);
-    let lastParent = extHelper_LastParentVariant;
+    let response = await extHelper_pageWindow.fetch.apply(extHelper_pageWindow, args);
+    const lastParent = extHelper_LastParentVariant;
+    const request = args[0];
 
-    const url = args[0] || "";
-
-    // Handle orders to capture parent/child ASIN context.
-    if (url.startsWith("api/voiceOrders")) {
-        // parse post body safely
+    if (extHelper_isVineApiRequest(request, 'voiceOrders')) {
+        let postData = {};
+        let responseData = {};
         try {
             const body = args[1] && args[1].body ? args[1].body : null;
-            extHelper_postData = body ? JSON.parse(body) : {};
-        } catch (e) {
-            console.error('[CF] | Failed to parse post body', e);
-            extHelper_postData = {};
+            postData = body ? JSON.parse(body) : {};
+        } catch (error) {
+            console.error('[CF] | Failed to parse post body', error);
         }
-        const asin = extHelper_postData.itemAsin || null;
-
         try {
-            extHelper_responseData = await response.clone().json();
-        } catch (e) {
-            console.error('[CF] | Failed to read response JSON (voiceOrders)', e);
-            extHelper_responseData = {};
+            responseData = await response.clone().json();
+        } catch (error) {
+            console.error('[CF] | Failed to read response JSON (voiceOrders)', error);
         }
 
         let parentAsin = null;
         if (lastParent && lastParent.recommendationId) {
-            const m = lastParent.recommendationId.match(/^.+?#(.+?)#.+$/);
-            if (m) parentAsin = m[1];
+            const match = lastParent.recommendationId.match(/^.+?#(.+?)#.+$/);
+            if (match) parentAsin = match[1];
         }
 
-        let data = {
-            status: "success",
-            error: null,
-            parent_asin: parentAsin,
-            asin: asin,
-        };
-
-        if (extHelper_responseData && extHelper_responseData.error != null) {
-            data = {
-                status: "failed",
-                error: extHelper_responseData.error,
-                parent_asin: parentAsin,
-                asin: asin,
-            };
+        let data = { status: 'success', error: null, parent_asin: parentAsin, asin: postData.itemAsin || null };
+        if (responseData && responseData.error != null) {
+            data = { status: 'failed', error: responseData.error, parent_asin: parentAsin, asin: postData.itemAsin || null };
         }
-
-        window.postMessage({ type: "order", data }, "*");
-
-        // Wait 500ms following an order to allow for the order report query to go through before the redirect happens.
-        await new Promise((r) => setTimeout(r, 500));
+        window.postMessage({ type: 'order', data }, '*');
+        await new Promise((resolve) => setTimeout(resolve, 500));
         return response;
     }
 
-    // Handle recommendations to extract ETV and variant details.
-    if (url.startsWith("api/recommendations")) {
+    if (extHelper_isVineApiRequest(request, 'recommendations')) {
+        response = await extHelper_repairRecommendationResponse(response);
+        let responseData = {};
         try {
-            extHelper_responseData = await response.clone().json();
-        } catch (e) {
-            console.error('[CF] | Failed to read response JSON (recommendations)', e);
-            extHelper_responseData = {};
+            responseData = await response.clone().json();
+        } catch (error) {
+            console.error('[CF] | Failed to read response JSON (recommendations)', error);
         }
 
-        const result = extHelper_responseData && extHelper_responseData.result ? extHelper_responseData.result : null;
-        const error = extHelper_responseData && extHelper_responseData.error ? extHelper_responseData.error : null;
-
+        const result = responseData && responseData.result ? responseData.result : null;
+        const error = responseData && responseData.error ? responseData.error : null;
         if (!result) {
             if (error && error.exceptionType) {
-                window.postMessage({ type: "error", data: { error: error.exceptionType } }, "*");
+                window.postMessage({ type: 'error', data: { error: error.exceptionType } }, '*');
             }
             return response;
         }
 
-        // Find if the item is a parent
         if (result.variations !== undefined) {
-            // The item has variations and so is a parent, store it for later interceptions
             extHelper_LastParentVariant = result;
         } else if (result.taxValue !== undefined) {
-            // The item has an ETV value, let's find out if it's a child or a parent
-            const isChild = !!lastParent && !!lastParent.variations && lastParent.variations.some((v) => v.asin == result.asin);
-            let data = {
-                parent_asin: null,
-                asin: result.asin,
-                etv: result.taxValue,
-            };
+            const isChild = !!lastParent && !!lastParent.variations && lastParent.variations.some((variation) => variation.asin == result.asin);
+            const data = { parent_asin: null, asin: result.asin, etv: result.taxValue };
             if (isChild && lastParent && lastParent.recommendationId) {
-                const m = lastParent.recommendationId.match(/^.+?#(.+?)#.+$/);
-                if (m) data.parent_asin = m[1];
+                const match = lastParent.recommendationId.match(/^.+?#(.+?)#.+$/);
+                if (match) data.parent_asin = match[1];
             } else {
                 extHelper_LastParentVariant = null;
             }
-            window.postMessage({ type: "etv", data }, "*");
+            window.postMessage({ type: 'etv', data }, '*');
         }
-
-        let fixed = 0;
-        result.variations = result.variations?.map((variation) => {
-            if (Object.keys(variation.dimensions || {}).length === 0) {
-                variation.dimensions = { asin_no: variation.asin };
-                fixed++;
-                return variation;
-            }
-
-            for (const key in variation.dimensions) {
-                // The core issue: special characters at the end of a variation can break Amazon's UI when used in HTML attributes.
-                // Make the string safe for an HTML attribute by adjusting problematic patterns.
-                if (!variation.dimensions[key].match(/[a-z0-9]$/i)) {
-                    variation.dimensions[key] = variation.dimensions[key] + "fixed";
-                    fixed++;
-                }
-
-                // Any variation with a : or ) without a space after will crash; ensure a space after those characters.
-                let newValue = variation.dimensions[key].replace(/([:)])([^\s])/g, "$1 $2");
-                if (newValue !== variation.dimensions[key]) {
-                    variation.dimensions[key] = newValue;
-                    fixed++;
-                }
-
-                // Any variation with a / with a space before it will crash; remove the space before.
-                newValue = variation.dimensions[key].replace(/(\s[/])/g, "/");
-                if (newValue !== variation.dimensions[key]) {
-                    variation.dimensions[key] = newValue;
-                    fixed++;
-                }
-            }
-
-            return variation;
-        });
-
-        if (fixed > 0) {
-            window.postMessage({ type: "infiniteWheelFixed", text: fixed + " variation(s) fixed." }, "*");
-        }
-
-        return new Response(JSON.stringify(extHelper_responseData));
     }
 
     return response;
-};
+}

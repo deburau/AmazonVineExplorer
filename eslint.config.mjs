@@ -101,6 +101,7 @@ export default [
         init: 'readonly',
         sort_by_key: 'readonly',
         ave: 'readonly',
+        SETTINGS: 'readonly',
         getCountry: 'readonly',
         vineFetch: 'readonly',
 database: 'readonly',
