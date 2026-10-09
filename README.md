@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [09.10.2026] - Version 0.12.1
+
+*  Merge [PR #67](https://github.com/deburau/AmazonVineExplorer/pull/67) by adripo: Fix for malformed Amazon Vine recommendation variation data
+
 ##### [09.02.2026] - Version 0.12.0
 
 *  Desktop Notification Highlight Keywords are sorted
