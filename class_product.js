@@ -1,5 +1,4 @@
-// eslint-disable-next-line no-unused-vars
-
+/* exported Product */
 // Product data model persisted in IndexedDB.
 class Product {
     id;

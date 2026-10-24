@@ -1,3 +1,7 @@
+/* exported extHelper_LastParentVariant, extHelper_fetchHookKey, extHelper_formatDimensionValue,
+   extHelper_getRequestUrl, extHelper_installRecommendationFetchHook, extHelper_isSpinnerFixEnabled,
+   extHelper_isVineApiRequest, extHelper_pageWindow, extHelper_processedRecommendationResponses,
+   extHelper_repairRecommendationData, extHelper_repairRecommendationResponse, vineFetch */
 var extHelper_LastParentVariant = null;
 const extHelper_processedRecommendationResponses = new WeakSet();
 const extHelper_pageWindow = typeof unsafeWindow !== 'undefined' && unsafeWindow ? unsafeWindow : window;

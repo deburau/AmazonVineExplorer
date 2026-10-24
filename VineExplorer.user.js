@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1
+// @version      0.12.1.1
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -34,6 +34,24 @@
 // ==/UserScript==
 
 'use strict';
+
+/* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
+   addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
+   appendInfiniteScrollTiles, backGroundTileScanner, btnEventhandlerClick, cleanUpDatabase,
+   colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
+   createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
+   createProductSite, createSettingsKeywordsTableElement, createSettingsMenuElement,
+   createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
+   currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
+   favStarEventhandlerClick, fixProductImageUrl, getContrastColor, getPageinationData,
+   getTilesFromURL, getUrlParameter, gotifyNotification, handleAutoScan, handleInfiniteScroll,
+   importDatabase, init, initBackgroundScan, initTileEventHandlers, injectDarkMode,
+   markAllCurrentDatabaseProductsAsSeen, markAllCurrentSiteProductsAsSeen, parseTileData,
+   populateSettingsContainer, readFile, reloadPageWithSubpageTarget, requestProductDetails,
+   rgbToHex, rgbaToHex, shareEventHandlerClick, showAutoScanScreen, showBackgroundScanScreen,
+   sort_by_key, startAutoScan, stickElementToTopScrollEVhandler, timeAgo, translate,
+   updateAutoScanScreenText, updateBackgroundScanScreenText, updateFavoritesBtn,
+   updateNewProductsBtn, updateTileStyle */
 console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 
 /**

@@ -1,5 +1,16 @@
 'use strict';
-if (window.top != window.self) return; //don't run on frames or iframes
+
+/* exported AVE_EVENTHANDLER, AVE_IS_THIS_SESSION_MASTER, AVE_SESSION_ID, AVE_TITLE, AVE_VERSION,
+   AUTO_SCAN_IS_RUNNING, AUTO_SCAN_PAGE_CURRENT, AUTO_SCAN_PAGE_MAX, DATABASE_NAME,
+   DATABASE_OBJECT_STORE_NAME, DATABASE_VERSION, INIT_AUTO_SCAN, PAGE_LOAD_TIMESTAMP,
+   SECONDS_PER_DAY, SECONDS_PER_WEEK, SETTINGS, SETTINGS_DEFAULT, SETTINGS_USERCONFIG_DEFINES,
+   SITE_IS_SHOPPING, SITE_IS_VINE, addBranding, ave_eventhandler, delay, fastStyleChanges,
+   findActiveMenuButton, generateSessionID, getCountry, loadSettings, saveSettings,
+   toTimestamp, toUnixTimestamp, unixTimeStamp, waitForHtmlElement, waitForHtmlElementPromise */
+
+// Don't run on frames or iframes.
+// A top level "return" is not valid in a plain script, so the execution is aborted with an error.
+if (window.top != window.self) throw new Error('AmazonVineExplorer: running inside a frame - aborted.');
 
 // Constants Needed for some things
 const AVE_VERSION = (GM_info?.script?.version)
@@ -460,6 +471,7 @@ async function waitForHtmlElement(selector, cb, altDocument = document, timeout 
 
     const _observer = new MutationObserver(() => {
         if (altDocument.querySelector(selector)) {
+            clearTimeout(timeoutId);
             _observer.disconnect();
             cb(altDocument.querySelector(selector));
             return;
@@ -471,7 +483,7 @@ async function waitForHtmlElement(selector, cb, altDocument = document, timeout 
         subtree: true
     });
 
-const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
         _observer.disconnect();
         console.warn(`Timeout: element ${selector} not found`);
         cb(null);

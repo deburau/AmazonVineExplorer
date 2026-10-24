@@ -1,4 +1,5 @@
 'use strict';
+/* exported I18N, detectLanguage, t */
 // Flat i18n dictionary for UI strings (DE/EN).
 const I18N = {
     de: {

@@ -1,3 +1,4 @@
+/* exported DB_HANDLER */
 console.log('loaded db_handler.js');
 class DB_HANDLER {
     #version;
