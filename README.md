@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-24] - Version 0.12.1.8
+
+*  Fix: the branding is not red on the pages that are not vine pages, there is no master/slave there
+
 ##### [2026-10-24] - Version 0.12.1.7
 
 *  Fix: a tab on a shopping page does not take over the master role anymore, the background scan crashed there

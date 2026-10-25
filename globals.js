@@ -80,6 +80,11 @@ function addBranding() {
 
     // Master session shows a distinct badge to avoid duplicate background work.
     const _isMasterSession = AVE_IS_THIS_SESSION_MASTER && SITE_IS_VINE;
+    // The master/slave distinction only exists on the vine pages. On all other pages a
+    // neutral color is used, because red would look like an error there.
+    const _brandingColor = _isMasterSession ?
+        'rgba(218, 247, 166, .75)' :
+        (SITE_IS_VINE ? 'rgba(255, 100, 100, .75)' : 'rgba(150, 150, 150, .75)');
 
     const _oldElem = document.getElementById('ave-branding-text');
     if (_oldElem) _oldElem.remove();
@@ -99,7 +104,7 @@ function addBranding() {
     width: fit-content;
     height: fit-content;
     margin-left: auto;
-    background-color: ${(_isMasterSession) ? 'rgba(218, 247, 166, .75)': 'rgba(255, 100, 100, .75)'};
+    background-color: ${_brandingColor};
     justify-content: center;
     display: flex;
     padding: 3px;
@@ -126,7 +131,7 @@ function addBranding() {
     _text.style.bottom = '10px';
     _text.style.left = '10px';
     _text.style.color = 'blue'; // Textfarbe
-    _text.style.backgroundColor = (_isMasterSession) ? 'rgba(218, 247, 166, .75)': 'rgba(255, 100, 100, .75)';
+    _text.style.backgroundColor = _brandingColor;
     _text.style.textAlign = 'left';
     _text.style.fontSize = '20px'; // Ändere die Schriftgröße hier
     _text.style.zIndex = '2000';
