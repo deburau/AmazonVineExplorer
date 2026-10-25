@@ -42,17 +42,17 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
-##### [24.10.2026] - Version 0.12.1.1
+##### [2026-10-24] - Version 0.12.1.1
 
 *  Reworked the ESLint configuration, so the linter reports real issues instead of hundreds of false positives
 *  Fix: waitForHtmlElement() no longer calls the callback a second time with null after the element was found
 *  Cleanup: added "exported" headers to all files, to document the shared global scope of the userscript
 
-##### [09.10.2026] - Version 0.12.1
+##### [2026-10-09] - Version 0.12.1
 
 *  Merge [PR #67](https://github.com/deburau/AmazonVineExplorer/pull/67) by adripo: Fix for malformed Amazon Vine recommendation variation data
 
-##### [09.02.2026] - Version 0.12.0
+##### [2026-02-09] - Version 0.12.0
 
 *  Desktop Notification Highlight Keywords are sorted
 *  Time to wait between unseen items notification is configurable
