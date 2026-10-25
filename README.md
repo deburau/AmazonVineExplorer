@@ -42,6 +42,11 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-24] - Version 0.12.1.14
+
+*  Fix: the reset of the settings marks all products as seen, so that the counter of the new entries starts at 0
+*  Fix: the callback of "mark all products as seen" was never called, because the database update returns a promise and not a callback
+
 ##### [2026-10-24] - Version 0.12.1.13
 
 *  Fix: the reset of the settings removes the state information of AVE too (the state of the scan, the current page, the sessions), so that AVE behaves like after a fresh installation

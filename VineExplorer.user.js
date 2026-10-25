@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.13
+// @version      0.12.1.14
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -568,8 +568,13 @@ function markAllCurrentDatabaseProductsAsSeen(cb = () => {}) {
         for (let i = 0; i < _prodsLength; i++) {
             const _currProd = prods[i];
             _currProd.isNew = 0;
-            database.update(_currProd, ()=> {
+            // NOTE: update() returns a promise, it does not take a callback
+            database.update(_currProd).then(() => {
                 if (SETTINGS.DebugLevel > 10) console.log(`markAllCurrentDatabaseProductsAsSeen() - Updated ${_currProd.id}`);
+                _returned++
+                if (_returned == _prodsLength) cb(true);
+            }).catch((error) => {
+                console.error(`markAllCurrentDatabaseProductsAsSeen(): could not update the product ${_currProd.id}: ${error}`);
                 _returned++
                 if (_returned == _prodsLength) cb(true);
             })
