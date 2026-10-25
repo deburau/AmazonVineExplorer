@@ -343,25 +343,8 @@ SETTINGS_USERCONFIG_DEFINES.push({key: 'DebugLevel', type: 'number', min: 0, max
 
 SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'RESET SETTINGS TO DEFAULT', bgColor: 'rgb(255,128,0)', description: 'It does what it says', key: 'BUTTON_RESET_SETTINGS', btnClick: () => {
     SETTINGS.reset();
-
-    // All products are marked as seen, so that the counter of the new entries starts at 0
-    let _reloaded = false;
-    const _reload = () => {
-        if (_reloaded) return;
-        _reloaded = true;
-        /* eslint-disable-next-line no-self-assign */
-        window.location.href = window.location.href;
-    };
-
-    // Fallback, in case the database is not reachable
-    setTimeout(_reload, 5000);
-
-    try {
-        markAllCurrentDatabaseProductsAsSeen(_reload);
-    } catch (error) {
-        console.error('The products could not be marked as seen:', error);
-        _reload();
-    }
+    /* eslint-disable-next-line no-self-assign */
+    window.location.href = window.location.href;
 }});
 SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DATABSE EXPORT >>>', bgColor: 'lime', description: 'Export the entire Database', key: 'BUTTON_DB_EXPORT', btnClick: () => {exportDatabase();}});
 SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DATABSE IMPORT <<<', bgColor: 'yellow', description: 'Clear the current database and import data from an earlier exported file. Data is imported as is, i.e. there is no validation. Please wait for the completion notification after clicking the button', key: 'BUTTON_DB_IMPORT', btnClick: () => {importDatabase();}});
