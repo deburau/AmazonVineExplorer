@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-24] - Version 0.12.1.6
+
+*  Fix: the heartbeat does not crash anymore if the own session is missing from the session list
+
 ##### [2026-10-24] - Version 0.12.1.5
 
 *  Fix: the unload handler does not overwrite the handler of the page anymore and does not crash if the session list is not readable

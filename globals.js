@@ -203,6 +203,15 @@ setTimeout(() => {
             }
         }
 
+        // Our own session can be missing here, e.g. if the browser throttled the timers of a
+        // background tab and the entry was removed as invalid. Then it has to be added again,
+        // otherwise this tab would lose its session (and crash below with an index of -1).
+        if (_ownIndex === -1) {
+            _sessions.push({id: AVE_SESSION_ID, ts: Date.now(), master: false});
+            _ownIndex = _sessions.length - 1;
+            console.log('The own session was missing and is added again');
+        }
+
         if (!AVE_IS_THIS_SESSION_MASTER && (_noValidMaster || _sessions.length == 1)) {
             AVE_IS_THIS_SESSION_MASTER = true;
             _sessions[_ownIndex].master = true;
