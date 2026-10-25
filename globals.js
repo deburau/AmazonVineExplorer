@@ -168,6 +168,13 @@ function addBranding() {
 
 unsafeWindow.ave.addBranding = addBranding;
 
+// Helper for the browser console: stores the settings as a JSON string.
+// Some userscript managers store the settings that way, the script has to be able to read them.
+unsafeWindow.ave.storeSettingsAsJsonString = () => {
+    GM_setValue('AVE_SETTINGS', JSON.stringify(SETTINGS));
+    console.log('The settings are stored as a JSON string now. Reload the page.');
+};
+
 // Small randomized delay reduces race conditions when multiple tabs start.
 setTimeout(() => {
     if (!localStorage.getItem('AVE_SESSIONS')) {
