@@ -220,7 +220,7 @@ setTimeout(() => {
         // background tab and the entry was removed as invalid. Then it has to be added again,
         // otherwise this tab would lose its session (and crash below with an index of -1).
         if (_ownIndex === -1) {
-            _sessions.push({id: AVE_SESSION_ID, ts: Date.now(), master: false});
+            _sessions.push({id: AVE_SESSION_ID, ts: Date.now(), master: AVE_IS_THIS_SESSION_MASTER});
             _ownIndex = _sessions.length - 1;
             console.log('The own session was missing and is added again');
         }
@@ -439,8 +439,17 @@ MaxItemsPerPage = 500;
         }
     }
 
+    /**
+     * Restores the default values, stores them and removes all the state information of AVE.
+     * After the reset AVE behaves like after a fresh installation.
+     */
     reset() {
-        GM_setValue('AVE_SETTINGS', new SETTINGS_DEFAULT());
+        const _defaults = new SETTINGS_DEFAULT();
+        for (const _key of Object.keys(_defaults)) {
+            this[_key] = _defaults[_key];
+        }
+        GM_setValue('AVE_SETTINGS', _defaults);
+        clearAVEState();
     }
 }
 
@@ -451,6 +460,45 @@ ave_eventhandler.on('ave-save-cofig', () => {
     console.log('Got Save Event');
     SETTINGS.save(true);
 });
+
+// All keys of the local storage that AVE uses for its state information
+const AVE_LOCAL_STORAGE_KEYS = [
+    'AVE_INIT_AUTO_SCAN',
+    'AVE_AUTO_SCAN_IS_RUNNING',
+    'AVE_AUTO_SCAN_PAGE_CURRENT',
+    'AVE_AUTO_SCAN_PAGE_MAX',
+    'AVE_BACKGROUND_SCAN_IS_RUNNING',
+    'AVE_BACKGROUND_SCAN_LAST_TIME',
+    'AVE_BACKGROUND_SCAN_PAGE_CURRENT',
+    'AVE_BACKGROUND_SCAN_PAGE_MAX',
+    'AVE_BACKGROUND_SCAN_STAGE',
+    'AVE_CLEANUP_LAST_TIME',
+    'AVE_FAST_SCAN_IS_RUNNING',
+    'AVE_FAST_SCAN_LAST_TIME',
+    'AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS',
+    'AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT',
+    'AVE_LAST_BACKGROUND_SCAN_STAGE',
+    'AVE_LAST_DROP',
+    'AVE_LAST_UNSEEN_NOTIFICATION',
+    'AVE_NEW_COUNT',
+    'AVE_OPEN_SETTINGS_TAB',
+    'AVE_SESSIONS',
+    'ave-share-details'
+];
+
+/**
+ * Removes all the state information of AVE (the state of the scan, the session list, ...).
+ * Is used by the reset of the settings, so that AVE behaves like after a fresh installation.
+ */
+function clearAVEState() {
+    for (const _key of AVE_LOCAL_STORAGE_KEYS) {
+        try {
+            localStorage.removeItem(_key);
+        } catch (error) {
+            console.error(`clearAVEState(): could not remove "${_key}":`, error);
+        }
+    }
+}
 
 /**
   * Load Settings from GM Storage

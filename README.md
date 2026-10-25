@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-24] - Version 0.12.1.13
+
+*  Fix: the reset of the settings removes the state information of AVE too (the state of the scan, the current page, the sessions), so that AVE behaves like after a fresh installation
+
 ##### [2026-10-24] - Version 0.12.1.12
 
 *  Fix: the settings did not register a new listener for every reset of the settings
