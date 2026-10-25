@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.16
+// @version      0.12.1.17
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -72,14 +72,16 @@ let backGroundScanTimeout;
 
 let BackGroundScanIsRunning = false;
 
-// Make some things accessable from console
-unsafeWindow.ave = {
+// Make some things accessable from console.
+// NOTE: The object of globals.js is not replaced, otherwise the helpers of globals.js
+// (e.g. addBranding) would be lost.
+unsafeWindow.ave = Object.assign(unsafeWindow.ave || {}, {
     classes: [
         DB_HANDLER
     ],
     config: SETTINGS,
     event: ave_eventhandler,
-};
+});
 
 let database;
 // Async bootstrap to avoid blocking document-start and to keep DB init isolated.

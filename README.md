@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-24] - Version 0.12.1.17
+
+*  Fix: the helpers of globals.js (e.g. addBranding) were lost, because the object for the console was replaced
+
 ##### [2026-10-24] - Version 0.12.1.16
 
 *  Debug: the helper "ave.storeSettingsAsJsonString()" in the browser console stores the settings as a JSON string
