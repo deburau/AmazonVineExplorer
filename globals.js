@@ -218,20 +218,28 @@ setTimeout(() => {
 }, Math.round(Math.random() * 100));
 
 
-window.onbeforeunload = function () {
+// Remove our session id on unload, so that another tab can take over the master role faster.
+// NOTE: A listener is used instead of window.onbeforeunload, so that the handler of the page is
+// not overwritten. The function must not return a value, otherwise the browser shows the
+// "leave this site?" dialog on every reload.
+window.addEventListener('beforeunload', () => {
     console.log('CLOSE OR RELOAD SESSION - REMOVE OUR SESSION ID FROM ARRAY');
-    const _sessions = JSON.parse(localStorage.AVE_SESSIONS);
-    for (let i = 0; i < _sessions.length; i++) {
-        const _elem = _sessions[i];
-        if (_elem.id == AVE_SESSION_ID) {
-            _sessions.splice(i, 1);
-            localStorage.setItem('AVE_SESSIONS', JSON.stringify(_sessions));
-            console.log('SESSION ID GOT REMOVED');
-            return;
+    try {
+        const _sessions = JSON.parse(localStorage.getItem('AVE_SESSIONS', '[]'));
+        if (!Array.isArray(_sessions)) return;
+        for (let i = 0; i < _sessions.length; i++) {
+            const _elem = _sessions[i];
+            if (_elem.id == AVE_SESSION_ID) {
+                _sessions.splice(i, 1);
+                localStorage.setItem('AVE_SESSIONS', JSON.stringify(_sessions));
+                console.log('SESSION ID GOT REMOVED');
+                return;
+            }
         }
+    } catch (error) {
+        console.error('Error while removing the session id:', error);
     }
-    return 'Realy ?'
-}
+});
 
 
 // All Config Options that should shown to the User
