@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.10
+// @version      0.12.1.11
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -52,7 +52,7 @@
    rgbToHex, rgbaToHex, shareEventHandlerClick, showAutoScanScreen, showBackgroundScanScreen,
    sort_by_key, startAutoScan, stickElementToTopScrollEVhandler, timeAgo, translate,
    updateAutoScanScreenText, updateBackgroundScanScreenText, updateFavoritesBtn,
-   updateNewProductsBtn, updateTileStyle */
+   updateNewProductsBtn, updateTileStyle, stopBackgroundScan */
 console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 
 /**
@@ -2339,6 +2339,20 @@ reader.onload = (event) => {
 
         reader.readAsText(file);
     });
+}
+
+/**
+ * Stops a running background scan.
+ * Is used when this tab is not the master session (anymore).
+ */
+function stopBackgroundScan() {
+    if (!BackGroundScanIsRunning) return;
+    console.warn('stopBackgroundScan(): stopping the background scan');
+    BackGroundScanIsRunning = false;
+    if (backGroundScanTimeout) {
+        clearTimeout(backGroundScanTimeout);
+        backGroundScanTimeout = null;
+    }
 }
 
 function initBackgroundScan() {

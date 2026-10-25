@@ -225,10 +225,22 @@ setTimeout(() => {
             console.log('The own session was missing and is added again');
         }
 
+        // If another tab has taken over the master role (that happens if our session was
+        // removed from the list), we have to give up the role and stop our background scan.
+        // Otherwise two tabs would scan at the same time.
+        const _otherMasterExists = _sessions.some((_session) => _session.master && _session.id !== AVE_SESSION_ID);
+        if (AVE_IS_THIS_SESSION_MASTER && _otherMasterExists) {
+            AVE_IS_THIS_SESSION_MASTER = false;
+            _sessions[_ownIndex].master = false;
+            stopBackgroundScan();
+            addBranding();
+            console.log('THE MASTER SESSION WAS TAKEN OVER BY AN OTHER TAB');
+        }
+
         // The master role is only needed on the vine pages, because only there the background
         // scan can run. Without this check a tab on a shopping page would take over the master
         // role and start the scan with a url that does not exist.
-        if (SITE_IS_VINE && !AVE_IS_THIS_SESSION_MASTER && (_noValidMaster || _sessions.length == 1)) {
+        if (SITE_IS_VINE && !AVE_IS_THIS_SESSION_MASTER && (_noValidMaster || !_otherMasterExists)) {
             AVE_IS_THIS_SESSION_MASTER = true;
             _sessions[_ownIndex].master = true;
             addBranding();

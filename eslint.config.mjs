@@ -54,7 +54,7 @@ const mainFile = [
     "rgbToHex", "rgbaToHex", "shareEventHandlerClick", "showAutoScanScreen", "showBackgroundScanScreen",
     "sort_by_key", "startAutoScan", "stickElementToTopScrollEVhandler", "timeAgo", "translate",
     "updateAutoScanScreenText", "updateBackgroundScanScreenText", "updateFavoritesBtn",
-    "updateNewProductsBtn", "updateTileStyle"
+    "updateNewProductsBtn", "updateTileStyle", "stopBackgroundScan"
 ];
 
 /** Userscript API globals (Tampermonkey) */
