@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-24] - Version 0.12.1.10
+
+*  Fix: a tab in the background does not lose its session anymore, because the browser throttles its timers
+
 ##### [2026-10-24] - Version 0.12.1.9
 
 *  Fix: the branding is not shown on the pages that are not vine pages anymore

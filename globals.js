@@ -71,6 +71,11 @@ class AVE_EVENTHANDLER {
     }
 }
 
+// A session is considered dead if it did not send a heartbeat for this time (ms).
+// It has to be longer than the heartbeat interval (1s), because the browser throttles the
+// timers of a background tab. Otherwise a tab in the background would lose its session.
+const AVE_SESSION_TIMEOUT = 10000;
+
 // Shared event bus for cross-file coordination.
 const ave_eventhandler = new AVE_EVENTHANDLER();
 
@@ -201,7 +206,7 @@ setTimeout(() => {
             if (_session.id == AVE_SESSION_ID){
                 _session.ts = Date.now();
                 _ownIndex = i;
-            } else if (_session.ts + 2500 < Date.now()) { // We have found a Invalid Session => Handle this
+            } else if (_session.ts + AVE_SESSION_TIMEOUT < Date.now()) { // We have found a Invalid Session => Handle this
                 if (_session.master && SITE_IS_VINE) { // Should we takeover Master ? ONLY IF WE ARE ON VINE SITE
                     _noValidMaster = true;
                     _sessions.splice(_sessions.indexOf(_session), 1);
