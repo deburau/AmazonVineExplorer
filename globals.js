@@ -212,7 +212,10 @@ setTimeout(() => {
             console.log('The own session was missing and is added again');
         }
 
-        if (!AVE_IS_THIS_SESSION_MASTER && (_noValidMaster || _sessions.length == 1)) {
+        // The master role is only needed on the vine pages, because only there the background
+        // scan can run. Without this check a tab on a shopping page would take over the master
+        // role and start the scan with a url that does not exist.
+        if (SITE_IS_VINE && !AVE_IS_THIS_SESSION_MASTER && (_noValidMaster || _sessions.length == 1)) {
             AVE_IS_THIS_SESSION_MASTER = true;
             _sessions[_ownIndex].master = true;
             addBranding();
