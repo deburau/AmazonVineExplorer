@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.1
+// @version      0.12.1.2
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -152,6 +152,8 @@ let aveShareData = localStorage.getItem('ave-share-details');
                 }, 100);
             });
             // Alternate init path for empty pages (no offers).
+            // This is the alternative for a page without products. On a page with products
+            // this element never appears, so the timeout warning is not wanted here.
             waitForHtmlElement('.vvp-no-offers-msg', (elem) => { // Empty Page ?!?!
                 if (!elem) return;
 
@@ -165,7 +167,7 @@ let aveShareData = localStorage.getItem('ave-share-details');
                 }
                 addBranding();
                 init(false);
-            });
+            }, document, 10000, false);
         } else if (SITE_IS_SHOPPING) {
             console.log('We are on Amazon Shopping');
             _execLock = true;

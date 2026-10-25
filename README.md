@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-24] - Version 0.12.1.2
+
+*  Fix: the warning "Timeout: element .vvp-no-offers-msg not found" is not shown anymore on every page with products
+
 ##### [2026-10-24] - Version 0.12.1.1
 
 *  Reworked the ESLint configuration, so the linter reports real issues instead of hundreds of false positives

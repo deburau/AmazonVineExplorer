@@ -459,8 +459,9 @@ function toTimestamp(unixTimestamp) {
     * @param {function} cb Callback Function
     * @param {object} [altDocument] Alternativ document root
     * @param {number} [timeout] Timeout in milliseconds
+    * @param {boolean} [logTimeout] Set to false to suppress the warning if the element is not found
     */
-async function waitForHtmlElement(selector, cb, altDocument = document, timeout = 10000) {
+async function waitForHtmlElement(selector, cb, altDocument = document, timeout = 10000, logTimeout = true) {
     if (typeof (selector) !== 'string') throw new Error('waitForHtmlElement(): selector is not defined or is not type of string');
     if (typeof (cb) !== 'function') throw new Error('waitForHtmlElement(): cb is not defined or is not type of string');
 
@@ -485,15 +486,15 @@ async function waitForHtmlElement(selector, cb, altDocument = document, timeout 
 
     const timeoutId = setTimeout(() => {
         _observer.disconnect();
-        console.warn(`Timeout: element ${selector} not found`);
+        if (logTimeout) console.warn(`Timeout: element ${selector} not found`);
         cb(null);
     }, timeout);
 }
 
 // Wrap waitForHtmlElement in a Promise to use it with async/await
-async function waitForHtmlElementPromise(selector, altDocument = document, timeout = 10000) {
+async function waitForHtmlElementPromise(selector, altDocument = document, timeout = 10000, logTimeout = true) {
     return new Promise((resolve, reject) => {
-        waitForHtmlElement(selector, resolve, altDocument, timeout);
+        waitForHtmlElement(selector, resolve, altDocument, timeout, logTimeout);
     });
 }
 
