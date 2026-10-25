@@ -78,13 +78,16 @@ function addBranding() {
     // sometimes document.body is null. I don't know why, but at least, it does not throw an error then
     if (!document?.body) return;
 
+    // The branding is only shown on the vine pages.
+    if (!SITE_IS_VINE) {
+        const _oldElem = document.getElementById('ave-branding-text');
+        if (_oldElem) _oldElem.remove();
+        return;
+    }
+
     // Master session shows a distinct badge to avoid duplicate background work.
-    const _isMasterSession = AVE_IS_THIS_SESSION_MASTER && SITE_IS_VINE;
-    // The master/slave distinction only exists on the vine pages. On all other pages a
-    // neutral color is used, because red would look like an error there.
-    const _brandingColor = _isMasterSession ?
-        'rgba(218, 247, 166, .75)' :
-        (SITE_IS_VINE ? 'rgba(255, 100, 100, .75)' : 'rgba(150, 150, 150, .75)');
+    const _isMasterSession = AVE_IS_THIS_SESSION_MASTER;
+    const _brandingColor = _isMasterSession ? 'rgba(218, 247, 166, .75)' : 'rgba(255, 100, 100, .75)';
 
     const _oldElem = document.getElementById('ave-branding-text');
     if (_oldElem) _oldElem.remove();
