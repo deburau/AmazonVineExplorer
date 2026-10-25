@@ -9,8 +9,10 @@
    toTimestamp, toUnixTimestamp, unixTimeStamp, waitForHtmlElement, waitForHtmlElementPromise */
 
 // Don't run on frames or iframes.
-// A top level "return" is not valid in a plain script, so the execution is aborted with an error.
-if (window.top != window.self) throw new Error('AmazonVineExplorer: running inside a frame - aborted.');
+// A top level "return" aborts the script silently, a thrown error would show up as an
+// uncaught error in the console of every frame (e.g. the hidden iframe of the scan).
+// The script is also excluded from frames with the @noframes directive.
+if (window.top != window.self) return;
 
 // Constants Needed for some things
 const AVE_VERSION = (GM_info?.script?.version)

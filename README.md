@@ -42,6 +42,11 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-24] - Version 0.12.1.4
+
+*  Fix: the error "AmazonVineExplorer: running inside a frame - aborted" is not shown anymore
+*  Fix: the script does not run in frames anymore (e.g. in the hidden iframe of the background scan)
+
 ##### [2026-10-24] - Version 0.12.1.3
 
 *  Fix: the timeout warnings of the optional style changes (Amazon navbar, footer, buttons, ...) are not shown anymore

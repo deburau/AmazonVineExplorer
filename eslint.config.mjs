@@ -126,5 +126,19 @@ export default [
             globals: Object.fromEntries(foreignGlobals(file).map((name) => [name, "readonly"]))
         }
     })),
-
+    {
+        // globals.js uses a top level "return" to abort the execution inside frames.
+        // The "commonjs" sourceType allows that syntax without changing the runtime behaviour.
+        // The "exported" comments do not work in that mode, so the shared names are ignored instead.
+        files: ["globals.js"],
+        languageOptions: {
+            sourceType: "commonjs"
+        },
+        rules: {
+            "no-unused-vars": ["error", {
+                args: "none",
+                varsIgnorePattern: `^(${globalsFile.join("|")})$`
+            }]
+        }
+    }
 ];

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.3
+// @version      0.12.1.4
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -18,6 +18,7 @@
 // @license      MIT
 // @icon64       https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/vine_logo.png
 // @run-at       document-start
+// @noframes     The script must not run in frames (e.g. in the hidden iframe of the background scan)
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM.getValue
