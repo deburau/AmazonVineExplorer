@@ -491,6 +491,17 @@ async function waitForHtmlElement(selector, cb, altDocument = document, timeout 
     }, timeout);
 }
 
+/**
+    * Waits for an optional element and applies a style change to it.
+    * In contrast to waitForHtmlElement() no warning is logged, if the element is not found,
+    * because the element is optional (e.g. the Amazon navbar is not on every page).
+    * @param {string} selector querySelector
+    * @param {function} cb Callback Function
+    */
+function waitForStyleElement(selector, cb) {
+    return waitForHtmlElement(selector, cb, document, 10000, false);
+}
+
 // Wrap waitForHtmlElement in a Promise to use it with async/await
 async function waitForHtmlElementPromise(selector, altDocument = document, timeout = 10000, logTimeout = true) {
     return new Promise((resolve, reject) => {
@@ -578,54 +589,54 @@ async function fastStyleChanges() {
 
     if (SITE_IS_VINE) {
         if (SETTINGS.EnableFullWidth) {
-            waitForHtmlElement('.vvp-body', (elem) => {
+            waitForStyleElement('.vvp-body', (elem) => {
                 if (elem) elem.style.maxWidth = '100%';
             });
         }
 
         if (SETTINGS.DisableAmazonNavbar) {
-            waitForHtmlElement('#navbar-main', (elem) => {
+            waitForStyleElement('#navbar-main', (elem) => {
                 if (elem) elem.style.display = 'none';
             });
 
-            waitForHtmlElement('#skiplink', (elem) => {
+            waitForStyleElement('#skiplink', (elem) => {
                 if (elem) elem.style.display = 'none';
             });
 
-            waitForHtmlElement('#vvp-logo-link > img', (elem) => {
+            waitForStyleElement('#vvp-logo-link > img', (elem) => {
                 if (elem) elem.style.display = 'none';
             });
 
-            waitForHtmlElement('#vvp-header', (elem) => {
+            waitForStyleElement('#vvp-header', (elem) => {
                 if (elem) {
                     elem.style.marginTop = '0';
                     elem.style.marginBottom = '0';
                 }
             });
 
-            waitForHtmlElement('.a-container.vvp-body > .a-section:not(#vvp-header)', (elem) => {
+            waitForStyleElement('.a-container.vvp-body > .a-section:not(#vvp-header)', (elem) => {
                 if (elem) elem.style.display = 'none';
             });
 
-            waitForHtmlElement('.a-tab-container.vvp-tab-set-container', (elem) => {
+            waitForStyleElement('.a-tab-container.vvp-tab-set-container', (elem) => {
                 if (elem) elem.style.marginTop = '0';
             });
         }
 
         if (SETTINGS.DisableCategories) {
-            waitForHtmlElement('#vvp-browse-nodes-container', (elem) => {
+            waitForStyleElement('#vvp-browse-nodes-container', (elem) => {
                 if (elem) elem.style.display = 'none';
             });
         }
 
         if (SETTINGS.DisableSuggestions) {
-            waitForHtmlElement('.copilot-secure-display', (elem) => {
+            waitForStyleElement('.copilot-secure-display', (elem) => {
                 if (elem) elem.style.display = 'none';
             });
         }
 
         if (SETTINGS.DisableFooter) {
-            waitForHtmlElement('#navFooter', (elem) => {
+            waitForStyleElement('#navFooter', (elem) => {
                 if (elem) {
                     elem.style.display = 'none';
                     elem.style.visibility = 'hidden';
@@ -634,28 +645,28 @@ async function fastStyleChanges() {
         }
 
         if (SETTINGS.DisableBtnPotLuck) {
-            waitForHtmlElement('#vvp-items-button--recommended', (elem) => {
+            waitForStyleElement('#vvp-items-button--recommended', (elem) => {
                 if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableBtnLastChance) {
-            waitForHtmlElement('#vvp-items-button--all', (elem) => {
+            waitForStyleElement('#vvp-items-button--all', (elem) => {
                 if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableBtnSeller) {
-            waitForHtmlElement('#vvp-items-button--seller', (elem) => {
+            waitForStyleElement('#vvp-items-button--seller', (elem) => {
                 if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.EnableTopLogoChange) {
-            waitForHtmlElement('#vvp-logo-link > img', (elem) => {
+            waitForStyleElement('#vvp-logo-link > img', (elem) => {
                 if (elem) {
                     elem.src = 'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_notification_image.png';
                     elem.style.height = '100px';
@@ -669,7 +680,7 @@ async function fastStyleChanges() {
             if (activeButtonId) {
                 console.log('EnablePaginationTop: Active menu button ID:', activeButtonId);
                 if (activeButtonId == "vvp-items-button--seller" || activeButtonId == "vvp-all-items-button") {
-                    waitForHtmlElement('nav.a-text-center', (elem) => {
+                    waitForStyleElement('nav.a-text-center', (elem) => {
                         if (!elem) return;
 
                         var clonedDiv = elem.cloneNode(true);
@@ -697,14 +708,14 @@ async function fastStyleChanges() {
 
         if (SETTINGS.DisableSuggestionsShopping) {
             //rhf-frame
-            waitForHtmlElement('#rhf', (elem) => {
+            waitForStyleElement('#rhf', (elem) => {
                 if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableFooterShopping) {
-            waitForHtmlElement('#navFooter', (elem) => {
+            waitForStyleElement('#navFooter', (elem) => {
                 if (elem) {
                     elem.style.display = 'none';
                     elem.style.visibility = 'hidden';

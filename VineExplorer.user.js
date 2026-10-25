@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.2
+// @version      0.12.1.3
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -410,7 +410,8 @@ async function parseTileData(tile) {
         return _ret;
     }
 
-    await waitForHtmlElementPromise('.vvp-item-badges', tile);
+    // The badges are optional, so a short timeout without a warning is enough
+    await waitForHtmlElementPromise('.vvp-item-badges', tile, 3000, false);
     const _isPrerelease = tile.getElementsByClassName('vvp-badge-prerelease').length > 0;
     const _isFeatured = tile.getElementsByClassName('vvp-badge-featured').length > 0;
 
@@ -3085,7 +3086,7 @@ function addStyleToTile(_currTile, _product) {
         if (!_itemBadge) return;
 
         _itemBadge.style.marginTop = '20px';
-    }, _currTile);
+    }, _currTile, 2000, false);
 }
 
 async function requestProductDetails(prod) {

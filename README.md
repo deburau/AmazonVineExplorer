@@ -42,6 +42,11 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-24] - Version 0.12.1.3
+
+*  Fix: the timeout warnings of the optional style changes (Amazon navbar, footer, buttons, ...) are not shown anymore
+*  Fix: the badges of a product are only waited for 3 seconds, they are optional
+
 ##### [2026-10-24] - Version 0.12.1.2
 
 *  Fix: the warning "Timeout: element .vvp-no-offers-msg not found" is not shown anymore on every page with products
