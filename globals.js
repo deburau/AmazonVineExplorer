@@ -421,10 +421,9 @@ MaxItemsPerPage = 500;
     CssProductDefault = "border: 2mm ridge rgba(173,216,230, .6); background-color: rgba(173,216,230, .2)";
 
     constructor() {
-        ave_eventhandler.on('ave-save-cofig', () => {
-            console.log('Got Save Event');
-            this.save(true);
-        })
+        // NOTE: No side effects here. Every instance of this class would register another
+        // listener for the save event. The listener is registered once for the SETTINGS
+        // singleton below.
     }
 
     CssProductFavStar() {
@@ -446,6 +445,12 @@ MaxItemsPerPage = 500;
 }
 
 const SETTINGS = new SETTINGS_DEFAULT();
+
+// The settings are written to the GM storage when the save event is fired.
+ave_eventhandler.on('ave-save-cofig', () => {
+    console.log('Got Save Event');
+    SETTINGS.save(true);
+});
 
 /**
   * Load Settings from GM Storage
