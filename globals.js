@@ -504,8 +504,21 @@ function clearAVEState() {
   * Load Settings from GM Storage
   */
 function loadSettings() {
-    const _settingsStore = GM_getValue('AVE_SETTINGS', {});
+    let _settingsStore = GM_getValue('AVE_SETTINGS', {});
     console.log('Got Settings from GM:(', typeof(_settingsStore),')', _settingsStore);
+
+    // Older versions of the userscript manager or manual changes can store the settings
+    // as a JSON string. In that case the string has to be parsed first, otherwise the
+    // settings would be silently ignored.
+    if (typeof(_settingsStore) === 'string') {
+        try {
+            _settingsStore = JSON.parse(_settingsStore);
+        } catch (error) {
+            console.error('loadSettings(): the stored settings could not be parsed:', error);
+            _settingsStore = {};
+        }
+    }
+
     if (typeof(_settingsStore) == 'object' && _settingsStore != null && _settingsStore != undefined) {
         const _keys = Object.keys(_settingsStore);
         const _keysLength = _keys.length;

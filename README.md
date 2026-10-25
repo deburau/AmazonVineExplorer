@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-24] - Version 0.12.1.15
+
+*  Fix: the settings are also read if they were stored as a JSON string, they were silently ignored before
+
 ##### [2026-10-24] - Version 0.12.1.14
 
 *  Fix: the callback of "mark all products as seen" was never called, because the database update returns a promise and not a callback
