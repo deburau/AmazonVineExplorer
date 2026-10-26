@@ -1,5 +1,8 @@
 # Amazon Vine Explorer - Development Guide for AI Agents
 
+> **Wechsel auf ein anderes System?** Siehe [HANDOVER.md](HANDOVER.md) – dort steht,
+> wie der Projektstand auf ein neues System (z. B. Ubuntu/Proxmox) mitgenommen wird.
+
 ## Project Overview
 
 Amazon Vine Explorer is a Tampermonkey/Greasemonkey userscript that enhances the Amazon Vine website with advanced product tracking, database management, and UI improvements. This is a pure JavaScript project using ES6+ features with extensive DOM manipulation and IndexedDB storage.
