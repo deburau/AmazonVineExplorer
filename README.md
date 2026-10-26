@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.30
+
+*  Fix: the writes to the database are no longer left unhandled, so that a failed write is reported instead of ending up as an unhandled promise rejection
+
 ##### [2026-10-26] - Version 0.12.1.29
 
 *  Fix: the search for the keywords is only done if a new product was really added and not after every update of an existing product, which made the background scan unnecessarily slow

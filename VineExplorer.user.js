@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.29
+// @version      0.12.1.30
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1240,8 +1240,12 @@ function btnEventhandlerClick(event, data) {
                 requestProductDetails(prod).then((_newProd) => {
                     database.update(_newProd || prod).then( () => {
                         updateTileStyle(_newProd || prod);
+                    }).catch((error) => {
+                        console.error(`btnEventhandlerClick(): could not update the product: ${error}`);
                     });
-                })
+                }).catch((error) => {
+                    console.error(`btnEventhandlerClick(): could not get the product details: ${error}`);
+                });
             }
         })
     }
@@ -1256,6 +1260,8 @@ function favStarEventhandlerClick(event, data) {
                 prod.isFav = 1 - prod.isFav;
                 database.update(prod).then(() => {
                     updateTileStyle(prod);
+                }).catch((error) => {
+                    console.error(`favStarEventhandlerClick(): could not update the product: ${error}`);
                 });
             }
         })
@@ -3059,7 +3065,9 @@ function updateNewProductsBtn() {
                         if (SETTINGS.EnableAutoMarkFavorite) {
                             _prod.isFav = 1;
                         }
-                        database.update(_prod);
+                        database.update(_prod).catch((error) => {
+                            console.error(`Could not save the notified product ${_prod.id}: ${error}`);
+                        });
                         break;
                     }
                 }
@@ -3253,7 +3261,11 @@ function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeVal
 function addStyleToTile(_currTile, _product) {
 
     if (!_product.gotFromDB) { // We have a new one ==> Save it to our Database ;)
-        database.add(_product);
+        // NOTE: The promise is not awaited, so a failed write has to be caught here.
+        // The write fails e.g. if a product with the same ASIN is already in the database.
+        database.add(_product).catch((error) => {
+            console.error(`addStyleToTile(): could not save the product ${_product.id}: ${error}`);
+        });
         _currTile.style.cssText = SETTINGS.CssProductSaved;
         _currTile.classList.add('ave-element-saved');
     } else {
