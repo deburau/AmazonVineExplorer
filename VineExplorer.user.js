@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.26
+// @version      0.12.1.27
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2712,83 +2712,90 @@ function backGroundTileScanner(url, cb) {
     if (SETTINGS.DebugLevel > 10) console.log(`Called backgroundTileScanner(${url})`);
     const _iconLoading = addLoadingSymbol();
     const _iframe = document.querySelector('#ave-iframe-backgroundloader');
-    const _iframeDoc = _iframe.contentWindow.document;
-    unsafeWindow.ave.backGroundIFrame = _iframeDoc;
-    _iframeDoc.location.href = url;
+
+    // NOTE: The browser replaces the document of the iframe when the iframe navigates.
+    // A document that was captured before the navigation is therefore outdated and still
+    // contains the tiles of the previous page. The live document has to be used and the
+    // scanner has to wait until the requested page is loaded.
+    const _docBeforeNavigation = _iframe.contentWindow.document;
+    const _urlBeforeNavigation = _iframe.contentWindow.location.href;
+    _iframe.contentWindow.location.href = url;
+
+    // Maximum number of checks (every 100ms) before the scan gives up on this page.
+    // Without it the scan could wait forever if the page does not load.
+    const _maxTicks = 300;
     let _tickCount = 0;
+
     const _loopDelay = setInterval(() => {
         _tickCount++;
-        if (SETTINGS.DebugLevel > 10) console.log(`backgroundTileScanner(): check if we have tiles to read... (tick ${_tickCount})`);
-        const _tiles =_iframeDoc.querySelectorAll('.vvp-item-tile');
-        if (_tiles) {
-            if (SETTINGS.DebugLevel > 10) console.log(`backgroundTileScanner(): Found first Tile`);
-            const _tilesLength = _tiles.length;
-            if (SETTINGS.DebugLevel > 10) console.log(`BackgroundsScan Querryd: ${url} and got ${_tilesLength} Tiles`);
-            // NOTE: The interval has to be cleared before anything else that can throw,
-            // otherwise the scan would run into an endless loop of errors.
-            clearInterval(_loopDelay);
-            if (SETTINGS.DebugLevel > 10) {
-                // DIAGNOSE: compares the requested url with the url that is really loaded in
-                // the iframe. If they differ, the scanner reads the dom of the previous page.
-                // NOTE: The access to the iframe can fail while the page is navigating.
-                try {
-                    // NOTE: Every single access has to be guarded on its own. During the
-                    // navigation the document of the iframe is replaced and the properties
-                    // of the old document can be null.
-                    const _safe = (_fn) => {
-                        try { return _fn(); } catch { return '<n/a>'; }
-                    };
-                    const _liveDoc = _safe(() => _iframe.contentWindow.document);
-                    console.log(`BACKGROUNDSCAN DIAG => requested: ${url}`);
-                    console.log(`BACKGROUNDSCAN DIAG => captured doc url: ${_safe(() => _iframeDoc.location.href)}`);
-                    console.log(`BACKGROUNDSCAN DIAG => live iframe url: ${_safe(() => _iframe.contentWindow.location.href)}`);
-                    console.log(`BACKGROUNDSCAN DIAG => doc is live doc: ${_safe(() => _iframeDoc === _iframe.contentWindow.document)}`);
-                    console.log(`BACKGROUNDSCAN DIAG => tiles captured: ${_tiles.length}, tiles live: ${_safe(() => _iframe.contentWindow.document.querySelectorAll('.vvp-item-tile').length)}`);
-                    console.log(`BACKGROUNDSCAN DIAG => captured readyState: ${_safe(() => _iframeDoc.readyState)}`);
-                    console.log(`BACKGROUNDSCAN DIAG => live readyState: ${_safe(() => _iframe.contentWindow.document.readyState)}`);
-                } catch (error) {
-                    console.warn(`BACKGROUNDSCAN DIAG => could not read the live iframe: ${error}`);
-                }
-            }
-            if (_tilesLength > 0) {
-                let _newCount = 0;
-                let _returned = 0;
-                const _tilesProm = []
-                for (let i = 0; i < _tilesLength; i++) {
-                    _tilesProm.push(parseTileData(_tiles[i]).then((prod) => {
-                        _returned++;
-                        if (SETTINGS.DebugLevel > 14) console.log(`BACKGROUNDSCAN => Got TileData Back: Tile ${_returned}/${_tilesLength} =>`, prod);
-                        if (!prod.gotFromDB) {
-                            ++_newCount;
-                            // NOTE: The promise of add() is not awaited, so a failed write
-                            // would end up as an unhandled rejection.
-                            database.add(prod).catch((error) => {
-                                console.error(`BACKGROUNDSCAN => Could not save the product ${prod.id}: ${error}`);
-                            });
-                        }
-                    }))
-                }
+        const _liveDoc = _iframe.contentWindow.document;
+        const _liveUrl = (_liveDoc.location) ? _liveDoc.location.href : '';
+        const _hasNewPage = (_liveDoc !== _docBeforeNavigation) || (_liveUrl !== _urlBeforeNavigation);
+        const _isLoaded = (_liveDoc.readyState === 'complete');
 
-                // NOTE: allSettled() does not throw, so the rejected tiles would be lost
-                // silently. They are collected here to make the failures visible.
-                Promise.allSettled(_tilesProm).then((_results) => {
-                    const _failed = _results.filter((_result) => _result.status === 'rejected');
-                    if (_failed.length > 0) {
-                        console.warn(`BACKGROUNDSCAN => ${_failed.length} of ${_tilesLength} tiles could not be processed`);
-                        if (SETTINGS.DebugLevel > 10) {
-                            for (const _result of _failed) {
-                                console.warn(`BACKGROUNDSCAN => Tile failed: ${_result.reason?.message || _result.reason}`);
-                            }
+        if (SETTINGS.DebugLevel > 10) {
+            console.log(`backgroundTileScanner(): tick ${_tickCount}, new page: ${_hasNewPage}, loaded: ${_isLoaded}`);
+        }
+
+        // Wait for the requested page. If it does not arrive in time, the scan continues
+        // with the next page instead of waiting forever.
+        if ((!_hasNewPage || !_isLoaded) && _tickCount < _maxTicks) return;
+
+        if (_tickCount >= _maxTicks) {
+            console.warn(`BACKGROUNDSCAN => the page ${url} was not loaded in time, the scan continues with the next page`);
+        }
+
+        unsafeWindow.ave.backGroundIFrame = _liveDoc;
+        const _tiles = _liveDoc.querySelectorAll('.vvp-item-tile');
+        const _tilesLength = _tiles.length;
+        if (SETTINGS.DebugLevel > 10) {
+            console.log(`BACKGROUNDSCAN DIAG => requested: ${url}`);
+            console.log(`BACKGROUNDSCAN DIAG => live iframe url: ${_liveUrl}`);
+            console.log(`BACKGROUNDSCAN DIAG => tiles: ${_tilesLength}`);
+            console.log(`BackgroundsScan Querryd: ${url} and got ${_tilesLength} Tiles`);
+        }
+        // NOTE: The interval has to be cleared before anything else that can throw,
+        // otherwise the scan would run into an endless loop of errors.
+        clearInterval(_loopDelay);
+
+        if (_tilesLength > 0) {
+            let _newCount = 0;
+            let _returned = 0;
+            const _tilesProm = []
+            for (let i = 0; i < _tilesLength; i++) {
+                _tilesProm.push(parseTileData(_tiles[i]).then((prod) => {
+                    _returned++;
+                    if (SETTINGS.DebugLevel > 14) console.log(`BACKGROUNDSCAN => Got TileData Back: Tile ${_returned}/${_tilesLength} =>`, prod);
+                    if (!prod.gotFromDB) {
+                        ++_newCount;
+                        // NOTE: The promise of add() is not awaited, so a failed write
+                        // would end up as an unhandled rejection.
+                        database.add(prod).catch((error) => {
+                            console.error(`BACKGROUNDSCAN => Could not save the product ${prod.id}: ${error}`);
+                        });
+                    }
+                }))
+            }
+
+            // NOTE: allSettled() does not throw, so the rejected tiles would be lost
+            // silently. They are collected here to make the failures visible.
+            Promise.allSettled(_tilesProm).then((_results) => {
+                const _failed = _results.filter((_result) => _result.status === 'rejected');
+                if (_failed.length > 0) {
+                    console.warn(`BACKGROUNDSCAN => ${_failed.length} of ${_tilesLength} tiles could not be processed`);
+                    if (SETTINGS.DebugLevel > 10) {
+                        for (const _result of _failed) {
+                            console.warn(`BACKGROUNDSCAN => Tile failed: ${_result.reason?.message || _result.reason}`);
                         }
                     }
-                    cb(_newCount);
-                    _iconLoading.remove();
-                });
-            } else {
-                if (SETTINGS.DebugLevel > 10) console.log(`BACKGROUNDSCAN => We dont have anything to do here anything => resume autoscan`);
-                cb(); // We dont have to do here anything
+                }
+                cb(_newCount);
                 _iconLoading.remove();
-            }
+            });
+        } else {
+            if (SETTINGS.DebugLevel > 10) console.log(`BACKGROUNDSCAN => We dont have anything to do here anything => resume autoscan`);
+            cb(); // We dont have to do here anything
+            _iconLoading.remove();
         }
     }, 100);
 }

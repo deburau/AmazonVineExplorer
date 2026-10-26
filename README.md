@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.27
+
+*  Fix: the background scan waited for the requested page instead of reading the dom of the previous page, so that the last page of a scan is not skipped anymore
+
 ##### [2026-10-26] - Version 0.12.1.26
 
 *  Debug: the diagnostic output of the background scan can no longer throw an error, which had stopped the scan in an endless loop
