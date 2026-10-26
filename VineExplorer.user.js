@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.18
+// @version      0.12.1.19
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -521,7 +521,13 @@ const _setAllSeenBtn = createButton(translate('buttons', 'markPageAsSeen', 'Seit
                         const _currProd = prodsArr[i];
                         if (_currProd.isNew) {
                             _currProd.isNew = 0;
-                            database.update(_currProd);
+                            database.update(_currProd).then(() => {
+                                // Update the tile on the current page, so that the "new" frame
+                                // disappears right away and not only after a reload of the page.
+                                updateTileStyle(_currProd);
+                            }).catch((error) => {
+                                console.error(`Could not update the product ${_currProd.id}: ${error}`);
+                            });
                         }
                     }
                 })
@@ -1236,7 +1242,7 @@ function updateTileStyle(prod) {
             if (SETTINGS.DebugLevel > 10) console.log(`Found Tile with id: ${prod.id}`);
             _tile.setAttribute('style', (prod.isFav) ? SETTINGS.CssProductFavTag : (prod.isNew) ? SETTINGS.CssProductNewTag : SETTINGS.CssProductDefault);
             const _favStar = _tile.querySelector('.ave-favorite-star');
-            _favStar.style.color = (prod.isFav) ? SETTINGS.FavStarColorChecked : 'white'; // SETTINGS.FavStarColorChecked = Gelb;
+            if (_favStar) _favStar.style.color = (prod.isFav) ? SETTINGS.FavStarColorChecked : 'white'; // SETTINGS.FavStarColorChecked = Gelb;
 
             const _taxValue = prod.data_estimated_tax_prize;
             if (typeof (_taxValue) == 'number') {

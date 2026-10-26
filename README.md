@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.19
+
+*  Fix: the button "mark all as seen" updates the tiles of the current page right away, so that the "new" frame disappears without a reload
+
 ##### [2026-10-25] - Version 0.12.1.18
 
 *  Fix: the callback of "mark the current site as seen" is now always called, so that the pagination does not get stuck anymore
