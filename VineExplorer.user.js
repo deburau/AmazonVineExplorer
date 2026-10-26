@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.24
+// @version      0.12.1.25
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2711,12 +2711,26 @@ function initBackgroundScan() {
 function backGroundTileScanner(url, cb) {
     if (SETTINGS.DebugLevel > 10) console.log(`Called backgroundTileScanner(${url})`);
     const _iconLoading = addLoadingSymbol();
-    const _iframeDoc = document.querySelector('#ave-iframe-backgroundloader').contentWindow.document;
+    const _iframe = document.querySelector('#ave-iframe-backgroundloader');
+    const _iframeDoc = _iframe.contentWindow.document;
     unsafeWindow.ave.backGroundIFrame = _iframeDoc;
     _iframeDoc.location.href = url;
+    let _tickCount = 0;
     const _loopDelay = setInterval(() => {
-        if (SETTINGS.DebugLevel > 10) console.log(`backgroundTileScanner(): check if we have tiles to read...`);
+        _tickCount++;
+        if (SETTINGS.DebugLevel > 10) console.log(`backgroundTileScanner(): check if we have tiles to read... (tick ${_tickCount})`);
         const _tiles =_iframeDoc.querySelectorAll('.vvp-item-tile');
+        if (SETTINGS.DebugLevel > 10) {
+            // DIAGNOSE: compares the requested url with the url that is really loaded in
+            // the iframe. If they differ, the scanner reads the dom of the previous page.
+            const _liveUrl = _iframe.contentWindow.location.href;
+            console.log(`BACKGROUNDSCAN DIAG => requested: ${url}`);
+            console.log(`BACKGROUNDSCAN DIAG => iframe doc url: ${_iframeDoc.location.href}`);
+            console.log(`BACKGROUNDSCAN DIAG => live iframe url: ${_liveUrl}`);
+            console.log(`BACKGROUNDSCAN DIAG => doc is live doc: ${_iframeDoc === _iframe.contentWindow.document}`);
+            console.log(`BACKGROUNDSCAN DIAG => tiles in captured doc: ${_tiles.length}, tiles in live doc: ${_iframe.contentWindow.document.querySelectorAll('.vvp-item-tile').length}`);
+            console.log(`BACKGROUNDSCAN DIAG => readyState: ${_iframeDoc.readyState}`);
+        }
         if (_tiles) {
             if (SETTINGS.DebugLevel > 10) console.log(`backgroundTileScanner(): Found first Tile`);
             const _tilesLength = _tiles.length;

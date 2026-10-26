@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.25
+
+*  Debug: the background scan logs the requested url and the url that is really loaded in the iframe, to check whether the scanner reads the dom of the previous page
+
 ##### [2026-10-26] - Version 0.12.1.24
 
 *  Fix: the background scan reports the products that could not be processed instead of losing the errors silently
