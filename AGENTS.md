@@ -54,6 +54,14 @@ npx eslint . --fix
 - Keep `AGENTS.md` up to date: if a rule, a convention or the project structure changes,
   update this file in the same commit.
 
+### Screenshots
+- The maintainer creates screenshots with ShareX and pastes the **file path** into the chat.
+  A pasted path is text, not an image. To see the screenshot, read the file with the `read`
+  tool (it supports png, jpg, gif, webp and bmp).
+- Screenshots are usually stored outside the repository. Do not commit them.
+  The folder `.unotes/` in the repository is in the `.gitignore` and can be used
+  as a place for them.
+
 ### Pushing
 - `git push origin dev-<version>` is allowed without asking.
 - `git push origin main` requires an explicit request.
