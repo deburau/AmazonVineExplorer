@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.27
+// @version      0.12.1.28
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -644,7 +644,9 @@ function createButton(text, id, style, clickHandler){
 }
 
 async function createTileFromProduct(product, btnID, cb) {
-    if (!product && SETTINGS.DebugLevel > 10) console.error(`createTileFromProduct got no valid product element`);
+    if (!product) {
+        throw new Error('createTileFromProduct(): no valid product element');
+    }
     return new Promise((resolve, _reject) => {
         const _btnAutoID = btnID || Math.round(Math.random() * 10000);
 
@@ -966,6 +968,12 @@ async function createProductSite(siteType, productArray, cb) {
             _returned++;
             if (SETTINGS.DebugLevel > 10) console.log(`Created Tile (${_returned}/${_fastCount})`);
             if (_returned == _fastCount) cb(true);
+        }).catch((error) => {
+            // The tile could not be created. It has to be counted as well, otherwise the
+            // callback would never be called and the page would stay unfinished.
+            console.error(`createProductSite(): could not create the tile: ${error}`);
+            _returned++;
+            if (_returned == _fastCount) cb(true);
         });
     }
 
@@ -1036,12 +1044,19 @@ async function appendInfiniteScrollTiles(cb = ()=>{}){
                 if (SETTINGS.DebugLevel > 14) console.log('Come Back from parseTileData <<<<<<<<<< INFINITYSCROLL <<<<<<<<<<<<<<<<<<<<<<<', _tile, _product);
                 addStyleToTile(_tile, _product);
                 addTileEventhandlers(_tile);
+            }).catch((error) => {
+                // The tile could not be processed, remove it again, so that no half
+                // finished tile is left behind.
+                console.error(`appendInfiniteScrollTiles(): could not process the tile: ${error}`);
+                _tile.remove();
             });
         } else {
             createTileFromProduct(_tile).then((_elem) => {
                 _tilesContainer.appendChild(_elem);
                 addTileEventhandlers(_elem);
-            })
+            }).catch((error) => {
+                console.error(`appendInfiniteScrollTiles(): could not create the tile: ${error}`);
+            });
         }
 
 
@@ -3308,9 +3323,25 @@ function init(hasTiles) {
                 if (SETTINGS.DebugLevel > 14) console.log('Come Back from parseTileData <<<<<<<<<< INIT <<<<<<<<<<<<<<<<<<<<<<<', _currTile, _product);
                 addStyleToTile(_currTile, _product);
 
+            }).catch((error) => {
+                // The tile could not be processed. The yellow background is removed, so that
+                // the tile does not look broken. The error is rethrown to report it together
+                // with the other failed tiles.
+                _currTile.style.cssText = '';
+                throw error;
             }));
         }
-        Promise.allSettled(_tilePorms).then(() => {
+        // NOTE: allSettled() does not throw, so the rejected tiles would be lost silently.
+        Promise.allSettled(_tilePorms).then((_results) => {
+            const _failed = _results.filter((_result) => _result.status === 'rejected');
+            if (_failed.length > 0) {
+                console.warn(`AVE => ${_failed.length} of ${_tilesLength} products on this page could not be processed`);
+                if (SETTINGS.DebugLevel > 10) {
+                    for (const _result of _failed) {
+                        console.warn(`AVE => Product failed: ${_result.reason?.message || _result.reason}`);
+                    }
+                }
+            }
             if(INIT_AUTO_SCAN) {
                 startAutoScan();
             } else if (AUTO_SCAN_IS_RUNNING) {

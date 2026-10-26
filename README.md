@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.28
+
+*  Fix: the products that could not be processed are reported on every page instead of being lost silently, and a failed product no longer leaves the page unfinished (e.g. the "new entries" page without working favorite stars)
+
 ##### [2026-10-26] - Version 0.12.1.27
 
 *  Fix: the background scan waited for the requested page instead of reading the dom of the previous page, so that the last page of a scan is not skipped anymore
