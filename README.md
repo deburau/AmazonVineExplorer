@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.21
+
+*  Fix: the text of the buttons in the navigation bar is now always readable, because it uses a contrast color that fits to the background of the button (in the dark mode the text of the "all products" button was white on a white button)
+
 ##### [2026-10-26] - Version 0.12.1.20
 
 *  Fix: the "all products" button had the same id as the "favorites" button, so the wrong button was highlighted when the favorites were opened

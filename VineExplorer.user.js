@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.20
+// @version      0.12.1.21
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -290,8 +290,11 @@ function injectDarkMode() {
     .vvp-details-btn *,
     .vvp-header-link *,
     .a-link-normal,
+    #ave-btn-all-products,
     #ave-btn-all-products *,
+    #ave-btn-favorites,
     #ave-btn-favorites *,
+    #ave-btn-list-new,
     #ave-btn-list-new *,
     .a-last *
     `
@@ -3096,6 +3099,10 @@ function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeVal
     _btnInnerText.setAttribute('id', textID);
     _btnInnerText.classList.add('a-button-text');
     _btnInnerText.innerText = text;
+    // The text has to get a color that contrasts to the background of the button.
+    // Otherwise the text would be white in the dark mode and therefore invisible on
+    // a white button (e.g. the "all products" button).
+    _btnInnerText.style.color = getContrastColor(colorToHex(color) || '#ffffff');
     _btnInner.append(_btnInnerText);
 
     if (badgeId) {
