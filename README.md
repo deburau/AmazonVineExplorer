@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-25] - Version 0.12.1.18
+
+*  Fix: the callback of "mark the current site as seen" is now always called, so that the pagination does not get stuck anymore
+
 ##### [2026-10-24] - Version 0.12.1.17
 
 *  Fix: the helpers of globals.js (e.g. addBranding) were lost, because the object for the console was replaced

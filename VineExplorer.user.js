@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.17
+// @version      0.12.1.18
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -542,18 +542,44 @@ function markAllCurrentSiteProductsAsSeen(cb = () => {}) {
     const _tiles = document.getElementsByClassName('vvp-item-tile');
     const _tilesLength = _tiles.length;
 
+    // If there is nothing to mark, the callback has to be called right away.
+    // Otherwise the caller (e.g. the "Gelesen" button of the pagination) would wait forever.
+    if (_tilesLength == 0) {
+        cb();
+        return;
+    }
+
     let _returned = 0;
+
+    // Counts a tile as done, no matter if the update worked or not, so that the
+    // callback is guaranteed to be called exactly once.
+    const _done = () => {
+        _returned++;
+        if (_returned == _tilesLength) cb();
+    };
+
     for (let i = 0; i < _tilesLength; i++) {
         const _tile = _tiles[i];
         const _id = _tile.getAttribute('data-recommendation-id');
         database.getById(_id).then((prod) => {
+            // The product is not in the database (should not happen normally), so there is
+            // nothing to mark. Without this check the following line would throw an error.
+            if (!prod) {
+                _done();
+                return;
+            }
             prod.isNew = 0;
             database.update(prod).then( () => {
                 updateTileStyle(prod);
-                _returned++;
-                if (_returned == _tilesLength) cb();
-            })
-        })
+                _done();
+            }).catch((error) => {
+                console.error(`markAllCurrentSiteProductsAsSeen(): could not update the product ${_id}: ${error}`);
+                _done();
+            });
+        }).catch((error) => {
+            console.error(`markAllCurrentSiteProductsAsSeen(): could not get the product ${_id}: ${error}`);
+            _done();
+        });
     }
 }
 
