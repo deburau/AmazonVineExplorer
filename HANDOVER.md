@@ -214,12 +214,68 @@ Punkt war: **Schritt 1 des async-Refactors** (Hot Path / Scan) – siehe
 
 ---
 
-## 6. Kurzstatus zum Zeitpunkt der Übergabe
+## 6. Arbeiten im headless LXC (Ubuntu ohne Grafik)
+
+In einem headless Container (z. B. Proxmox LXC) gibt es **kein X11 und kein
+Wayland**. pi liest die Zwischenablage auf Linux über `wl-paste` bzw.
+`xclip`/`xsel` – beides braucht ein Display. Deshalb funktioniert pi's eigenes
+**Einfügen** (`Ctrl+V`) dort nicht.
+
+### Text in pi einfügen
+
+Nicht pi's `Ctrl+V` benutzen, sondern den **Paste des Terminals**:
+
+| Terminal | Taste |
+|---|---|
+| Windows Terminal, PowerShell | `Ctrl+Shift+V` |
+| Konsole, PuTTY | Rechtsklick → Einfügen |
+| WezTerm | `Ctrl+Shift+V` |
+| iTerm2 | `Cmd+V` |
+
+Das Terminal sendet den Text als Tastatureingabe (Bracketed Paste) an pi –
+das funktioniert unabhängig vom Container. (pi wertet `ESC[200~ … ESC[201~` aus.)
+
+### Text aus pi kopieren
+
+| Aktion | Taste |
+|---|---|
+| letzte Antwort kopieren | `Ctrl+X` |
+| markierten Text kopieren | `Ctrl+C` (bei Auswahl) |
+
+pi erkennt `SSH_CONNECTION` und schickt den kopierten Text per **OSC 52** an das
+Terminal – dieser landet dann in der Zwischenablage des Clients. Voraussetzung:
+das Terminal beherrscht OSC 52 (Windows Terminal ab 1.18, WezTerm, iTerm2,
+kitty). Manche Terminals blockieren OSC 52 aus Sicherheitsgründen; bei tmux
+hilft `set -g set-clipboard on`.
+
+### Wenn es gar nicht klemmt: Umweg über eine Datei
+
+Der zuverlässigste Weg, gerade für längere Texte (Config-Schnipsel, API-Keys,
+Pfade):
+
+```bash
+nano /tmp/notiz.txt     # Text eintippen (oder per heredoc anlegen)
+```
+
+Dann im Chat nur den **Pfad** nennen – der Agent liest die Datei mit dem
+`read`-Tool. Das ist derselbe Weg wie bei den Screenshots.
+
+### Weitere Stolpersteine im LXC
+
+- `Ctrl+C` leert im Editor (zweimal hintereinander = pi beenden), es ist **kein**
+  Copy-Kürzel, solange nichts ausgewählt ist.
+- `Ctrl+V` ist unter Linux der pi-Kurzbefehl – in einem headless Container
+  sollte stattdessen das Terminal-Paste verwendet werden.
+- Für lange Ausgaben `pi -p "..."` bzw. das Log per `script`/`tee` in eine Datei.
+
+---
+
+## 7. Kurzstatus zum Zeitpunkt der Übergabe
 
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0-13.0` |
-| Letzter Commit | `23cddfd` docs(agents): document how screenshots are shared |
+| Letzter Commit | `d80e07e` docs(handover): correct the pi model configuration (`pi config` is for packages) |
 | Version | `0.12.1.22` |
 | `origin/dev-0-13.0` | identisch mit lokal |
 | `main` | `379193c` – **unverändert** |
