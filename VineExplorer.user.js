@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.23
+// @version      0.12.1.24
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2732,12 +2732,27 @@ function backGroundTileScanner(url, cb) {
                         if (SETTINGS.DebugLevel > 14) console.log(`BACKGROUNDSCAN => Got TileData Back: Tile ${_returned}/${_tilesLength} =>`, prod);
                         if (!prod.gotFromDB) {
                             ++_newCount;
-                            database.add(prod);
+                            // NOTE: The promise of add() is not awaited, so a failed write
+                            // would end up as an unhandled rejection.
+                            database.add(prod).catch((error) => {
+                                console.error(`BACKGROUNDSCAN => Could not save the product ${prod.id}: ${error}`);
+                            });
                         }
                     }))
                 }
 
-                Promise.allSettled(_tilesProm).then(() => {
+                // NOTE: allSettled() does not throw, so the rejected tiles would be lost
+                // silently. They are collected here to make the failures visible.
+                Promise.allSettled(_tilesProm).then((_results) => {
+                    const _failed = _results.filter((_result) => _result.status === 'rejected');
+                    if (_failed.length > 0) {
+                        console.warn(`BACKGROUNDSCAN => ${_failed.length} of ${_tilesLength} tiles could not be processed`);
+                        if (SETTINGS.DebugLevel > 10) {
+                            for (const _result of _failed) {
+                                console.warn(`BACKGROUNDSCAN => Tile failed: ${_result.reason?.message || _result.reason}`);
+                            }
+                        }
+                    }
                     cb(_newCount);
                     _iconLoading.remove();
                 });
