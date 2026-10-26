@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.30
+// @version      0.12.1.31
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2297,11 +2297,19 @@ async function cleanUpDatabase(cb = () => {}) {
                     database.removeID(_currEntry.id).then((ret) => {
                         _deleted++;
                         resolve()
+                    }).catch((error) => {
+                        // NOTE: The promise has to be resolved in every case. Otherwise the
+                        // cleanup would wait forever and the symbol would stay on the screen.
+                        console.error(`cleanUpDatabase(): could not remove the entry ${_currEntry.id}: ${error}`);
+                        resolve();
                     });
                 } else if (!_needUpdate){
                     resolve()
                 } else {
-                    database.update(_currEntry).then((ret) => {_updated++; resolve();});
+                    database.update(_currEntry).then((ret) => {_updated++; resolve();}).catch((error) => {
+                        console.error(`cleanUpDatabase(): could not update the entry ${_currEntry.id}: ${error}`);
+                        resolve();
+                    });
                 }
             }))
         }
@@ -2314,6 +2322,12 @@ async function cleanUpDatabase(cb = () => {}) {
             cb(true);
         })
 
+    }).catch((error) => {
+        // The database could not be read. The symbol has to be removed anyway, otherwise
+        // it would stay on the screen forever.
+        console.error(`cleanUpDatabase(): could not read the database: ${error}`);
+        _dbCleanIcon.remove();
+        cb(false);
     });
 }
 

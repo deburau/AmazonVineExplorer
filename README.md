@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.31
+
+*  Fix: the database cleanup does not hang anymore if a write to the database fails, the symbol of the running cleanup is removed in every case
+
 ##### [2026-10-26] - Version 0.12.1.30
 
 *  Fix: the writes to the database are no longer left unhandled, so that a failed write is reported instead of ending up as an unhandled promise rejection
