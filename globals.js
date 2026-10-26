@@ -623,9 +623,12 @@ function waitForStyleElement(selector, cb) {
 }
 
 // Wrap waitForHtmlElement in a Promise to use it with async/await
+// NOTE: waitForHtmlElement() is async, so it can reject. The rejection has to be
+// forwarded here, otherwise this promise would never settle and the caller would
+// wait forever (e.g. if the element or the document root is undefined).
 async function waitForHtmlElementPromise(selector, altDocument = document, timeout = 10000, logTimeout = true) {
     return new Promise((resolve, reject) => {
-        waitForHtmlElement(selector, resolve, altDocument, timeout, logTimeout);
+        waitForHtmlElement(selector, resolve, altDocument, timeout, logTimeout).catch(reject);
     });
 }
 

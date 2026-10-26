@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.23
+
+*  Fix: the promise for waiting for an element no longer stays pending forever if the wait fails, so that a single broken product cannot stop the background scan anymore
+
 ##### [2026-10-26] - Version 0.12.1.22
 
 *  Fix: a nearly white button of the navigation bar (e.g. "all products") does not glare anymore in the dark mode, it uses the background color of the dark mode instead
