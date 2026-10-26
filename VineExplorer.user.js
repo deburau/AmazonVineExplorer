@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.28
+// @version      0.12.1.29
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -207,6 +207,16 @@ let oldCountOfNewItems = 0;
 
 let showDbUpdateLogoTimeout = null;
 let showDbUpdateLogoIcon = null;
+
+// Is set to true if a new product was added to the database. The search for the
+// keywords is expensive, so it is only done if a new product was really added and not
+// after every update of an existing product.
+let newProductWasAdded = false;
+
+ave_eventhandler.on('ave-new-product-added', () => {
+    if (SETTINGS.DebugLevel > 1) console.info('EVENT - A new product was added to the database');
+    newProductWasAdded = true;
+});
 
 ave_eventhandler.on('ave-database-changed', () => {
     if (SETTINGS.DebugLevel > 1) console.info('EVENT - Database has new Data for us! we should look what has changed');
@@ -2930,6 +2940,14 @@ function updateFavoritesBtn(){
 function updateNewProductsBtn() {
     if (AUTO_SCAN_IS_RUNNING) return;
     if (SETTINGS.DebugLevel > 1) console.log('Called updateNewProductsBtn()');
+
+    // The search for the keywords below is expensive, because every new product is
+    // checked against every keyword. It is only done if a new product was added and
+    // not after every update of an existing product (e.g. after every timestamp update
+    // of the background scan).
+    const _checkForKeywords = newProductWasAdded;
+    newProductWasAdded = false;
+
     database.getNewEntries().then((prodArr) => {
         const _btnBadge = document.getElementById('ave-new-items-btn-badge');
         const _pageTitle = document.title.replace(/^[^|]*\|/, '').trim();
@@ -2979,7 +2997,7 @@ function updateNewProductsBtn() {
         }
 
         let _notifyed = false;
-        if ((SETTINGS.EnableDesktopNotifikation || SETTINGS.EnableAutoMarkFavorite || SETTINGS.GotifyUrl) && SETTINGS.DesktopNotifikationKeywords?.length > 0) {
+        if (_checkForKeywords && (SETTINGS.EnableDesktopNotifikation || SETTINGS.EnableAutoMarkFavorite || SETTINGS.GotifyUrl) && SETTINGS.DesktopNotifikationKeywords?.length > 0) {
 
             if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Inside IF`);
 
@@ -3362,6 +3380,9 @@ function init(hasTiles) {
     _searchbarContainer.appendChild(createNavButton('ave-btn-favorites', translate('buttons', 'favorites', 'Favoriten'), '', SETTINGS.BtnColorFavorites, () => {createNewSite(PAGETYPE.FAVORITES);}, 'ave-fav-items-btn-badge', '-', SETTINGS.BtnColorFavoritesBadge));
     _searchbarContainer.appendChild(createNavButton('ave-btn-list-new', translate('buttons', 'newEntries', 'Neue Einträge'), 'ave-new-items-btn', SETTINGS.BtnColorNewProducts, () => {createNewSite(PAGETYPE.NEW_ITEMS);}, 'ave-new-items-btn-badge', '-', SETTINGS.BtnColorNewProductsBadge));
 
+    // The search for the keywords is also done on page load, because the products could
+    // have been added by an other tab or before the page was closed.
+    newProductWasAdded = true;
     updateNewProductsBtn();
     updateFavoritesBtn();
 

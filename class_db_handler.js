@@ -6,6 +6,7 @@ class DB_HANDLER {
     #storeName;
     #db;
     #eventDelayTimeout;
+    #pendingNewProduct = false;
 
     /**
     * Db Handler to easy use of IndexedDB Object Store Databases
@@ -137,11 +138,21 @@ class DB_HANDLER {
 
     /**
      * Fires the Event ave-database-changed when any writeaccess has happend
+     * If a new product was added, the Event ave-new-product-added is fired as well.
+     * The two events are debounced together, so that a burst of write operations
+     * results in only one event.
      */
     // Debounced change event to avoid flooding listeners on batch writes.
-    #fireDataChangedEvent() {
+    #fireDataChangedEvent(isNewProduct = false) {
+        if (isNewProduct) this.#pendingNewProduct = true;
         if (this.#eventDelayTimeout) clearTimeout(this.#eventDelayTimeout);
         this.#eventDelayTimeout = setTimeout(() => {
+            // NOTE: The event for a new product comes first, so that the listener of the
+            // change event can already know that a new product was added.
+            if (this.#pendingNewProduct) {
+                this.#pendingNewProduct = false;
+                ave_eventhandler.emit('ave-new-product-added');
+            }
             ave_eventhandler.emit('ave-database-changed');
             this.#eventDelayTimeout = null;
         }, 250);
@@ -181,7 +192,7 @@ class DB_HANDLER {
 
             _request.onsuccess = (event) => {
                 resolve();
-                this.#fireDataChangedEvent();
+                this.#fireDataChangedEvent(true);
             };
         })
     };

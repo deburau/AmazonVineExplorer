@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.29
+
+*  Fix: the search for the keywords is only done if a new product was really added and not after every update of an existing product, which made the background scan unnecessarily slow
+
 ##### [2026-10-26] - Version 0.12.1.28
 
 *  Fix: the products that could not be processed are reported on every page instead of being lost silently, and a failed product no longer leaves the page unfinished (e.g. the "new entries" page without working favorite stars)
