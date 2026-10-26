@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.21
+// @version      0.12.1.22
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -3083,15 +3083,57 @@ function getContrastColor(hexColor) {
     return brightness > 125 ? 'black' : 'white';
 }
 
+/**
+ * Calculates the background color and the text color of a button in the navigation bar.
+ * In the dark mode a nearly white button would glare, because the background color of the
+ * button is set inline and therefore is not replaced by the dark mode background.
+ * Such a button gets the background color of the dark mode and the text color of the
+ * dark mode instead. All other colors are kept, the text color is calculated from them.
+ * @param {string} color The configured color of the button
+ * @returns {object} An object with the properties "background" and "text"
+ */
+function getNavButtonColors(color) {
+    const _hex = colorToHex(color) || '#ffffff';
+
+    // The hex color of a rgba value has the alpha value first (e.g. #ffrrggbb),
+    // so the position of the color components has to be calculated.
+    const _offset = (_hex.length > 7) ? 3 : 1;
+    const _r = parseInt(_hex.substr(_offset, 2), 16);
+    const _g = parseInt(_hex.substr(_offset + 2, 2), 16);
+    const _b = parseInt(_hex.substr(_offset + 4, 2), 16);
+
+    // Calculate perceived brightness according W3C Accessibility guidelines
+    const _brightness = (_r * 299 + _g * 587 + _b * 114) / 1000;
+
+    if (SETTINGS.DarkMode) {
+        // Only nearly white colors are replaced, so that the colored buttons
+        // (e.g. yellow for the favorites) keep their color.
+        if (_brightness > 240) {
+            return {
+                background: SETTINGS.DarkModeBackgroundColor,
+                text: SETTINGS.DarkModeColor
+            };
+        }
+    }
+
+    return {
+        background: color,
+        // Return black for bright colors, white for dark colors
+        text: (_brightness > 125) ? 'black' : 'white'
+    };
+}
+
 function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeValue, badgeColor) {
     const _btn = document.createElement('span');
     _btn.setAttribute('id', mainID);
     _btn.setAttribute('class', 'a-button a-button-normal a-button-toggle vvp-items-button');
     _btn.addEventListener('click', onclick);
 
+    const _btnColors = getNavButtonColors(color);
+
     const _btnInner = document.createElement('span');
     _btnInner.classList.add('a-button-inner');
-    _btnInner.style.backgroundColor = color;
+    _btnInner.style.backgroundColor = _btnColors.background;
     _btnInner.style.display = 'flex';
     _btn.append(_btnInner);
 
@@ -3102,7 +3144,7 @@ function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeVal
     // The text has to get a color that contrasts to the background of the button.
     // Otherwise the text would be white in the dark mode and therefore invisible on
     // a white button (e.g. the "all products" button).
-    _btnInnerText.style.color = getContrastColor(colorToHex(color) || '#ffffff');
+    _btnInnerText.style.color = _btnColors.text;
     _btnInner.append(_btnInnerText);
 
     if (badgeId) {
