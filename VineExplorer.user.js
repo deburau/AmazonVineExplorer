@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.19
+// @version      0.12.1.20
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -271,6 +271,7 @@ function injectDarkMode() {
     .vvp-item-tile-content *,
     .a-popover-lgtbox,
     .a-modal-scroller.a-declarative,
+    #ave-btn-all-products *,
     #ave-btn-favorites *,
     #ave-btn-list-new *,
     .ave-settings-label-switch *,
@@ -289,6 +290,7 @@ function injectDarkMode() {
     .vvp-details-btn *,
     .vvp-header-link *,
     .a-link-normal,
+    #ave-btn-all-products *,
     #ave-btn-favorites *,
     #ave-btn-list-new *,
     .a-last *
@@ -1101,9 +1103,13 @@ function createNewSite(type, data) {
             database.getFavEntries().then((_prodArr) => {
                 createProductSite(type, _prodArr, () => {
                     initTileEventHandlers();
+                    // NOTE: The button has its own id, because the "all products" button
+                    // used the same id as the favorites button.
                     const _btn = document.getElementById('ave-btn-favorites');
-                    _btn.classList.add('a-button-selected');
-                    _btn.setAttribute('aria-checked', true);
+                    if (_btn) {
+                        _btn.classList.add('a-button-selected');
+                        _btn.setAttribute('aria-checked', true);
+                    }
                 });
             })
             break;
@@ -1111,6 +1117,11 @@ function createNewSite(type, data) {
         case PAGETYPE.ALL:{
             currentMainPage = PAGETYPE.ALL;
             createInfiniteScrollSite(currentMainPage,(_tilesContainer) => {
+                const _btn = document.getElementById('ave-btn-all-products');
+                if (_btn) {
+                    _btn.classList.add('a-button-selected');
+                    _btn.setAttribute('aria-checked', true);
+                }
                 const _baseUrl = (/(http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items)/.exec(window.location.href))[1];
                 const _preloadPages = ['potluck', 'last_chance', 'encore']
                 infiniteScrollLastPreloadedPage = 1;
@@ -3217,7 +3228,7 @@ function init(hasTiles) {
 
     const _searchbarContainer = document.getElementById('vvp-items-button-container');
 
-    if (SETTINGS.EnableBtnAll) _searchbarContainer.appendChild(createNavButton('ave-btn-favorites', 'Alle Produkte', '', SETTINGS.BtnColorAllProducts, () => { createNewSite(PAGETYPE.ALL); }));
+    if (SETTINGS.EnableBtnAll) _searchbarContainer.appendChild(createNavButton('ave-btn-all-products', 'Alle Produkte', '', SETTINGS.BtnColorAllProducts, () => { createNewSite(PAGETYPE.ALL); }));
     _searchbarContainer.appendChild(createNavButton('ave-btn-favorites', translate('buttons', 'favorites', 'Favoriten'), '', SETTINGS.BtnColorFavorites, () => {createNewSite(PAGETYPE.FAVORITES);}, 'ave-fav-items-btn-badge', '-', SETTINGS.BtnColorFavoritesBadge));
     _searchbarContainer.appendChild(createNavButton('ave-btn-list-new', translate('buttons', 'newEntries', 'Neue Einträge'), 'ave-new-items-btn', SETTINGS.BtnColorNewProducts, () => {createNewSite(PAGETYPE.NEW_ITEMS);}, 'ave-new-items-btn-badge', '-', SETTINGS.BtnColorNewProductsBadge));
 

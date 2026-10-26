@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.20
+
+*  Fix: the "all products" button had the same id as the "favorites" button, so the wrong button was highlighted when the favorites were opened
+
 ##### [2026-10-26] - Version 0.12.1.19
 
 *  Fix: the button "mark all as seen" updates the tiles of the current page right away, so that the "new" frame disappears without a reload
