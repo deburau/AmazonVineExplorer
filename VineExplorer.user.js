@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.25
+// @version      0.12.1.26
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2720,22 +2720,36 @@ function backGroundTileScanner(url, cb) {
         _tickCount++;
         if (SETTINGS.DebugLevel > 10) console.log(`backgroundTileScanner(): check if we have tiles to read... (tick ${_tickCount})`);
         const _tiles =_iframeDoc.querySelectorAll('.vvp-item-tile');
-        if (SETTINGS.DebugLevel > 10) {
-            // DIAGNOSE: compares the requested url with the url that is really loaded in
-            // the iframe. If they differ, the scanner reads the dom of the previous page.
-            const _liveUrl = _iframe.contentWindow.location.href;
-            console.log(`BACKGROUNDSCAN DIAG => requested: ${url}`);
-            console.log(`BACKGROUNDSCAN DIAG => iframe doc url: ${_iframeDoc.location.href}`);
-            console.log(`BACKGROUNDSCAN DIAG => live iframe url: ${_liveUrl}`);
-            console.log(`BACKGROUNDSCAN DIAG => doc is live doc: ${_iframeDoc === _iframe.contentWindow.document}`);
-            console.log(`BACKGROUNDSCAN DIAG => tiles in captured doc: ${_tiles.length}, tiles in live doc: ${_iframe.contentWindow.document.querySelectorAll('.vvp-item-tile').length}`);
-            console.log(`BACKGROUNDSCAN DIAG => readyState: ${_iframeDoc.readyState}`);
-        }
         if (_tiles) {
             if (SETTINGS.DebugLevel > 10) console.log(`backgroundTileScanner(): Found first Tile`);
             const _tilesLength = _tiles.length;
             if (SETTINGS.DebugLevel > 10) console.log(`BackgroundsScan Querryd: ${url} and got ${_tilesLength} Tiles`);
+            // NOTE: The interval has to be cleared before anything else that can throw,
+            // otherwise the scan would run into an endless loop of errors.
             clearInterval(_loopDelay);
+            if (SETTINGS.DebugLevel > 10) {
+                // DIAGNOSE: compares the requested url with the url that is really loaded in
+                // the iframe. If they differ, the scanner reads the dom of the previous page.
+                // NOTE: The access to the iframe can fail while the page is navigating.
+                try {
+                    // NOTE: Every single access has to be guarded on its own. During the
+                    // navigation the document of the iframe is replaced and the properties
+                    // of the old document can be null.
+                    const _safe = (_fn) => {
+                        try { return _fn(); } catch { return '<n/a>'; }
+                    };
+                    const _liveDoc = _safe(() => _iframe.contentWindow.document);
+                    console.log(`BACKGROUNDSCAN DIAG => requested: ${url}`);
+                    console.log(`BACKGROUNDSCAN DIAG => captured doc url: ${_safe(() => _iframeDoc.location.href)}`);
+                    console.log(`BACKGROUNDSCAN DIAG => live iframe url: ${_safe(() => _iframe.contentWindow.location.href)}`);
+                    console.log(`BACKGROUNDSCAN DIAG => doc is live doc: ${_safe(() => _iframeDoc === _iframe.contentWindow.document)}`);
+                    console.log(`BACKGROUNDSCAN DIAG => tiles captured: ${_tiles.length}, tiles live: ${_safe(() => _iframe.contentWindow.document.querySelectorAll('.vvp-item-tile').length)}`);
+                    console.log(`BACKGROUNDSCAN DIAG => captured readyState: ${_safe(() => _iframeDoc.readyState)}`);
+                    console.log(`BACKGROUNDSCAN DIAG => live readyState: ${_safe(() => _iframe.contentWindow.document.readyState)}`);
+                } catch (error) {
+                    console.warn(`BACKGROUNDSCAN DIAG => could not read the live iframe: ${error}`);
+                }
+            }
             if (_tilesLength > 0) {
                 let _newCount = 0;
                 let _returned = 0;
