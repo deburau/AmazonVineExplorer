@@ -28,6 +28,36 @@ npx eslint . --fix
 2. Navigating to Amazon Vine websites
 3. Verifying functionality works as expected
 
+## Git Workflow and Release Rules
+
+### Branches
+- `main` is the branch that is published to the users (see `@updateURL`/`@downloadURL`).
+  **Never push to `main` without the explicit request of the maintainer.**
+- Development happens in the `dev-*` branches (e.g. `dev-0-13.0`). Pushing to a `dev-*`
+  branch is allowed without asking.
+- The `@updateURL`/`@downloadURL` in `VineExplorer.user.js` deliberately point to `main`,
+  so that the dev branches can be tested without affecting the other users.
+
+### Versioning and Changelog
+- Every user visible change gets a new version number in the `@version` line of
+  `VineExplorer.user.js` (patch level, e.g. `0.12.1.17` -> `0.12.1.18`).
+- Every change gets an entry in the `Changelog Deburau` section of `README.md`.
+  The heading is `##### [YYYY-MM-DD] - Version <version>` followed by a short bullet list.
+- Commit messages follow the pattern `type(scope): short description`
+  (e.g. `fix(settings): read the settings if they are stored as a JSON string`).
+
+### Working Style (important)
+- Work **step by step: one single change at a time**. Do not bundle several fixes into
+  one commit.
+- After each step the maintainer tests the change manually in the browser and gives the
+  feedback. Wait for that feedback before starting the next step.
+- Keep `AGENTS.md` up to date: if a rule, a convention or the project structure changes,
+  update this file in the same commit.
+
+### Pushing
+- `git push origin dev-<version>` is allowed without asking.
+- `git push origin main` requires an explicit request.
+
 ## Code Style Guidelines
 
 ### Naming Conventions
