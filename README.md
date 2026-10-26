@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.32
+
+*  Fix: the database handler stops the request when the input is invalid instead of continuing after the error, the error messages of the methods are correct now and the database import updates the badge and the title
+
 ##### [2026-10-26] - Version 0.12.1.31
 
 *  Fix: the database cleanup does not hang anymore if a write to the database fails, the symbol of the running cleanup is removed in every case
