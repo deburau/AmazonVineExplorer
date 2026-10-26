@@ -81,26 +81,55 @@ npm install -g @earendil-works/pi-coding-agent
 pi --version
 ```
 
+Modellliste aktualisieren (nötig, damit `/model` die Modelle kennt):
+
+```bash
+pi update --models
+```
+
 Zugangsdaten (`~/.pi/agent/auth.json`) und Modell-Einstellungen
 (`~/.pi/agent/settings.json`) sind **nicht** im Repo. Auf dem neuen System:
 
+### 3.1 Anmeldung (API-Key)
+
+Innerhalb von pi geht das am einfachsten über den Slash-Befehl:
+
+```
+/login openrouter
+```
+
+pi zeigt die verfügbaren Methoden (OAuth-Geräte-Flow oder API-Key) und speichert das
+Ergebnis in `~/.pi/agent/auth.json`.
+
+> **Headless LXC:** Wenn beim OAuth-Flow der Callback nicht im lokalen Browser
+> aufgeht, kopiert pi eine Redirect-URL bzw. einen Autorisierungscode in die
+> Anzeige – den einfach in pi wieder einfügen.
+
+Alternativ per Umgebungsvariable (praktisch in Docker/Proxmox):
+
 ```bash
-# Modell-Defaults setzen (Beispiel aus der alten Installation)
-pi config set defaultProvider openrouter
-pi config set defaultModel moonshotai/kimi-k2.6
+export OPENROUTER_API_KEY="sk-or-..."
 ```
 
-Der API-Key wird über die Provider-Anmeldung gesetzt, z. B.:
+### 3.2 Modell-Defaults
+
+`pi config` ist **nicht** dafür zuständig (der Befehl verwaltet Pi-Packages).
+Die Defaults stehen in `~/.pi/agent/settings.json` und werden von Hand editiert:
 
 ```bash
-pi   # startet, fragt beim ersten Mal nach der Anmeldung / dem Key
+mkdir -p ~/.pi/agent
+cat > ~/.pi/agent/settings.json <<'EOF'
+{
+  "defaultProvider": "openrouter",
+  "defaultModel": "moonshotai/kimi-k2.6"
+}
+EOF
 ```
 
-Alternativ `auth.json` von Hand anlegen:
+Alternativ nur für einen Start: `pi --provider openrouter --model moonshotai/kimi-k2.6`
 
-```json
-{ "openrouter": { "type": "api_key", "key": "sk-or-..." } }
-```
+> `defaultModel` muss die **exakte** Modell-ID aus `/model` sein. Mit
+> `pi update --models` wird die Modellliste aktualisiert; `/model` zeigt sie an.
 
 ### 3.2 Chat-Verlauf mitnehmen (optional, aber empfohlen)
 
