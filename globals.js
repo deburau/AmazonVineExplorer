@@ -22,7 +22,11 @@ const SECONDS_PER_WEEK = 604800;
 const SITE_IS_VINE = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/vine\//.test(window.location.href);
 const SITE_IS_SHOPPING = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/(?!vine)(?!gp\/video)(?!music)/.test(window.location.href);
 // Session id is used for multi-tab master/slave coordination.
-const AVE_SESSION_ID = generateSessionID();
+// Reuse the id from sessionStorage so that reloads and navigations inside the
+// same tab keep the same session. This avoids a dead session blocking the
+// master role until the 10 s timeout expires.
+const AVE_SESSION_ID = sessionStorage.getItem('AVE_SESSION_ID') || generateSessionID();
+sessionStorage.setItem('AVE_SESSION_ID', AVE_SESSION_ID);
 
 /**
  * Is this Browser Tab / Window the Master Instance ??
@@ -191,6 +195,10 @@ setTimeout(() => {
         for (const _session of _sessions) {
             if (_session.master) _isMasterInstance = false;
         }
+        // If an entry with our id is still present (beforeunload did not fire or
+        // the write was blocked), remove it before creating the fresh entry.
+        // Otherwise the old entry would stay as a ghost until the 10 s timeout.
+        _sessions = _sessions.filter((_session) => _session.id !== AVE_SESSION_ID);
         AVE_IS_THIS_SESSION_MASTER = _isMasterInstance;
         _sessions.push({id: AVE_SESSION_ID, ts: Date.now(), master: _isMasterInstance});
         localStorage.setItem('AVE_SESSIONS', JSON.stringify(_sessions));
