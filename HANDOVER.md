@@ -268,6 +268,42 @@ Dann im Chat nur den **Pfad** nennen – der Agent liest die Datei mit dem
   sollte stattdessen das Terminal-Paste verwendet werden.
 - Für lange Ausgaben `pi -p "..."` bzw. das Log per `script`/`tee` in eine Datei.
 
+### Zwischenablage (MobaXterm + SSH-X11-Forwarding)
+
+MobaXterm tunneliert das X11-Display in den LXC. Damit kann pi die
+Zwischenablage des Windows-Rechners auslesen – aber nur, wenn `xclip`
+installiert ist und `DISPLAY` auf das richtige Display zeigt.
+
+| Datei | Zweck |
+|---|---|
+| `~/.x11_display.sh` | ermittelt das X11-Display **automatisch** (die Nummer wechselt pro Sitzung, `DISPLAY` aus der Umgebung ist oft veraltet) |
+| `~/.bashrc`, `~/.profile` | rufen die Erkennung auf – vor dem Interaktivitäts-Rückearly, damit auch pi sie bekommt |
+| `~/.local/bin/pb` | fügt den Inhalt der Zwischenablage über den tmux-Puffer in die aktuelle Pane ein (umgeht das Terminal-Paste) |
+| `~/.local/bin/shots` | listet/verschiebt per Drag&Drop geladene Screenshots nach `~/shots` |
+
+Installiert sein müssen: `sudo apt install xclip xsel`
+
+**Ergebnis der Einrichtung:**
+
+| Aktion | funktioniert |
+|---|---|
+| Text in Windows kopieren → in pi `Ctrl+V` | ✅ ja |
+| Bild über die Zwischenablage in pi | ❌ nein – MobaXterm spiegelt nur Textformate (`UTF8_STRING`), keine `image/png` |
+| Terminal-Paste (`Ctrl+Shift+V`) unter tmux | ❌ nein – unzuverlässig, stattdessen `Ctrl+V` in pi |
+| Screenshot per **Drag&Drop** in MobaXterm | ✅ Datei landet im Projektverzeichnis |
+
+**Workflow für Screenshots (Plan B):**
+
+1. Screenshot in MobaXterm per Drag&Drop in das Terminal ziehen
+   → die Datei landet im aktuellen Verzeichnis (`/home/wf/AmazonVineExplorer`)
+2. `shots -m` verschiebt sie nach `~/shots` und gibt den Pfad aus
+3. Pfad in pi per `Ctrl+V` einfügen → der Agent liest die Datei mit dem `read`-Tool
+
+Damit die hochgeladenen Bilder nicht im Projektverzeichnis stören, stehen in
+`.git/info/exclude` die Muster `*.png` und `screenshots/`. Diese Datei ist
+**lokal** und wird nicht committet – die versionierten Logos (`vine_logo*.png`)
+bleiben davon unberührt, weil `exclude` nur unversionierte Dateien betrifft.
+
 ---
 
 ## 7. Kurzstatus zum Zeitpunkt der Übergabe
