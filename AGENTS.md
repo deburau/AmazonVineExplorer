@@ -237,6 +237,23 @@ try {
 4. **Infinite Scroll**: Dynamic content loading with buffering
 5. **Settings System**: Dynamic UI generation from configuration
 
+### Init Structure
+
+The initialisation of the page is split into small functions, one per
+responsibility:
+
+| Function | Responsibility |
+|----------|----------------|
+| `init()` | Starts the initialisation and calls the other functions |
+| `initTileParsing()` | Parses the tiles of the page and starts the auto scan |
+| `initNavigationButtons()` | Adds the buttons for the product sites |
+| `initSearchBar()` | Adds the search bar for the products |
+| `initPagination()` | Replaces the "next page" button of the pagination |
+
+The helper script `.unotes/verify_init.js` compares the created DOM, the
+database accesses and the calls of the old and the new implementation in four
+scenarios (normal page, empty page, running auto scan and subpage request).
+
 ### Background Scan Structure
 
 The background scan is split into small functions, one per responsibility. The

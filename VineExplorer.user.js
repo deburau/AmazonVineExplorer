@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.45
+// @version      0.12.1.46
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -55,7 +55,8 @@
    updateNewProductsBtn, updateTileStyle, stopBackgroundScan, aveFixRelativeVineLinks,
    aveResolveUrl, aveUrlWithPage, notifyAboutUnseenItems, notifyAboutNewProducts,
    searchKeywordsInProducts, checkKeywordsForProduct, stringToRegex,
-   notifyAboutProductDrop, shouldStopFastScan, stopFastScan, handleFastScanFinished */
+   notifyAboutProductDrop, shouldStopFastScan, stopFastScan, handleFastScanFinished,
+   initTileParsing, initNavigationButtons, initSearchBar, initPagination */
 console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 
 /**
@@ -4159,66 +4160,67 @@ async function requestProductDetails(prod) {
     }
 }
 
-function init(hasTiles) {
-    // Get all Products on this page ;)
-
-    if (AUTO_SCAN_IS_RUNNING) showAutoScanScreen(`Autoscan is running...Page (${AUTO_SCAN_PAGE_CURRENT}/${AUTO_SCAN_PAGE_MAX})`);
-
-    const _aveSubpageRequest = getUrlParameter('ave-subpage');
-    if (SETTINGS.DebugLevel > 10) console.log(`Got Subpage Parameter`, _aveSubpageRequest);
-
-    if (_aveSubpageRequest) createNewSite(parseInt(_aveSubpageRequest));
-
-    if (hasTiles) {
-        const _tiles = document.getElementsByClassName('vvp-item-tile');
-
-        const _tilesLength = _tiles.length;
-        const _tilePorms = [];
-        const _parseStartTime = Date.now();
-        for (let i = 0; i < _tilesLength; i++) {
-            const _currTile = _tiles[i];
-            _currTile.style.cssText = 'background-color: yellow;';
-            _tilePorms.push(
-                parseTileData(_currTile)
-                    .then((_product) => {
-                        if (SETTINGS.DebugLevel > 14)
-                            console.log('Come Back from parseTileData <<<<<<<<<< INIT <<<<<<<<<<<<<<<<<<<<<<<', _currTile, _product);
-                        addStyleToTile(_currTile, _product);
-                    })
-                    .catch((error) => {
-                        // The tile could not be processed. The yellow background is removed, so that
-                        // the tile does not look broken. The error is rethrown to report it together
-                        // with the other failed tiles.
-                        _currTile.style.cssText = '';
-                        throw error;
-                    })
-            );
-        }
-        // NOTE: allSettled() does not throw, so the rejected tiles would be lost silently.
-        Promise.allSettled(_tilePorms).then((_results) => {
-            const _failed = _results.filter((_result) => _result.status === 'rejected');
-            if (_failed.length > 0) {
-                console.warn(`AVE => ${_failed.length} of ${_tilesLength} products on this page could not be processed`);
-                if (SETTINGS.DebugLevel > 10) {
-                    for (const _result of _failed) {
-                        console.warn(`AVE => Product failed: ${_result.reason?.message || _result.reason}`);
-                    }
-                }
-            }
-            if (INIT_AUTO_SCAN) {
-                startAutoScan();
-            } else if (AUTO_SCAN_IS_RUNNING) {
-                handleAutoScan();
-            } else {
-                completeDelayedInit();
-            }
-        });
-    } else {
+/**
+ * Parses the tiles of the current page and starts the auto scan if it is
+ * running.
+ *
+ * @param {boolean} hasTiles true, if the page has tiles
+ */
+function initTileParsing(hasTiles) {
+    if (!hasTiles) {
         if (SETTINGS.DebugLevel > 10) console.log(`init(): NO TILES TO PARSE ON THIS SITE => SKIP`);
+        return;
     }
 
-    if (AUTO_SCAN_IS_RUNNING) return;
+    const _tiles = document.getElementsByClassName('vvp-item-tile');
+    const _tilesLength = _tiles.length;
+    const _tilePorms = [];
+    const _parseStartTime = Date.now();
+    for (let i = 0; i < _tilesLength; i++) {
+        const _currTile = _tiles[i];
+        _currTile.style.cssText = 'background-color: yellow;';
+        _tilePorms.push(
+            parseTileData(_currTile)
+                .then((_product) => {
+                    if (SETTINGS.DebugLevel > 14)
+                        console.log('Come Back from parseTileData <<<<<<<<<< INIT <<<<<<<<<<<<<<<<<<<<<<<', _currTile, _product);
+                    addStyleToTile(_currTile, _product);
+                })
+                .catch((error) => {
+                    // The tile could not be processed. The yellow background is removed, so that
+                    // the tile does not look broken. The error is rethrown to report it together
+                    // with the other failed tiles.
+                    _currTile.style.cssText = '';
+                    throw error;
+                })
+        );
+    }
+    // NOTE: allSettled() does not throw, so the rejected tiles would be lost silently.
+    Promise.allSettled(_tilePorms).then((_results) => {
+        const _failed = _results.filter((_result) => _result.status === 'rejected');
+        if (_failed.length > 0) {
+            console.warn(`AVE => ${_failed.length} of ${_tilesLength} products on this page could not be processed`);
+            if (SETTINGS.DebugLevel > 10) {
+                for (const _result of _failed) {
+                    console.warn(`AVE => Product failed: ${_result.reason?.message || _result.reason}`);
+                }
+            }
+        }
+        if (INIT_AUTO_SCAN) {
+            startAutoScan();
+        } else if (AUTO_SCAN_IS_RUNNING) {
+            handleAutoScan();
+        } else {
+            completeDelayedInit();
+        }
+    });
+}
 
+/**
+ * Adds the buttons for the product sites (all products, favorites, new entries)
+ * to the navigation of Amazon.
+ */
+function initNavigationButtons() {
     const _searchbarContainer = document.getElementById('vvp-items-button-container');
 
     if (SETTINGS.EnableBtnAll)
@@ -4255,14 +4257,14 @@ function init(hasTiles) {
             SETTINGS.BtnColorNewProductsBadge
         )
     );
+}
 
-    // The search for the keywords is also done on page load, because the products could
-    // have been added by an other tab or before the page was closed.
-    newProductWasAdded = true;
-    updateNewProductsBtn();
-    updateFavoritesBtn();
+/**
+ * Adds the search bar for the products to the navigation of Amazon.
+ */
+function initSearchBar() {
+    const _searchbarContainer = document.getElementById('vvp-items-button-container');
 
-    // Searchbar
     const _searchBarSpan = document.createElement('span');
     _searchBarSpan.setAttribute('class', 'ave-search-container');
     _searchBarSpan.style.cssText = `margin-left: 0.5em;`;
@@ -4292,12 +4294,13 @@ function init(hasTiles) {
 
     _searchBarSpan.appendChild(_searchBarInput);
     _searchbarContainer.appendChild(_searchBarSpan);
+}
 
-    if (hasTiles) addLeftSideButtons();
-
-    if (SETTINGS.EnableBackgroundScan) initBackgroundScan();
-
-    // Modify Pageination if exists
+/**
+ * Replaces the "next page" button of the pagination with a button that marks
+ * the products of the current page as seen before it navigates to the next page.
+ */
+function initPagination() {
     const _paginationContainers = document.querySelectorAll('.a-pagination');
     _paginationContainers.forEach((_paginationContainer) => {
         if (SETTINGS.DebugLevel > 10) console.log('Manipulating Pagination');
@@ -4347,6 +4350,38 @@ function init(hasTiles) {
         _paginationContainer.appendChild(_btn);
         _paginationContainer.appendChild(_AveNextArrow);
     });
+}
+
+function init(hasTiles) {
+    // Get all Products on this page ;)
+
+    if (AUTO_SCAN_IS_RUNNING) showAutoScanScreen(`Autoscan is running...Page (${AUTO_SCAN_PAGE_CURRENT}/${AUTO_SCAN_PAGE_MAX})`);
+
+    const _aveSubpageRequest = getUrlParameter('ave-subpage');
+    if (SETTINGS.DebugLevel > 10) console.log(`Got Subpage Parameter`, _aveSubpageRequest);
+
+    if (_aveSubpageRequest) createNewSite(parseInt(_aveSubpageRequest));
+
+    initTileParsing(hasTiles);
+
+    if (AUTO_SCAN_IS_RUNNING) return;
+
+    initNavigationButtons();
+
+    // The search for the keywords is also done on page load, because the products could
+    // have been added by an other tab or before the page was closed.
+    newProductWasAdded = true;
+    updateNewProductsBtn();
+    updateFavoritesBtn();
+
+    initSearchBar();
+
+    if (hasTiles) addLeftSideButtons();
+
+    if (SETTINGS.EnableBackgroundScan) initBackgroundScan();
+
+    // Modify Pageination if exists
+    initPagination();
 }
 
 //Sort Items by key
