@@ -209,7 +209,7 @@ setTimeout(() => {
     setInterval(() => { //
         let _sessions;
         try {
-            _sessions = JSON.parse(localStorage.getItem('AVE_SESSIONS', '[]'));
+            _sessions = JSON.parse(localStorage.getItem('AVE_SESSIONS') || '[]');
         } catch (error) {
             console.error('Error parsing sessions in interval:', error);
             _sessions = [];
