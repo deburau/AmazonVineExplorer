@@ -9,9 +9,14 @@ const extHelper_fetchHookKey = '__aveInfiniteSpinnerFixFetchHooked';
 
 function extHelper_getRequestUrl(input) {
     try {
-        const urlValue = typeof input === 'string' ? input :
-            (input && typeof input.url === 'string' ? input.url :
-                (input && typeof input.href === 'string' ? input.href : String(input)));
+        const urlValue =
+            typeof input === 'string'
+                ? input
+                : input && typeof input.url === 'string'
+                  ? input.url
+                  : input && typeof input.href === 'string'
+                    ? input.href
+                    : String(input);
         return new URL(urlValue, extHelper_pageWindow.location.href);
     } catch {
         return null;
@@ -56,7 +61,7 @@ function extHelper_repairRecommendationData(responseData) {
         const dimensions = variation && variation.dimensions;
         return dimensions && typeof dimensions === 'object' && !Array.isArray(dimensions) ? Object.entries(dimensions) : [];
     });
-    const templateEntries = dimensionEntries.reduce((best, current) => current.length > best.length ? current : best, []);
+    const templateEntries = dimensionEntries.reduce((best, current) => (current.length > best.length ? current : best), []);
     const templateKeys = templateEntries.map(([key]) => key);
     const hasIncompleteDimensions = dimensionEntries.some((entries) => entries.length < templateKeys.length);
     const combineDimensions = hasIncompleteDimensions && templateKeys.length > 1;
@@ -135,7 +140,7 @@ async function extHelper_repairRecommendationResponse(response) {
         const repairedResponse = new extHelper_pageWindow.Response(JSON.stringify(responseData), {
             headers,
             status: response.status,
-            statusText: response.statusText,
+            statusText: response.statusText
         });
         extHelper_processedRecommendationResponses.add(repairedResponse);
         extHelper_pageWindow.postMessage({ type: 'infiniteWheelFixed', text: `${fixed} variation(s) fixed.` }, '*');
@@ -149,7 +154,7 @@ function extHelper_installRecommendationFetchHook() {
     if (extHelper_pageWindow[extHelper_fetchHookKey] || typeof extHelper_pageWindow.fetch !== 'function') return;
 
     const originalFetch = extHelper_pageWindow.fetch;
-    const hookedFetch = async function(...args) {
+    const hookedFetch = async function (...args) {
         const response = await originalFetch.apply(this, args);
         if (!extHelper_isVineApiRequest(args[0], 'recommendations') || !extHelper_isSpinnerFixEnabled()) return response;
         return extHelper_repairRecommendationResponse(response);
@@ -221,7 +226,8 @@ async function vineFetch(...args) {
         if (result.variations !== undefined) {
             extHelper_LastParentVariant = result;
         } else if (result.taxValue !== undefined) {
-            const isChild = !!lastParent && !!lastParent.variations && lastParent.variations.some((variation) => variation.asin == result.asin);
+            const isChild =
+                !!lastParent && !!lastParent.variations && lastParent.variations.some((variation) => variation.asin == result.asin);
             const data = { parent_asin: null, asin: result.asin, etv: result.taxValue };
             if (isChild && lastParent && lastParent.recommendationId) {
                 const match = lastParent.recommendationId.match(/^.+?#(.+?)#.+$/);
