@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.33
+// @version      0.12.1.34
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -3318,6 +3318,7 @@ async function requestProductDetails(prod) {
         if (res.error) {
             if (res.error.exceptionType == 'ITEM_NOT_IN_ENROLLMENT') {
                 prod.forceRemove = true;
+                return prod;
             } else {
                 console.error('requestProductDetails():ERROR:', res.error);
                 throw res.error.exceptionType;

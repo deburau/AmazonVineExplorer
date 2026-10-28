@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.34
+
+* Fix: clicking on a parent-ASIN product that was removed from the Vine enrollment caused a TypeError because `requestProductDetails()` set `forceRemove = true` but continued to access `res.result` afterwards.
+
 ##### [2026-10-26] - Version 0.12.1.33
 
 * Fix: branding turned red for up to ~10 seconds after navigating inside the same tab because a new session id was generated on every page load and the old ghost session blocked the master role until the timeout expired. The session id is now persisted in sessionStorage and reused across reloads, and stale entries with the same id are cleaned up on init.
