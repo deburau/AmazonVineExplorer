@@ -1,4 +1,5 @@
 'use strict';
+/* exported I18N, detectLanguage, t */
 // Flat i18n dictionary for UI strings (DE/EN).
 const I18N = {
     de: {
@@ -9,24 +10,24 @@ const I18N = {
             backToTop: 'Zum Seitenanfang',
             settingsTab: 'AVE Einstellungen',
             favorites: 'Favoriten',
-            newEntries: 'Neue Einträge',
+            newEntries: 'Neue Einträge'
         },
         badges: {
             preRelease: 'Vorabversion',
-            featured: 'Empfohlen',
+            featured: 'Empfohlen'
         },
         notifications: {
             nothingToSee: 'Hier gibt es nix zu sehen.\nZumindest noch nicht :P',
             copySuccess: 'Text wurde in die Zwischenablage kopiert.',
             copyError: 'Fehler beim Kopieren in die Zwischenablage:',
             unseenItemsTitle: (version) => `Amazon Vine Explorer - ${version}`,
-            unseenItemsBody: (count) => `Es wurden ${count} neue Eintraege gefunden`,
+            unseenItemsBody: (count) => `Es wurden ${count} neue Eintraege gefunden`
         },
         share: {
             myFSE: 'Mein FSE',
             availableAll: 'Verfügbar für Alle',
             additional: 'Zusätzliche Artikel',
-            page: 'Seite:',
+            page: 'Seite:'
         },
         settings: {
             header: (title, version) => `Einstellungen ${title} - Version ${version}`,
@@ -109,7 +110,8 @@ const I18N = {
             EnablePaginationTop: 'Zeigt Paginierung oben für ZA-Seite',
             EnableBackgroundScan: 'Aktiviert den Background Scan',
             EnableInfiniteScrollLiveQuerry: 'Wenn aktiv, werden Produkte live von Amazon geladen',
-            EnableInfiniteSpinnerFix: 'Repariert fehlerhafte Variantendaten, die das Laden auf der Amazon Vine-Seite endlos fortsetzen können',
+            EnableInfiniteSpinnerFix:
+                'Repariert fehlerhafte Variantendaten, die das Laden auf der Amazon Vine-Seite endlos fortsetzen können',
             EnableDesktopNotifikation: 'Aktiviert Desktop-Benachrichtigungen für neue Produkte',
             EnableAutoMarkFavorite: 'Markiert neue Produkte automatisch als Favorit, wenn Keywords matchen',
             EnableCleanupFavorites: 'Favoriten werden beim Cleanup ebenfalls entfernt',
@@ -166,24 +168,24 @@ const I18N = {
             backToTop: 'Back to top',
             settingsTab: 'AVE Settings',
             favorites: 'Favorites',
-            newEntries: 'New Entries',
+            newEntries: 'New Entries'
         },
         badges: {
             preRelease: 'Pre-release',
-            featured: 'Featured',
+            featured: 'Featured'
         },
         notifications: {
             nothingToSee: 'Nothing to see here.\nAt least not yet :P',
             copySuccess: 'Text copied to clipboard',
             copyError: 'Error copying to clipboard:',
             unseenItemsTitle: (version) => `Amazon Vine Explorer - ${version}`,
-            unseenItemsBody: (count) => `${count} new entries found`,
+            unseenItemsBody: (count) => `${count} new entries found`
         },
         share: {
             myFSE: 'My FSE',
             availableAll: 'Available for All',
             additional: 'Additional Items',
-            page: 'Page:',
+            page: 'Page:'
         },
         settings: {
             header: (title, version) => `Settings ${title} - Version ${version}`,
@@ -317,7 +319,10 @@ const I18N = {
     }
 };
 
-// Resolve current UI language from settings, with a safe fallback.
+/**
+ * Resolves the current UI language from the settings, with a safe fallback.
+ * @returns {string} The language code ("de" or "en")
+ */
 function detectLanguage() {
     if (!SETTINGS || typeof SETTINGS.UI_LANGUAGE === 'undefined') {
         return 'de';
@@ -327,7 +332,16 @@ function detectLanguage() {
     return 'de';
 }
 
-// Translation lookup with optional formatter functions.
+/**
+ * Looks up a translation and formats it if the entry is a function.
+ *
+ * If the translation is missing, the key is returned and a warning is logged.
+ *
+ * @param {string} category The category of the translation (e.g. "buttons")
+ * @param {string} key The key of the translation
+ * @param {...any} args The arguments of the formatter function
+ * @returns {string} The translated text
+ */
 function t(category, key, ...args) {
     const lang = detectLanguage();
     if (!I18N[lang] || !I18N[lang][category]) {

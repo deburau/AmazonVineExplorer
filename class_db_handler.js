@@ -1,3 +1,4 @@
+/* exported DB_HANDLER */
 console.log('loaded db_handler.js');
 class DB_HANDLER {
     #version;
@@ -5,26 +6,38 @@ class DB_HANDLER {
     #storeName;
     #db;
     #eventDelayTimeout;
+    #pendingNewProduct = false;
 
     /**
-    * Db Handler to easy use of IndexedDB Object Store Databases
-    * @constructor
-    * @param {string} dbName Name your Database
-    * @param {string} [storeName] Object Store Name
-    * @param {number} [version] Object Store Name
-    * @param {function} [cb] Callback function executes when database initialisation is done
-    * @return {DB_HANDLER} DBHANDLER Object
-    */
+     * Db Handler to easy use of IndexedDB Object Store Databases
+     * @constructor
+     * @param {string} dbName Name your Database
+     * @param {string} [storeName] Object Store Name
+     * @param {number} [version] Object Store Name
+     * @param {function} [cb] Callback function executes when database initialisation is done
+     * @return {DB_HANDLER} DBHANDLER Object
+     */
 
     constructor(dbName, storeName, version) {
-        if (!dbName) throw new Error(`CLASS DB_HANDLER needs a name for the database to init: example:  const db = new DB_HANDLER('AnyName')`);
+        if (!dbName)
+            throw new Error(`CLASS DB_HANDLER needs a name for the database to init: example:  const db = new DB_HANDLER('AnyName')`);
         this.#dbName = dbName;
         this.#version = version || 1;
         this.#storeName = storeName || dbName + '_ObjectStore';
-        // Note: do NOT call async code here!
+        // NOTE: Do NOT call async code here!
     }
 
-    // Async initializer avoids running async code in the constructor.
+    /**
+     * Creates the handler and opens the database.
+     *
+     * The database cannot be opened in the constructor, because the constructor
+     * must not run async code.
+     *
+     * @param {string} dbName Name of the database
+     * @param {string} [storeName] Object store name
+     * @param {number} [version] Version of the database
+     * @returns {Promise<DB_HANDLER>} The initialised handler
+     */
     static async init(dbName, storeName, version) {
         const instance = new DB_HANDLER(dbName, storeName, version);
         await instance.#init();
@@ -47,18 +60,18 @@ class DB_HANDLER {
                 reject(event);
                 console.error(event);
                 throw new Error('Indexed DB has an Error');
-            }
+            };
 
             _request.onblocked = (event) => {
                 reject(event);
                 console.warn(event);
                 throw new Error('IndexedDB is blocked');
-            }
+            };
 
             _request.onsuccess = (event) => {
                 this.#db = event.target.result;
                 resolve(event.target.result);
-            }
+            };
 
             // Schema migration and index maintenance happen here.
             _request.onupgradeneeded = (event) => {
@@ -95,21 +108,20 @@ class DB_HANDLER {
 
                 if (!_store.indexNames.contains('data_asin')) {
                     // if new db, don't check for duplicate asins
-                    if (event.oldVersion === 0){
+                    if (event.oldVersion === 0) {
                         _store.createIndex('data_asin', 'data_asin', { unique: true });
-                    }
-                    else if (this.#checkForDuplicatedASIN()) {
+                    } else if (this.#checkForDuplicatedASIN()) {
                         _store.createIndex('data_asin', 'data_asin', { unique: true });
                     }
                 }
-            }
-        })
-    };
+            };
+        });
+    }
 
     /**
-    * DB ASIN CHECKER
-    * @param {function} [cb] Callback function executes when database query is done
-    */
+     * DB ASIN CHECKER
+     * @param {function} [cb] Callback function executes when database query is done
+     */
     #checkForDuplicatedASIN() {
         const _request = this.#getStore().openCursor();
 
@@ -126,47 +138,61 @@ class DB_HANDLER {
                     console.warn('Duplikate in "data_asin" gefunden. Bereinigen oder löschen Sie die Datenbank');
                     return false;
                 } else {
-                    // Keine Duplikate gefunden, Sie können den Index jetzt als eindeutig markieren
+                    // No duplicates found, the index can be marked as unique
                     return true;
                 }
             }
         };
-        _request.onerror = (event) => { throw new Error(`DB_HANDLER.#checkForDuplicatedAsin: ${event.target.error.name}`); };
-    };
+        _request.onerror = (event) => {
+            throw new Error(`DB_HANDLER.#checkForDuplicatedAsin: ${event.target.error.name}`);
+        };
+    }
 
     /**
      * Fires the Event ave-database-changed when any writeaccess has happend
+     * If a new product was added, the Event ave-new-product-added is fired as well.
+     * The two events are debounced together, so that a burst of write operations
+     * results in only one event.
      */
     // Debounced change event to avoid flooding listeners on batch writes.
-    #fireDataChangedEvent() {
+    #fireDataChangedEvent(isNewProduct = false) {
+        if (isNewProduct) this.#pendingNewProduct = true;
         if (this.#eventDelayTimeout) clearTimeout(this.#eventDelayTimeout);
         this.#eventDelayTimeout = setTimeout(() => {
+            // NOTE: The event for a new product comes first, so that the listener of the
+            // change event can already know that a new product was added.
+            if (this.#pendingNewProduct) {
+                this.#pendingNewProduct = false;
+                ave_eventhandler.emit('ave-new-product-added');
+            }
             ave_eventhandler.emit('ave-database-changed');
             this.#eventDelayTimeout = null;
         }, 250);
     }
 
     /**
-    * Get Object Store Object
-    * @param {boolean} [rw] Set to true if u want to create a writeable access
-    * @return {object} Object Store Object
-    */
+     * Get Object Store Object
+     * @param {boolean} [rw] Set to true if u want to create a writeable access
+     * @return {object} Object Store Object
+     */
     #getStore(rw = false) {
         if (!this.#db) throw new Error('DB_HANDLER.#getStore: Database Object is not defined');
-        const _transaction = this.#db.transaction([this.#storeName], (rw) ? 'readwrite' : 'readonly');
+        const _transaction = this.#db.transaction([this.#storeName], rw ? 'readwrite' : 'readonly');
         const _store = _transaction.objectStore(this.#storeName);
         return _store;
     }
 
     /**
-    * Add Object to Database
-    * @async
-    * @param {object} dbName Name your Database
-    * @returns {Promise<void>}
-    */
-    async add(obj) {
+     * Add Object to Database
+     * @param {object} obj The object to add
+     * @returns {Promise<void>}
+     */
+    add(obj) {
         return new Promise((resolve, reject) => {
-            if (typeof (obj) != 'object') reject('DB_HANDLER.add(): obj is not defined or is not type of object');
+            if (!obj || typeof obj != 'object') {
+                reject('DB_HANDLER.add(): obj is not defined or is not type of object');
+                return;
+            }
 
             const _request = this.#getStore(true).add(obj);
 
@@ -180,36 +206,41 @@ class DB_HANDLER {
 
             _request.onsuccess = (event) => {
                 resolve();
-                this.#fireDataChangedEvent();
+                this.#fireDataChangedEvent(true);
             };
-        })
-    };
+        });
+    }
 
     /**
-    * Get Object by ID
-    * @async
-    * @param {string} id Object ID
-    * @returns {Promise<Product>}
-    */
-    async get(id) {
+     * Get Object by ID
+     * @param {string} id Object ID
+     * @returns {Promise<Product>}
+     */
+    get(id) {
         return new Promise((resolve, reject) => {
-            if (typeof (id) != 'string') reject('DB_HANDLER.get(): id is not defined or is not typeof string');
+            if (!id || typeof id != 'string') {
+                reject('DB_HANDLER.get(): id is not defined or is not typeof string');
+                return;
+            }
 
             const _request = this.#getStore().get(id);
-            _request.onerror = (event) => { reject(`DB_HANDLER.add(): ${event.target.error}`); };
-            _request.onsuccess = (event) => { resolve(event.target.result); };
-        })
-    };
+            _request.onerror = (event) => {
+                reject(`DB_HANDLER.get(): ${event.target.error}`);
+            };
+            _request.onsuccess = (event) => {
+                resolve(event.target.result);
+            };
+        });
+    }
 
     /**
-    * Get Object by ID
-    * If the entry is not found by the given ID, the ID is deconstructed to get the ASIN.
-    * If an entry exists with this ASIN, it is returned
-    * @async
-    * @param {string} id Object ID
-    * @returns {Promise<Product>}
-    */
-    async getById(id) {
+     * Get Object by ID
+     * If the entry is not found by the given ID, the ID is deconstructed to get the ASIN.
+     * If an entry exists with this ASIN, it is returned
+     * @param {string} id Object ID
+     * @returns {Promise<Product>}
+     */
+    getById(id) {
         return new Promise((_resolve, _reject) => {
             this.get(id)
                 .then((_prod) => {
@@ -218,56 +249,65 @@ class DB_HANDLER {
                         _resolve(_prod);
                     } else {
                         const _data_asin = id.split('#')[1];
-                        if (SETTINGS.DebugLevel > 1) console.debug(`object with ID "${id}" not found, trying to get it with ASIN "${_data_asin}"`);
+                        if (SETTINGS.DebugLevel > 1)
+                            console.debug(`object with ID "${id}" not found, trying to get it with ASIN "${_data_asin}"`);
                         this.getByASIN(_data_asin)
                             .then((_prod) => {
                                 if (_prod) {
-                                    if (SETTINGS.DebugLevel > 1) console.debug(`got object with ID "${id}" and ASIN "${_data_asin}": "${_prod}"`);
-                                // } else {
+                                    if (SETTINGS.DebugLevel > 1)
+                                        console.debug(`got object with ID "${id}" and ASIN "${_data_asin}": "${_prod}"`);
                                 }
 
                                 _resolve(_prod);
                             })
                             .catch((_error) => {
                                 console.error(`failed to get object with ID "${id}" and ASIN "${_data_asin}": "${_error}"`);
-                                _reject(_error)
+                                _reject(_error);
                             });
                     }
                 })
                 .catch((_error) => {
                     console.error(`failed to get object with ID "${id}": "${_error}"`);
-                    _reject(_error)
+                    _reject(_error);
                 });
         });
-    };
+    }
 
     /**
-    * Get Object by ASIN
-    * @async
-    * @param {string} asin ASIN
-    * @returns {Promise<Product>}
-    */
-    async getByASIN(asin) {
+     * Get Object by ASIN
+     * @param {string} asin ASIN
+     * @returns {Promise<Product>}
+     */
+    getByASIN(asin) {
         return new Promise((resolve, reject) => {
-            if (typeof (asin) != 'string') reject('DB_HANDLER.get(): asin is not defined or is not typeof string');
+            if (!asin || typeof asin != 'string') {
+                reject('DB_HANDLER.getByASIN(): asin is not defined or is not typeof string');
+                return;
+            }
 
             const _index = this.#getStore().index('data_asin');
             const _request = _index.get(asin);
-            _request.onerror = (event) => { reject(`DB_HANDLER.add(): ${event.target.error.name}`); };
-            _request.onsuccess = (event) => { resolve(event.target.result); };
-        })
-    };
+            _request.onerror = (event) => {
+                reject(`DB_HANDLER.getByASIN(): ${event.target.error.name}`);
+            };
+            _request.onsuccess = (event) => {
+                resolve(event.target.result);
+            };
+        });
+    }
 
     /**
-    * Update Object
-    * @async
-    * @param {object} obj Object to update
-    * @returns {Promise<void>}
-    */
-    async update(obj) {
+     * Update Object
+     * @param {object} obj Object to update
+     * @returns {Promise<void>}
+     */
+    update(obj) {
         return new Promise((resolve, reject) => {
             if (SETTINGS.DebugLevel > 1) console.log('Called DB_HANDLER:update()');
-            if (typeof (obj) != 'object') reject('DB_HANDLER.update(): obj is not defined or is not type of object');
+            if (!obj || typeof obj != 'object') {
+                reject('DB_HANDLER.update(): obj is not defined or is not type of object');
+                return;
+            }
 
             const _request = this.#getStore(true).put(obj);
 
@@ -278,26 +318,30 @@ class DB_HANDLER {
             _request.onsuccess = (event) => {
                 this.#fireDataChangedEvent();
                 resolve();
-            }
-        })
-    };
+            };
+        });
+    }
 
     /**
-    * Query Database for Searchstring
-    * @async
-    * @param {(string|array)} query String to find
-    * @returns {Promise<Product[]>}
-    */
-    async query(query) {
+     * Query Database for Searchstring
+     * @param {(string|array)} query String to find
+     * @returns {Promise<Product[]>}
+     */
+    query(query) {
         return new Promise((resolve, reject) => {
-            if (typeof (query) != 'string' && !Array.isArray(query)) reject('DB_HANDLER.query(): query is not defined or is not typeof string or array');
+            if (!query || (typeof query != 'string' && !Array.isArray(query))) {
+                reject('DB_HANDLER.query(): query is not defined or is not typeof string or array');
+                return;
+            }
 
             const _request = this.#getStore().openCursor();
             const _result = [];
 
-            // Use a Array of words for search
-            const _keys = (typeof (query) == 'string') ? [query] : query;
-            for (let _key of _keys) { _key = _key.toLowerCase(); }
+            // Use an array of words for the search
+            const _keys = typeof query == 'string' ? [query] : query;
+            for (let _key of _keys) {
+                _key = _key.toLowerCase();
+            }
 
             _request.onsuccess = (event) => {
                 const _cursor = event.target.result;
@@ -309,8 +353,8 @@ class DB_HANDLER {
                     }
 
                     _cursor.continue();
-
-                } else { // No more entries
+                } else {
+                    // No more entries
                     resolve(_result);
                 }
             };
@@ -318,16 +362,14 @@ class DB_HANDLER {
             _request.onerror = (event) => {
                 reject('Error querying records:', event.target.error.name);
             };
-        })
-    };
+        });
+    }
 
-
-/**
+    /**
      * Get all new "unseen" products from Database
-     * @async
      * @returns {Promise<Product[]>}
      */
-    async getNewEntries() {
+    getNewEntries() {
         return new Promise((resolve, reject) => {
             const _result = [];
             const _onlyTrue = IDBKeyRange.only(1);
@@ -339,20 +381,22 @@ class DB_HANDLER {
                 if (_cursor) {
                     _result.push(_cursor.value);
                     _cursor.continue();
-                } else { // No more entries
+                } else {
+                    // No more entries
                     resolve(_result);
                 }
             };
-            _request.onerror = (event) => { reject(`DB_HANDLER.getNewEntries(): ${event.target.error.name}`); };
-        })
-    };
+            _request.onerror = (event) => {
+                reject(`DB_HANDLER.getNewEntries(): ${event.target.error.name}`);
+            };
+        });
+    }
 
     /**
      * Get all Favorite products from Database
-     * @async
      * @returns {Promise<Product[]>}
      */
-    async getFavEntries(cb) {
+    getFavEntries() {
         return new Promise((resolve, reject) => {
             const _result = [];
             const _onlyTrue = IDBKeyRange.only(1);
@@ -364,13 +408,16 @@ class DB_HANDLER {
                 if (_cursor) {
                     _result.push(_cursor.value);
                     _cursor.continue();
-                } else { // No more entries
+                } else {
+                    // No more entries
                     resolve(_result);
                 }
             };
-            _request.onerror = (event) => { reject(`DB_HANDLER.getFavEntries(): ${event.target.error.name}`); };
-        })
-    };
+            _request.onerror = (event) => {
+                reject(`DB_HANDLER.getFavEntries(): ${event.target.error.name}`);
+            };
+        });
+    }
 
     /**
      * Get all the Objects stored in our DB
@@ -379,43 +426,52 @@ class DB_HANDLER {
     getAll() {
         return new Promise((resolve, reject) => {
             const _request = this.#getStore().getAll();
-            _request.onsuccess = (event) => { resolve(event.target.result); };
-            _request.onerror = (event) => { reject(`DB_HANDLER.getAll(): ${event.target.error.name}`); };
-        })
+            _request.onsuccess = (event) => {
+                resolve(event.target.result);
+            };
+            _request.onerror = (event) => {
+                reject(`DB_HANDLER.getAll(): ${event.target.error.name}`);
+            };
+        });
     }
 
     /**
-    * Removes Object with given ID from Database
-    * @async
-    * @param {string} id Object ID
-    * @returns {Promise<void>}
-    */
-    async removeID(id) {
+     * Removes Object with given ID from Database
+     * @param {string} id Object ID
+     * @returns {Promise<void>}
+     */
+    removeID(id) {
         return new Promise((resolve, reject) => {
-            if (typeof (id) != 'string') (reject('DB_HANDLER.removeID(): id is not defined or is not typeof string'));
+            if (!id || typeof id != 'string') {
+                reject('DB_HANDLER.removeID(): id is not defined or is not typeof string');
+                return;
+            }
 
             const _request = this.#getStore(true).delete(id);
             _request.onsuccess = (event) => {
                 resolve();
                 this.#fireDataChangedEvent();
             };
-            _request.onerror = (event) => { reject(`DB_HANDLER.removeID(): ${event.target.error.name}`); };
-        })
-    };
+            _request.onerror = (event) => {
+                reject(`DB_HANDLER.removeID(): ${event.target.error.name}`);
+            };
+        });
+    }
 
     /**
      * Imports the database, i.e. delete all existing entries and add new ones
-     * @async
-    * @returns {Promise<void>}
+     * @returns {Promise<void>}
      */
-    async import(datas) {
+    import(datas) {
         return new Promise((resolve, reject) => {
             if (datas === null) {
                 reject('DB_HANDLER.import(): datas is null');
+                return;
             }
 
             if (typeof datas[Symbol.iterator] !== 'function') {
                 reject('DB_HANDLER.import(): datas is not iterable');
+                return;
             }
 
             const _store = this.#getStore(true);
@@ -424,27 +480,34 @@ class DB_HANDLER {
                 let _addRequest;
                 for (const data of datas) {
                     _addRequest = _store.add(data);
-                    _addRequest.onerror = (event) => { reject(`DB_HANDLER.import().add(): ${event.target.error.name}`); };
+                    _addRequest.onerror = (event) => {
+                        reject(`DB_HANDLER.import().add(): ${event.target.error.name}`);
+                    };
                 }
-                if (_addRequest){
+                if (_addRequest) {
                     _addRequest.onsuccess = () => {
+                        // NOTE: The listeners of the database have to be informed about the
+                        // new data, otherwise the badge and the title stay outdated.
+                        this.#fireDataChangedEvent(true);
                         resolve();
-                    }
-                } else{
+                    };
+                } else {
+                    this.#fireDataChangedEvent(true);
                     resolve();
                 }
             };
 
-            _clearRequest.onerror = (event) => { reject(`DB_HANDLER.import().clear(): ${event.target.error.name}`); };
-        })
+            _clearRequest.onerror = (event) => {
+                reject(`DB_HANDLER.import().clear(): ${event.target.error.name}`);
+            };
+        });
     }
 
-/**
-    * Deletes the entire database.
-    * @async
-    * @returns {Promise<void>}
-    */
-    async deleteDatabase() {
+    /**
+     * Deletes the entire database.
+     * @returns {Promise<void>}
+     */
+    deleteDatabase() {
         return new Promise((resolve, reject) => {
             const deleteRequest = indexedDB.deleteDatabase(this.#dbName);
 

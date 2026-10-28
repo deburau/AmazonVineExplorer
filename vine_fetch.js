@@ -1,25 +1,57 @@
+/* exported extHelper_LastParentVariant, extHelper_fetchHookKey, extHelper_formatDimensionValue,
+   extHelper_getRequestUrl, extHelper_installRecommendationFetchHook, extHelper_isSpinnerFixEnabled,
+   extHelper_isVineApiRequest, extHelper_pageWindow, extHelper_processedRecommendationResponses,
+   extHelper_repairRecommendationData, extHelper_repairRecommendationResponse, vineFetch */
 var extHelper_LastParentVariant = null;
 const extHelper_processedRecommendationResponses = new WeakSet();
 const extHelper_pageWindow = typeof unsafeWindow !== 'undefined' && unsafeWindow ? unsafeWindow : window;
 const extHelper_fetchHookKey = '__aveInfiniteSpinnerFixFetchHooked';
 
+/**
+ * Extracts the URL of a fetch request.
+ *
+ * @param {string|Request|object} input The first argument of fetch(), it can be
+ *                                      a URL, a Request or an object with a url
+ *                                      or href property
+ * @returns {URL|null} The URL of the request, or null if it could not be parsed
+ */
 function extHelper_getRequestUrl(input) {
     try {
-        const urlValue = typeof input === 'string' ? input :
-            (input && typeof input.url === 'string' ? input.url :
-                (input && typeof input.href === 'string' ? input.href : String(input)));
+        const urlValue =
+            typeof input === 'string'
+                ? input
+                : input && typeof input.url === 'string'
+                  ? input.url
+                  : input && typeof input.href === 'string'
+                    ? input.href
+                    : String(input);
         return new URL(urlValue, extHelper_pageWindow.location.href);
     } catch {
         return null;
     }
 }
 
+/**
+ * Checks if a fetch request goes to one of the Vine API endpoints.
+ *
+ * @param {string|Request|object} input The first argument of fetch()
+ * @param {string} endpoint The name of the endpoint (e.g. "recommendations")
+ * @returns {boolean} true if the request goes to the given endpoint
+ */
 function extHelper_isVineApiRequest(input, endpoint) {
     const requestUrl = extHelper_getRequestUrl(input);
     if (!requestUrl || requestUrl.origin !== extHelper_pageWindow.location.origin) return false;
     return new RegExp(`/api/${endpoint}(?:/|$)`).test(requestUrl.pathname);
 }
 
+/**
+ * Checks if the repair of the broken variation data is enabled.
+ *
+ * The setting is read from the storage of the userscript manager, because the
+ * hook is installed before the settings of AVE are loaded.
+ *
+ * @returns {boolean} true if the repair is enabled
+ */
 function extHelper_isSpinnerFixEnabled() {
     try {
         if (typeof GM_getValue === 'function') {
@@ -34,6 +66,13 @@ function extHelper_isSpinnerFixEnabled() {
     return typeof SETTINGS === 'undefined' || SETTINGS.EnableInfiniteSpinnerFix !== false;
 }
 
+/**
+ * Formats the value of a variation dimension, so that Amazon does not render a
+ * broken spinner for it.
+ *
+ * @param {string} value The raw value of the dimension
+ * @returns {string} The formatted value
+ */
 function extHelper_formatDimensionValue(value) {
     if (typeof value !== 'string') return value;
 
@@ -44,6 +83,15 @@ function extHelper_formatDimensionValue(value) {
     return formatted;
 }
 
+/**
+ * Repairs the variation data of a recommendation, if it is malformed.
+ *
+ * Amazon sometimes delivers the dimensions of the variations in an incomplete
+ * or malformed form, which makes the page show a spinner forever.
+ *
+ * @param {object} responseData The parsed body of the API response
+ * @returns {number} The number of the repaired variations
+ */
 function extHelper_repairRecommendationData(responseData) {
     const variations = responseData && responseData.result && responseData.result.variations;
     if (!Array.isArray(variations)) return 0;
@@ -52,7 +100,7 @@ function extHelper_repairRecommendationData(responseData) {
         const dimensions = variation && variation.dimensions;
         return dimensions && typeof dimensions === 'object' && !Array.isArray(dimensions) ? Object.entries(dimensions) : [];
     });
-    const templateEntries = dimensionEntries.reduce((best, current) => current.length > best.length ? current : best, []);
+    const templateEntries = dimensionEntries.reduce((best, current) => (current.length > best.length ? current : best), []);
     const templateKeys = templateEntries.map(([key]) => key);
     const hasIncompleteDimensions = dimensionEntries.some((entries) => entries.length < templateKeys.length);
     const combineDimensions = hasIncompleteDimensions && templateKeys.length > 1;
@@ -115,6 +163,13 @@ function extHelper_repairRecommendationData(responseData) {
     return fixed;
 }
 
+/**
+ * Repairs a recommendation response, if its variation data is malformed.
+ *
+ * @param {Response} response The response of the Vine API
+ * @returns {Promise<Response>} The repaired response, or the original one if
+ *                               it could not be repaired
+ */
 async function extHelper_repairRecommendationResponse(response) {
     if (extHelper_processedRecommendationResponses.has(response) || !extHelper_isSpinnerFixEnabled()) return response;
     extHelper_processedRecommendationResponses.add(response);
@@ -131,7 +186,7 @@ async function extHelper_repairRecommendationResponse(response) {
         const repairedResponse = new extHelper_pageWindow.Response(JSON.stringify(responseData), {
             headers,
             status: response.status,
-            statusText: response.statusText,
+            statusText: response.statusText
         });
         extHelper_processedRecommendationResponses.add(repairedResponse);
         extHelper_pageWindow.postMessage({ type: 'infiniteWheelFixed', text: `${fixed} variation(s) fixed.` }, '*');
@@ -141,11 +196,18 @@ async function extHelper_repairRecommendationResponse(response) {
     }
 }
 
+/**
+ * Installs the hook on fetch(), so that the broken variation data of the Vine
+ * API can be repaired before the page sees it.
+ *
+ * The hook is only installed once per page, the flag in the page window keeps
+ * track of it.
+ */
 function extHelper_installRecommendationFetchHook() {
     if (extHelper_pageWindow[extHelper_fetchHookKey] || typeof extHelper_pageWindow.fetch !== 'function') return;
 
     const originalFetch = extHelper_pageWindow.fetch;
-    const hookedFetch = async function(...args) {
+    const hookedFetch = async function (...args) {
         const response = await originalFetch.apply(this, args);
         if (!extHelper_isVineApiRequest(args[0], 'recommendations') || !extHelper_isSpinnerFixEnabled()) return response;
         return extHelper_repairRecommendationResponse(response);
@@ -161,6 +223,24 @@ function extHelper_installRecommendationFetchHook() {
 
 extHelper_installRecommendationFetchHook();
 
+/**
+ * Fetches a URL and processes the response of the Vine API.
+ *
+ * The requests to the voice order endpoint are intercepted, so that the order
+ * can be reported to AVE. The responses of the recommendation endpoint are
+ * repaired, if their variation data is malformed.
+ *
+ * NOTE: The complexity of this function is above the limit of the ESLint rule,
+ * because it has to handle three different kinds of requests (voice orders,
+ * recommendations and everything else) and every kind needs its own error
+ * handling. Splitting the function would change the order of the response
+ * hooks, which is relevant for the behaviour of the page, so the warning is
+ * accepted instead.
+ *
+ * @param {...any} args The arguments of fetch()
+ * @returns {Promise<Response>} The response of the request
+ */
+// eslint-disable-next-line complexity
 async function vineFetch(...args) {
     let response = await extHelper_pageWindow.fetch.apply(extHelper_pageWindow, args);
     const lastParent = extHelper_LastParentVariant;
@@ -217,7 +297,8 @@ async function vineFetch(...args) {
         if (result.variations !== undefined) {
             extHelper_LastParentVariant = result;
         } else if (result.taxValue !== undefined) {
-            const isChild = !!lastParent && !!lastParent.variations && lastParent.variations.some((variation) => variation.asin == result.asin);
+            const isChild =
+                !!lastParent && !!lastParent.variations && lastParent.variations.some((variation) => variation.asin == result.asin);
             const data = { parent_asin: null, asin: result.asin, etv: result.taxValue };
             if (isChild && lastParent && lastParent.recommendationId) {
                 const match = lastParent.recommendationId.match(/^.+?#(.+?)#.+$/);

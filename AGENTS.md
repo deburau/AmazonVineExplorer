@@ -1,5 +1,8 @@
 # Amazon Vine Explorer - Development Guide for AI Agents
 
+> **Wechsel auf ein anderes System?** Siehe [HANDOVER.md](HANDOVER.md) – dort steht,
+> wie der Projektstand auf ein neues System (z. B. Ubuntu/Proxmox) mitgenommen wird.
+
 ## Project Overview
 
 Amazon Vine Explorer is a Tampermonkey/Greasemonkey userscript that enhances the Amazon Vine website with advanced product tracking, database management, and UI improvements. This is a pure JavaScript project using ES6+ features with extensive DOM manipulation and IndexedDB storage.
@@ -10,23 +13,140 @@ Amazon Vine Explorer is a Tampermonkey/Greasemonkey userscript that enhances the
 - Storage: IndexedDB + Tampermonkey storage APIs
 - Testing: None (manual testing only)
 - Linting: ESLint 9.x with flat config
+- Formatting: Prettier 3.x (configuration in `.prettierrc`)
 
 ## Development Commands
 
-### Linting
+### Formatting and linting
 ```bash
-# Run ESLint on all JavaScript files
-npx eslint .
+# Format all sources with Prettier (the project style)
+npm run format
 
-# Fix auto-fixable issues
-npx eslint . --fix
+# Check the formatting without changing anything
+npm run format:check
+
+# Run ESLint on all JavaScript files
+npm run lint
+
+# Fix the auto-fixable ESLint issues
+npm run lint -- --fix
+
+# Both checks at once (this is what CI should run)
+npm run check
 ```
 
+### Code quality gates
+`eslint.config.mjs` defines warnings that keep the code from growing further. The
+limits are set just above the current maximum of the existing code, so they do not
+report anything today:
+
+| Rule | Limit | Purpose |
+|------|-------|---------|
+| `complexity` | 20 | Branches per function |
+| `max-lines-per-function` | 150 | Length of a function (comments and blank lines are ignored) |
+| `max-statements` | 80 | Statements per function |
+| `max-depth` | 5 | Nesting level of blocks |
+| `prefer-const` | - | `let` that is never reassigned |
+
+The rules are warnings, so `npm run lint` stays green. `npm run lint:strict` fails
+on warnings and is meant for a later cleanup, not for the daily workflow.
+
+**Exception:** The complexity of `vineFetch()` in `vine_fetch.js` is above the
+limit. The function handles three kinds of requests and every kind needs its own
+error handling. Splitting it would change the order of the response hooks, which
+is relevant for the behaviour of the page, so the warning is suppressed with an
+`eslint-disable` comment and a note.
+
+**Never run a formatter on the markdown files** - the documentation is written by
+hand and the changelog would be reflowed without any benefit. `*.md` is therefore
+listed in `.prettierignore`.
+
 ### Testing
-**Note:** This project has no automated tests. Testing is done manually by:
+**Note:** This project has no automated browser tests. The behaviour of the
+userscript is tested manually by:
 1. Installing the userscript in Tampermonkey/Greasemonkey
 2. Navigating to Amazon Vine websites
 3. Verifying functionality works as expected
+
+The **refactorings** are checked automatically, because a refactoring must not
+change the behaviour. See the section "Verifying a refactoring".
+
+## Git Workflow and Release Rules
+
+### Branches
+- `main` is the branch that is published to the users (see `@updateURL`/`@downloadURL`).
+  **Never push to `main` without the explicit request of the maintainer.**
+- Development happens in the `dev-*` branches (e.g. `dev-0-13.0`). Pushing to a `dev-*`
+  branch is allowed without asking.
+- The `@updateURL`/`@downloadURL` in `VineExplorer.user.js` deliberately point to `main`,
+  so that the dev branches can be tested without affecting the other users.
+
+### Versioning and Changelog
+- Every user visible change gets a new version number in the `@version` line of
+  `VineExplorer.user.js` (patch level, e.g. `0.12.1.17` -> `0.12.1.18`).
+- Every change gets an entry in the `Changelog Deburau` section of `README.md`.
+  The heading is `##### [YYYY-MM-DD] - Version <version>` followed by a short bullet list.
+- Commit messages follow the pattern `type(scope): short description`
+  (e.g. `fix(settings): read the settings if they are stored as a JSON string`).
+
+### Working Style (important)
+- Work **step by step: one single change at a time**. Do not bundle several fixes into
+  one commit.
+- After each step the maintainer tests the change manually in the browser and gives the
+  feedback. Wait for that feedback before starting the next step.
+- Keep `AGENTS.md` up to date: if a rule, a convention or the project structure changes,
+  update this file in the same commit.
+
+### Verifying a refactoring
+
+A refactoring must not change the behaviour. Because the order of the side
+effects is relevant, the behaviour is not checked by reading the code but by
+comparing the old and the new implementation:
+
+1. **Before** the refactoring, freeze the current state as the baseline:
+   ```bash
+   npm run verify:baseline
+   ```
+   This writes the current git commit into `scripts/verify/baselines.json`.
+
+2. Make the refactoring.
+
+3. Run the verifications:
+   ```bash
+   npm run verify
+   ```
+   Every script compares the baseline with the current working tree and reports
+   the differences of the side effects (local storage accesses, database
+   accesses, created DOM, calls of the other functions).
+
+4. If the refactoring was correct, the result is "all scenarios are identical".
+
+The baseline is only used for the comparison, it is never part of the build.
+
+| Script | Compares |
+|--------|----------|
+| `verify_scan.js` | The local storage accesses of the background scan over seven scenarios |
+| `verify_db_helpers.js` | The database accesses of `cleanUpDatabase()` and the marking of the products |
+| `verify_settings_ui.js` | The created DOM of all nine setting types |
+| `verify_new_products_btn.js` | The notifications, the badge and the page title of the new entries button |
+| `verify_init.js` | The created DOM and the calls of the page initialisation |
+
+**NOTE:** A new verification needs the same structure: a `vm` sandbox with mocked
+browser APIs, a list of the function names of the old and the new version and a
+comparison of the side effects. The shared helpers are in
+`scripts/verify/lib/verify_helpers.js`.
+
+### Screenshots
+- The maintainer creates screenshots with ShareX and pastes the **file path** into the chat.
+  A pasted path is text, not an image. To see the screenshot, read the file with the `read`
+  tool (it supports png, jpg, gif, webp and bmp).
+- Screenshots are usually stored outside the repository. Do not commit them.
+  The folder `.unotes/` in the repository is in the `.gitignore` and can be used
+  as a place for them.
+
+### Pushing
+- `git push origin dev-<version>` is allowed without asking.
+- `git push origin main` requires an explicit request.
 
 ## Code Style Guidelines
 
@@ -42,6 +162,26 @@ npx eslint . --fix
 - No ES6 modules or CommonJS imports/exports
 - Global scope sharing between required files
 - All code shares the same global namespace
+- The verification scripts under `scripts/verify/` are Node.js programs and use
+  CommonJS, they run outside of the browser
+
+### Adding a new global function
+
+A new top level function in one of the project files has to be declared twice,
+because all files share one global namespace:
+
+1. In the `/* exported ... */` comment at the top of the file (for the linter)
+2. In `eslint.config.mjs` in the list of the file it is declared in (so that the
+   other files know the name)
+
+```javascript
+// VineExplorer.user.js
+/* exported myNewFunction */
+function myNewFunction() { ... }
+
+// eslint.config.mjs
+const mainFile = [ ..., 'myNewFunction' ];
+```
 
 ### Code Organization
 ```javascript
@@ -57,6 +197,23 @@ async function waitForHtmlElement(selector, cb, altDocument = document, timeout 
     // Implementation
 }
 ```
+
+### Comment Style
+All comments are written in **English**, also the ones in the German user
+interface. The rules for the different kinds of comments:
+
+| Kind | Format | Example |
+|------|--------|---------|
+| Description of a function | JSDoc `/** ... */` above the function | `/** Creates the tile of a product. */` |
+| Important information in the code | `// NOTE: ...` | `// NOTE: The URL is relative and has to be resolved.` |
+| A known problem that is not fixed | `// KNOWN: ...` | `// KNOWN: The document body is not always available.` |
+| A normal explanation | `// ...` | `// The badge shows the number of new products.` |
+| A CSS rule in a template literal | `/* ... */` | `/* Hide the tooltip content by default */` |
+
+A function whose purpose is not obvious **must** have a JSDoc block that
+explains what it does, what the parameters are and what it returns. A
+comment that explains *why* something is done in that way is more valuable
+than one that repeats *what* the code does.
 
 ### Error Handling Patterns
 - **Always use try-catch** for async operations and JSON parsing
@@ -146,11 +303,19 @@ try {
 ## File Structure and Responsibilities
 
 ### Core Files
-- **`VineExplorer.user.js`** (3,267 lines) - Main entry point, orchestrates all functionality
-- **`globals.js`** (690 lines) - Global constants, settings definitions, utility functions
-- **`class_db_handler.js`** (494 lines) - IndexedDB database management class
-- **`class_product.js`** (37 lines) - Product data model
-- **`vine_fetch.js`** (141 lines) - Enhanced fetch wrapper for API calls
+- **`VineExplorer.user.js`** (~4,000 lines) - Main entry point, orchestrates all functionality
+- **`globals.js`** (~1,150 lines) - Global constants, settings definitions, utility functions
+- **`class_db_handler.js`** (~520 lines) - IndexedDB database management class
+- **`class_product.js`** (~37 lines) - Product data model
+- **`vine_fetch.js`** (~245 lines) - Enhanced fetch wrapper for API calls
+- **`i18n.js`** (~350 lines) - Translations
+
+### Tooling Files
+- **`.prettierrc`** - Project style (print width 140, 4 spaces, single quotes)
+- **`.prettierignore`** - Keeps the formatter away from the markdown files and the local notes
+- **`eslint.config.mjs`** - Linter config and the list of the globals of every file
+- **`scripts/verify/`** - The verification scripts for the refactorings (Node.js)
+- **`scripts/verify/baselines.json`** - The git commit that every verification compares against
 
 ### Key Patterns to Follow
 
@@ -159,6 +324,52 @@ try {
 3. **Background Processing**: Automated scanning with rate limiting
 4. **Infinite Scroll**: Dynamic content loading with buffering
 5. **Settings System**: Dynamic UI generation from configuration
+
+### Init Structure
+
+The initialisation of the page is split into small functions, one per
+responsibility:
+
+| Function | Responsibility |
+|----------|----------------|
+| `init()` | Starts the initialisation and calls the other functions |
+| `initTileParsing()` | Parses the tiles of the page and starts the auto scan |
+| `initNavigationButtons()` | Adds the buttons for the product sites |
+| `initSearchBar()` | Adds the search bar for the products |
+| `initPagination()` | Replaces the "next page" button of the pagination |
+
+The helper script `.unotes/verify_init.js` compares the created DOM, the
+database accesses and the calls of the old and the new implementation in four
+scenarios (normal page, empty page, running auto scan and subpage request).
+
+### Background Scan Structure
+
+The background scan is split into small functions, one per responsibility. The
+state that has to survive the single iterations of the scan loop is kept in a
+`BackgroundScanState` object:
+
+| Function | Responsibility |
+|----------|----------------|
+| `initBackgroundScan()` | Starts the scan and the pagination wait loop |
+| `initBackgroundScanStorage()` | Writes the initial values to the local storage |
+| `getBackgroundScanStageZeroSites()` | The queues of the first stage |
+| `backgroundScanLoop()` | One iteration of the loop, it selects the stage |
+| `prepareFastScan()` | Decides if a fast scan is started |
+| `prepareScanIteration()` | Determines the stage and the sub stage |
+| `scanStageZero()` … `scanStageIdle()` | The five stages of the scan |
+| `backgroundScanFinished()` | Stores the state and starts the next iteration |
+| `handleFastScanFinished()` | Handles the end of an iteration during a fast scan |
+| `shouldStopFastScan()` | Decides if the fast scan has to be stopped |
+| `stopFastScan()` | Restores the values of the background scan and stops the fast scan |
+| `notifyAboutProductDrop()` | Sends the notification about a possible product drop |
+| `formatDuration()` | Formats a duration for the screen text |
+
+**NOTE:** The scan must be verified with a comparison, because a change of the
+order of the local storage accesses changes the behaviour of the scan. The
+helper script `.unotes/verify_scan.js` runs the old and the new implementation
+in a sandbox with mocked browser APIs and compares the resulting local storage
+accesses step by step. It covers seven scenarios, among them the start of a fast
+scan and the three reasons why a fast scan is stopped.
 
 ## Development Best Practices
 

@@ -1,15 +1,32 @@
 'use strict';
-if (window.top != window.self) return; //don't run on frames or iframes
+
+/* exported AVE_EVENTHANDLER, AVE_IS_THIS_SESSION_MASTER, AVE_SESSION_ID, AVE_TITLE, AVE_VERSION,
+   AUTO_SCAN_IS_RUNNING, AUTO_SCAN_PAGE_CURRENT, AUTO_SCAN_PAGE_MAX, DATABASE_NAME,
+   DATABASE_OBJECT_STORE_NAME, DATABASE_VERSION, INIT_AUTO_SCAN, PAGE_LOAD_TIMESTAMP,
+   SECONDS_PER_DAY, SECONDS_PER_WEEK, SETTINGS, SETTINGS_DEFAULT, SETTINGS_USERCONFIG_DEFINES,
+   SITE_IS_SHOPPING, SITE_IS_VINE, addBranding, ave_eventhandler, delay, fastStyleChanges,
+   findActiveMenuButton, generateSessionID, getCountry, loadSettings, saveSettings,
+   toTimestamp, toUnixTimestamp, unixTimeStamp, waitForHtmlElement, waitForHtmlElementPromise */
+
+// Don't run on frames or iframes.
+// A top level "return" aborts the script silently, a thrown error would show up as an
+// uncaught error in the console of every frame (e.g. the hidden iframe of the scan).
+// The script is also excluded from frames with the @noframes directive.
+if (window.top != window.self) return;
 
 // Constants Needed for some things
-const AVE_VERSION = (GM_info?.script?.version)
-const AVE_TITLE = (GM_info?.script?.name);
+const AVE_VERSION = GM_info?.script?.version;
+const AVE_TITLE = GM_info?.script?.name;
 const SECONDS_PER_DAY = 86400;
 const SECONDS_PER_WEEK = 604800;
 const SITE_IS_VINE = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/vine\//.test(window.location.href);
 const SITE_IS_SHOPPING = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/(?!vine)(?!gp\/video)(?!music)/.test(window.location.href);
 // Session id is used for multi-tab master/slave coordination.
-const AVE_SESSION_ID = generateSessionID();
+// Reuse the id from sessionStorage so that reloads and navigations inside the
+// same tab keep the same session. This avoids a dead session blocking the
+// master role until the 10 s timeout expires.
+const AVE_SESSION_ID = sessionStorage.getItem('AVE_SESSION_ID') || generateSessionID();
+sessionStorage.setItem('AVE_SESSION_ID', AVE_SESSION_ID);
 
 /**
  * Is this Browser Tab / Window the Master Instance ??
@@ -17,13 +34,14 @@ const AVE_SESSION_ID = generateSessionID();
 let AVE_IS_THIS_SESSION_MASTER = false;
 
 // Persisted scan state from previous runs (used by auto-scan logic).
-const INIT_AUTO_SCAN = (localStorage.getItem('AVE_INIT_AUTO_SCAN') == 'true') ? true : false;
-const AUTO_SCAN_IS_RUNNING = (localStorage.getItem('AVE_AUTO_SCAN_IS_RUNNING') == 'true') ? true : false;
-const AUTO_SCAN_PAGE_CURRENT = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_CURRENT')) || -1
-const AUTO_SCAN_PAGE_MAX = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_MAX')) || -1
+const INIT_AUTO_SCAN = localStorage.getItem('AVE_INIT_AUTO_SCAN') == 'true' ? true : false;
+const AUTO_SCAN_IS_RUNNING = localStorage.getItem('AVE_AUTO_SCAN_IS_RUNNING') == 'true' ? true : false;
+const AUTO_SCAN_PAGE_CURRENT = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_CURRENT')) || -1;
+const AUTO_SCAN_PAGE_MAX = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_MAX')) || -1;
 const PAGE_LOAD_TIMESTAMP = Date.now();
 
-// Obsolete sobald die Datenbank über Tampermonkey läuft
+// NOTE: The database is still stored in IndexedDB of the browser and not in the
+// storage of the userscript manager, so these constants are needed.
 const DATABASE_NAME = 'VineVoiceExplorer';
 const DATABASE_OBJECT_STORE_NAME = `${DATABASE_NAME}_Objects`;
 const DATABASE_VERSION = 4;
@@ -33,17 +51,17 @@ unsafeWindow.ave = {};
 
 class AVE_EVENTHANDLER {
     /**
-    * AVE Eventhandler
-    * A very basic and simple eventhandler/wrapper
-    * @constructor
-    * @return {AVE_EVENTHANDLER} AVE_EVENTHANDLER Object
-    */
-    constructor(){}
+     * AVE Eventhandler
+     * A very basic and simple eventhandler/wrapper
+     * @constructor
+     * @return {AVE_EVENTHANDLER} AVE_EVENTHANDLER Object
+     */
+    constructor() {}
 
     /**
-    * Fire out an Event
-    * @param {string} eventName Thats the Name of the Event u want to fire
-    */
+     * Fire out an Event
+     * @param {string} eventName Thats the Name of the Event u want to fire
+     */
     emit(eventName) {
         unsafeWindow.dispatchEvent(new Event(eventName));
     }
@@ -58,15 +76,35 @@ class AVE_EVENTHANDLER {
     }
 }
 
+// A session is considered dead if it did not send a heartbeat for this time (ms).
+// It has to be longer than the heartbeat interval (1s), because the browser throttles the
+// timers of a background tab. Otherwise a tab in the background would lose its session.
+const AVE_SESSION_TIMEOUT = 10000;
+
 // Shared event bus for cross-file coordination.
 const ave_eventhandler = new AVE_EVENTHANDLER();
 
+/**
+ * Shows the branding of AVE in the bottom left corner of the page.
+ *
+ * The badge is green if this tab is the master session (the one that runs the
+ * background scan) and red if it is not, so that only one tab does the work.
+ */
 function addBranding() {
-    // sometimes document.body is null. I don't know why, but at least, it does not throw an error then
+    // NOTE: The document body is not always available, depending on when the
+    // function is called. Without this check the function would throw an error.
     if (!document?.body) return;
 
+    // The branding is only shown on the vine pages.
+    if (!SITE_IS_VINE) {
+        const _oldElem = document.getElementById('ave-branding-text');
+        if (_oldElem) _oldElem.remove();
+        return;
+    }
+
     // Master session shows a distinct badge to avoid duplicate background work.
-    const _isMasterSession = AVE_IS_THIS_SESSION_MASTER && SITE_IS_VINE;
+    const _isMasterSession = AVE_IS_THIS_SESSION_MASTER;
+    const _brandingColor = _isMasterSession ? 'rgba(218, 247, 166, .75)' : 'rgba(255, 100, 100, .75)';
 
     const _oldElem = document.getElementById('ave-branding-text');
     if (_oldElem) _oldElem.remove();
@@ -86,7 +124,7 @@ function addBranding() {
     width: fit-content;
     height: fit-content;
     margin-left: auto;
-    background-color: ${(_isMasterSession) ? 'rgba(218, 247, 166, .75)': 'rgba(255, 100, 100, .75)'};
+    background-color: ${_brandingColor};
     justify-content: center;
     display: flex;
     padding: 3px;
@@ -98,6 +136,9 @@ function addBranding() {
     display: flex;
   }
 
+  /* NOTE: Known typo 'brandig' instead of 'branding'. It is a redundant selector
+     because '#ave-branding-text' is also listed above, so nothing matches this.
+     Left as-is to avoid unnecessary churn in the style injection. */
   #ave-brandig-text {
     padding: 0;
     margin: 0;
@@ -112,15 +153,15 @@ function addBranding() {
     _text.style.position = 'fixed';
     _text.style.bottom = '10px';
     _text.style.left = '10px';
-    _text.style.color = 'blue'; // Textfarbe
-    _text.style.backgroundColor = (_isMasterSession) ? 'rgba(218, 247, 166, .75)': 'rgba(255, 100, 100, .75)';
+    _text.style.color = 'blue'; // Text colour
+    _text.style.backgroundColor = _brandingColor;
     _text.style.textAlign = 'left';
-    _text.style.fontSize = '20px'; // Ändere die Schriftgröße hier
+    _text.style.fontSize = '20px'; // Font size of the branding
     _text.style.zIndex = '2000';
     _text.style.borderRadius = '3px';
     _text.innerHTML = `
     <p id="ave-brandig-text">
-      ${AVE_TITLE}${(_isMasterSession) ? ' - Master': ''} - ${AVE_VERSION}
+      ${AVE_TITLE}${_isMasterSession ? ' - Master' : ''} - ${AVE_VERSION}
     </p>
     <div class="ave-x-wrapper">
       <div class="ave-close-x" id="ave-branding-x">
@@ -129,12 +170,11 @@ function addBranding() {
     </div>
     `;
 
-
     document.body.appendChild(_text);
 
     const _brandingClose = document.getElementById('ave-branding-x');
 
-    _brandingClose.addEventListener('click', function() {
+    _brandingClose.addEventListener('click', function () {
         var brandingWrapper = document.getElementById('ave-branding-text');
         brandingWrapper.style.display = 'none';
     });
@@ -142,160 +182,480 @@ function addBranding() {
 
 unsafeWindow.ave.addBranding = addBranding;
 
-// Small randomized delay reduces race conditions when multiple tabs start.
-setTimeout(() => {
-    if (!localStorage.getItem('AVE_SESSIONS')) {
-        localStorage.setItem("AVE_SESSIONS", JSON.stringify([{id: AVE_SESSION_ID, ts: Date.now()}]));
-} else {
-        let _sessions;
-        try {
-            _sessions = JSON.parse(localStorage.AVE_SESSIONS);
-        } catch (error) {
-            console.error('Error parsing sessions:', error);
-            _sessions = [];
-        }
-        let _isMasterInstance = SITE_IS_VINE;
-        for (const _session of _sessions) {
-            if (_session.master) _isMasterInstance = false;
-        }
-        AVE_IS_THIS_SESSION_MASTER = _isMasterInstance;
-        _sessions.push({id: AVE_SESSION_ID, ts: Date.now(), master: _isMasterInstance});
-        localStorage.setItem('AVE_SESSIONS', JSON.stringify(_sessions));
-        addBranding();
-    }
+// Helper for the browser console: stores the settings as a JSON string.
+// Some userscript managers store the settings that way, the script has to be able to read them.
+unsafeWindow.ave.storeSettingsAsJsonString = () => {
+    GM_setValue('AVE_SETTINGS', JSON.stringify(SETTINGS));
+    console.log('The settings are stored as a JSON string now. Reload the page.');
+};
 
-    // Heartbeat: keep session list fresh and elect a master when needed.
-    setInterval(() => { //
-        let _sessions;
-        try {
-            _sessions = JSON.parse(localStorage.getItem('AVE_SESSIONS', '[]'));
-        } catch (error) {
-            console.error('Error parsing sessions in interval:', error);
-            _sessions = [];
+// Small randomized delay reduces race conditions when multiple tabs start.
+//
+//   KNOWN: The session list is stored as a single JSON blob in localStorage without
+//   compare-and-swap, so two tabs writing at the same time could overwrite each other.
+//   This is ignored because only the master tab writes meaningful state and the session
+//   list is rebuilt by the heartbeat within one second anyway.
+setTimeout(
+    () => {
+        if (!localStorage.getItem('AVE_SESSIONS')) {
+            localStorage.setItem('AVE_SESSIONS', JSON.stringify([{ id: AVE_SESSION_ID, ts: Date.now() }]));
+        } else {
+            let _sessions;
+            try {
+                _sessions = JSON.parse(localStorage.AVE_SESSIONS);
+            } catch (error) {
+                console.error('Error parsing sessions:', error);
+                _sessions = [];
+            }
+            let _isMasterInstance = SITE_IS_VINE;
+            for (const _session of _sessions) {
+                if (_session.master) _isMasterInstance = false;
+            }
+            // If an entry with our id is still present (beforeunload did not fire or
+            // the write was blocked), remove it before creating the fresh entry.
+            // Otherwise the old entry would stay as a ghost until the 10 s timeout.
+            _sessions = _sessions.filter((_session) => _session.id !== AVE_SESSION_ID);
+            AVE_IS_THIS_SESSION_MASTER = _isMasterInstance;
+            _sessions.push({ id: AVE_SESSION_ID, ts: Date.now(), master: _isMasterInstance });
+            localStorage.setItem('AVE_SESSIONS', JSON.stringify(_sessions));
+            addBranding();
         }
-        let _noValidMaster = false;
-        let _ownIndex = -1;
-        for (let i = 0; i < _sessions.length; i++) {
-            const _session = _sessions[i];
-            if (_session.id == AVE_SESSION_ID){
-                _session.ts = Date.now();
-                _ownIndex = i;
-            } else if (_session.ts + 2500 < Date.now()) { // We have found a Invalid Session => Handle this
-                if (_session.master && SITE_IS_VINE) { // Should we takeover Master ? ONLY IF WE ARE ON VINE SITE
-                    _noValidMaster = true;
-                    _sessions.splice(_sessions.indexOf(_session), 1);
-                } else {
-                    _sessions.splice(_sessions.indexOf(_session), 1);
+
+        // Heartbeat: keep session list fresh and elect a master when needed.
+        //   KNOWN: The heartbeat also runs on Amazon shopping pages (SITE_IS_VINE is only
+        //   checked inside the interval). This causes a small overhead and unnecessary
+        //   session entries for shopping tabs, but it is needed to keep the master election
+        //   consistent when the user navigates from shopping back to a Vine page.
+        setInterval(() => {
+            //
+            let _sessions;
+            try {
+                _sessions = JSON.parse(localStorage.getItem('AVE_SESSIONS') || '[]');
+            } catch (error) {
+                console.error('Error parsing sessions in interval:', error);
+                _sessions = [];
+            }
+            let _noValidMaster = false;
+            let _ownIndex = -1;
+            for (let i = 0; i < _sessions.length; i++) {
+                const _session = _sessions[i];
+                if (_session.id == AVE_SESSION_ID) {
+                    _session.ts = Date.now();
+                    _ownIndex = i;
+                } else if (_session.ts + AVE_SESSION_TIMEOUT < Date.now()) {
+                    // We have found a Invalid Session => Handle this
+                    if (_session.master && SITE_IS_VINE) {
+                        // Should we takeover Master ? ONLY IF WE ARE ON VINE SITE
+                        _noValidMaster = true;
+                        _sessions.splice(_sessions.indexOf(_session), 1);
+                    } else {
+                        _sessions.splice(_sessions.indexOf(_session), 1);
+                    }
                 }
             }
-        }
 
-        if (!AVE_IS_THIS_SESSION_MASTER && (_noValidMaster || _sessions.length == 1)) {
-            AVE_IS_THIS_SESSION_MASTER = true;
-            _sessions[_ownIndex].master = true;
-            addBranding();
-            console.log('WE TOOK OVER MASTER SESSION TO OUR CURRENT');
-            initBackgroundScan();
-            // More Handling NEEDED ????
-        }
-        localStorage.setItem("AVE_SESSIONS", JSON.stringify(_sessions));
-    }, 1000);
+            // Our own session can be missing here, e.g. if the browser throttled the timers of a
+            // background tab and the entry was removed as invalid. Then it has to be added again,
+            // otherwise this tab would lose its session (and crash below with an index of -1).
+            if (_ownIndex === -1) {
+                _sessions.push({ id: AVE_SESSION_ID, ts: Date.now(), master: AVE_IS_THIS_SESSION_MASTER });
+                _ownIndex = _sessions.length - 1;
+                console.log('The own session was missing and is added again');
+            }
 
+            // If another tab has taken over the master role (that happens if our session was
+            // removed from the list), we have to give up the role and stop our background scan.
+            // Otherwise two tabs would scan at the same time.
+            const _otherMasterExists = _sessions.some((_session) => _session.master && _session.id !== AVE_SESSION_ID);
+            if (AVE_IS_THIS_SESSION_MASTER && _otherMasterExists) {
+                AVE_IS_THIS_SESSION_MASTER = false;
+                _sessions[_ownIndex].master = false;
+                stopBackgroundScan();
+                addBranding();
+                console.log('THE MASTER SESSION WAS TAKEN OVER BY AN OTHER TAB');
+            }
 
-}, Math.round(Math.random() * 100));
-
-
-window.onbeforeunload = function () {
-    console.log('CLOSE OR RELOAD SESSION - REMOVE OUR SESSION ID FROM ARRAY');
-    const _sessions = JSON.parse(localStorage.AVE_SESSIONS);
-    for (let i = 0; i < _sessions.length; i++) {
-        const _elem = _sessions[i];
-        if (_elem.id == AVE_SESSION_ID) {
-            _sessions.splice(i, 1);
+            // The master role is only needed on the vine pages, because only there the background
+            // scan can run. Without this check a tab on a shopping page would take over the master
+            // role and start the scan with a url that does not exist.
+            if (SITE_IS_VINE && !AVE_IS_THIS_SESSION_MASTER && (_noValidMaster || !_otherMasterExists)) {
+                AVE_IS_THIS_SESSION_MASTER = true;
+                _sessions[_ownIndex].master = true;
+                addBranding();
+                console.log('WE TOOK OVER MASTER SESSION TO OUR CURRENT');
+                initBackgroundScan();
+                // More Handling NEEDED ????
+            }
             localStorage.setItem('AVE_SESSIONS', JSON.stringify(_sessions));
-            console.log('SESSION ID GOT REMOVED');
-            return;
-        }
-    }
-    return 'Realy ?'
-}
+        }, 1000);
+    },
+    Math.round(Math.random() * 100)
+);
 
+// Remove our session id on unload, so that another tab can take over the master role faster.
+// NOTE: A listener is used instead of window.onbeforeunload, so that the handler of the page is
+// not overwritten. The function must not return a value, otherwise the browser shows the
+// "leave this site?" dialog on every reload.
+// KNOWN: Browsers may block or delay localStorage writes during beforeunload, so the
+// session might not be removed here. This is not a problem because the init code cleans
+// up stale entries with the same session id (the id is reused via sessionStorage).
+window.addEventListener('beforeunload', () => {
+    console.log('CLOSE OR RELOAD SESSION - REMOVE OUR SESSION ID FROM ARRAY');
+    try {
+        const _sessions = JSON.parse(localStorage.getItem('AVE_SESSIONS', '[]'));
+        if (!Array.isArray(_sessions)) return;
+        for (let i = 0; i < _sessions.length; i++) {
+            const _elem = _sessions[i];
+            if (_elem.id == AVE_SESSION_ID) {
+                _sessions.splice(i, 1);
+                localStorage.setItem('AVE_SESSIONS', JSON.stringify(_sessions));
+                console.log('SESSION ID GOT REMOVED');
+                return;
+            }
+        }
+    } catch (error) {
+        console.error('Error while removing the session id:', error);
+    }
+});
 
 // All Config Options that should shown to the User
 const SETTINGS_USERCONFIG_DEFINES = [];
-SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Amazon Vine', description: 'Tooltip Description of this Setting', key: 'TITLE_AMAZON_VINE'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'UI_LANGUAGE', type: 'select', options: ['de', 'en'], name: 'UI Language', description: 'Choose your preferred language for the UI'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableFullWidth', type: 'bool', name: 'Enable Full Width', description: 'Uses the full width of the display'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DarkMode', type: 'bool', name: 'Enable Dark Mode (reload required atm)', description: 'Switches between Amazon Light Theme and AVE Dark Mode (reload required atm)'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableAmazonNavbar', type: 'bool', name: 'Disable Amazon Navbar', description: 'Disables the Amazon Navbar'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableCategories', type: 'bool', name: 'Disable Categories', description: 'Disables the Categories of the Amazon Vine Page'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableFooter', type: 'bool', name: 'Disable Footer', description: 'Disables the Footer of the Amazon Vine Page'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableSuggestions', type: 'bool', name: 'Disable Suggestions', description: 'Disables Suggestions on the Amazon Vine Page'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableBtnPotLuck', type: 'bool', name: 'Disable Button Potluck', description: 'Disables the Section Button PotLuck(FSE)'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableBtnLastChance', type: 'bool', name: 'Disable Button Last Chance', description: 'Disables the Section Button Last Chance(VFA)'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableBtnSeller', type: 'bool', name: 'Disable Button Seller', description: 'Disables the Section Button Seller(ZA)'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableTopLogoChange', type: 'bool', name: 'Enable Top Logo Change', description: 'Enables the Change of the top logo to our AVE Logo'});
+SETTINGS_USERCONFIG_DEFINES.push({
+    type: 'title',
+    name: 'Amazon Vine',
+    description: 'Tooltip Description of this Setting',
+    key: 'TITLE_AMAZON_VINE'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'UI_LANGUAGE',
+    type: 'select',
+    options: ['de', 'en'],
+    name: 'UI Language',
+    description: 'Choose your preferred language for the UI'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableFullWidth',
+    type: 'bool',
+    name: 'Enable Full Width',
+    description: 'Uses the full width of the display'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'DarkMode',
+    type: 'bool',
+    name: 'Enable Dark Mode (reload required atm)',
+    description: 'Switches between Amazon Light Theme and AVE Dark Mode (reload required atm)'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'DisableAmazonNavbar',
+    type: 'bool',
+    name: 'Disable Amazon Navbar',
+    description: 'Disables the Amazon Navbar'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'DisableCategories',
+    type: 'bool',
+    name: 'Disable Categories',
+    description: 'Disables the Categories of the Amazon Vine Page'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'DisableFooter',
+    type: 'bool',
+    name: 'Disable Footer',
+    description: 'Disables the Footer of the Amazon Vine Page'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'DisableSuggestions',
+    type: 'bool',
+    name: 'Disable Suggestions',
+    description: 'Disables Suggestions on the Amazon Vine Page'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'DisableBtnPotLuck',
+    type: 'bool',
+    name: 'Disable Button Potluck',
+    description: 'Disables the Section Button PotLuck(FSE)'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'DisableBtnLastChance',
+    type: 'bool',
+    name: 'Disable Button Last Chance',
+    description: 'Disables the Section Button Last Chance(VFA)'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'DisableBtnSeller',
+    type: 'bool',
+    name: 'Disable Button Seller',
+    description: 'Disables the Section Button Seller(ZA)'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableTopLogoChange',
+    type: 'bool',
+    name: 'Enable Top Logo Change',
+    description: 'Enables the Change of the top logo to our AVE Logo'
+});
 
-SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableBtnAll', type: 'bool', name: 'Enable Button All Products', description: 'Enable &quot;All Products&quot; Button'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'EnablePaginationTop', type: 'bool', name: 'Enable Pagination on top', description: 'Enable Pagination to be displayed on top for ZA page' });
-SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableBackgroundScan', type: 'bool', name: 'Enable Background Scan', description: 'Enables the Background scan, if disabled you will find a Button for Autoscan on the Vine Website'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableInfiniteScrollLiveQuerry', type: 'bool', name: 'Enable Infiniti Scroll Live Querry', description: 'If enabled the Products of the All Products Page will get querryd from Amazon directls otherwise they will get loaded from Database(faster)'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableInfiniteSpinnerFix', type: 'bool', name: 'Fix Infinite Spinner', description: 'Repairs malformed product variation data that can leave Amazon Vine loading indefinitely'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableDesktopNotifikation', type: 'bool', name: 'Enable Desktop Notifications', description: 'Enable Desktop Notifications if new Products are detected'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableAutoMarkFavorite', type: 'bool', name: 'Enable auto marking product as favotite', description: 'If a new product matches a highlight keyword it is automatically marked as favorite'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableCleanupFavorites', type: 'bool', name: 'Also remove favorites when cleaning up products', description: 'If enabled, favorite products will also be removed during the cleanup process based on the defined criteria.'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableBtnMarkAllAsSeen', type: 'bool', name: 'Enable Button Mark all as seen', description: 'Enable the Button Mark all as seen'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'ShowFirstSeen', type: 'bool', name: 'Show first seen instead of last seen', description: 'Instead of the &quot;Last seen&quot; date in the product box show the date, the item was first seen'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DesktopNotifikationKeywords', type: 'keywords', name: 'Desktop Notification Highlight Keywords', inputPlaceholder: 'Type in your highlight keywords one per line and click outside to submit', description: 'Create a List of words u want to Highlight if Product desciption containes one or more of them'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'GotifyUrl', type: 'url', name: 'URL of the Gotify Server', description: 'If Gotify should be used for notifications, enter the URL of your Gotify server here, e.g. https://gotify.example.com'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'GotifyToken', type: 'password', name: 'Gotify application token', description: 'The authenticatin token of your Gotify application'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'BackGroundScanDelayPerPage', type: 'number', min: 2000, max: 20000, name: 'Background Scan Per Page Min Delay(Milliseconds)', description: 'Minimal Delay per Page load of Background Scan'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'BackGroundScannerRandomness', type: 'number', min: 100, max: 10000, name: 'Background Scan Randomness per Page(Milliseconds)', description: 'A Value that gives the maximal range for the Randomy added delay per page load'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DesktopNotifikationDelay', type: 'number', min: 0, max: 3600, name: 'Desktop Notifikation Delay (Seconds)', description: 'Minimal time between desktop notifikations, exept notifikations for keyword matches. A value of 0 disables this notifications.'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'SearchBarInputDelay', type: 'number', min: 100, max: 1000, name: 'Search Bar Input Delay until auto search(Milliseconds)', description: 'When typing in the search bar, start searching when no key pressed this long milliseconds'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'IdlePeriodAfterScan', type: 'number', min: 0, max: 1440, name: 'Idle period after a scan', description: 'Number of minutes to wait until next scan starts'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'HoursBeforeCleanup', type: 'number', min: 0, max: 168, name: 'Number of hours to wait before items get removed from the database', description: 'If an item was not seen this many hours during full background scans, it will be removed from the database. For a value of zero, the items will be removed as soon as they where not seen during a scan.'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'MaxItemsPerPage', type: 'number', min: 20, max: 1000, name: 'Maximum items per page', description: 'Maximum items that will show up one one page'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'UnseenItemsNotificationThreshold', type: 'number', min: 0, max: 1000, name: 'Number of unseen items to trigger a unseen items notification', description: 'If greater than zero, a notification is sent if the number of unseen item exeeds this number'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'UnseenItemsNotificationRepitionMinutes', type: 'number', min: 0, max: 1440, name: 'Number of minutes to wait before a new unseen items notification', description: 'Number of minutes to wait before another unseen items notification is sent'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'NewItemsNotificationThreshold', type: 'number', min: 0, max: 1000, name: 'Number of new items to trigger a possible drop starting notification', description: 'If greater than zero, a notification is sent if a fast scan reveals more than this many items'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'NewItemsNotificationRepititionMinutes', type: 'number', min: 0, max: 1440, name: 'Number of new minutes to wait before a new possible drop starting notification', description: 'Number of minues to wait before another possible drop notification is sent'});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableBtnAll',
+    type: 'bool',
+    name: 'Enable Button All Products',
+    description: 'Enable &quot;All Products&quot; Button'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnablePaginationTop',
+    type: 'bool',
+    name: 'Enable Pagination on top',
+    description: 'Enable Pagination to be displayed on top for ZA page'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableBackgroundScan',
+    type: 'bool',
+    name: 'Enable Background Scan',
+    description: 'Enables the Background scan, if disabled you will find a Button for Autoscan on the Vine Website'
+});
+// NOTE: 'EnableInfiniteScrollLiveQuerry' is a known typo for '...Query'. It is used
+//   consistently in globals.js and VineExplorer.user.js and is part of the persisted
+//   settings, so renaming it would invalidate existing user configurations.
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableInfiniteScrollLiveQuerry',
+    type: 'bool',
+    name: 'Enable Infiniti Scroll Live Querry',
+    description:
+        'If enabled the Products of the All Products Page will get querryd from Amazon directls otherwise they will get loaded from Database(faster)'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableInfiniteSpinnerFix',
+    type: 'bool',
+    name: 'Fix Infinite Spinner',
+    description: 'Repairs malformed product variation data that can leave Amazon Vine loading indefinitely'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableDesktopNotifikation',
+    type: 'bool',
+    name: 'Enable Desktop Notifications',
+    description: 'Enable Desktop Notifications if new Products are detected'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableAutoMarkFavorite',
+    type: 'bool',
+    name: 'Enable auto marking product as favotite',
+    description: 'If a new product matches a highlight keyword it is automatically marked as favorite'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableCleanupFavorites',
+    type: 'bool',
+    name: 'Also remove favorites when cleaning up products',
+    description: 'If enabled, favorite products will also be removed during the cleanup process based on the defined criteria.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableBtnMarkAllAsSeen',
+    type: 'bool',
+    name: 'Enable Button Mark all as seen',
+    description: 'Enable the Button Mark all as seen'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'ShowFirstSeen',
+    type: 'bool',
+    name: 'Show first seen instead of last seen',
+    description: 'Instead of the &quot;Last seen&quot; date in the product box show the date, the item was first seen'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'DesktopNotifikationKeywords',
+    type: 'keywords',
+    name: 'Desktop Notification Highlight Keywords',
+    inputPlaceholder: 'Type in your highlight keywords one per line and click outside to submit',
+    description: 'Create a List of words u want to Highlight if Product desciption containes one or more of them'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'GotifyUrl',
+    type: 'url',
+    name: 'URL of the Gotify Server',
+    description: 'If Gotify should be used for notifications, enter the URL of your Gotify server here, e.g. https://gotify.example.com'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'GotifyToken',
+    type: 'password',
+    name: 'Gotify application token',
+    description: 'The authenticatin token of your Gotify application'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'BackGroundScanDelayPerPage',
+    type: 'number',
+    min: 2000,
+    max: 20000,
+    name: 'Background Scan Per Page Min Delay(Milliseconds)',
+    description: 'Minimal Delay per Page load of Background Scan'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'BackGroundScannerRandomness',
+    type: 'number',
+    min: 100,
+    max: 10000,
+    name: 'Background Scan Randomness per Page(Milliseconds)',
+    description: 'A Value that gives the maximal range for the Randomy added delay per page load'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'DesktopNotifikationDelay',
+    type: 'number',
+    min: 0,
+    max: 3600,
+    name: 'Desktop Notifikation Delay (Seconds)',
+    description:
+        'Minimal time between desktop notifikations, exept notifikations for keyword matches. A value of 0 disables this notifications.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'SearchBarInputDelay',
+    type: 'number',
+    min: 100,
+    max: 1000,
+    name: 'Search Bar Input Delay until auto search(Milliseconds)',
+    description: 'When typing in the search bar, start searching when no key pressed this long milliseconds'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'IdlePeriodAfterScan',
+    type: 'number',
+    min: 0,
+    max: 1440,
+    name: 'Idle period after a scan',
+    description: 'Number of minutes to wait until next scan starts'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'HoursBeforeCleanup',
+    type: 'number',
+    min: 0,
+    max: 168,
+    name: 'Number of hours to wait before items get removed from the database',
+    description:
+        'If an item was not seen this many hours during full background scans, it will be removed from the database. For a value of zero, the items will be removed as soon as they where not seen during a scan.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'MaxItemsPerPage',
+    type: 'number',
+    min: 20,
+    max: 1000,
+    name: 'Maximum items per page',
+    description: 'Maximum items that will show up one one page'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'UnseenItemsNotificationThreshold',
+    type: 'number',
+    min: 0,
+    max: 1000,
+    name: 'Number of unseen items to trigger a unseen items notification',
+    description: 'If greater than zero, a notification is sent if the number of unseen item exeeds this number'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'UnseenItemsNotificationRepitionMinutes',
+    type: 'number',
+    min: 0,
+    max: 1440,
+    name: 'Number of minutes to wait before a new unseen items notification',
+    description: 'Number of minutes to wait before another unseen items notification is sent'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'NewItemsNotificationThreshold',
+    type: 'number',
+    min: 0,
+    max: 1000,
+    name: 'Number of new items to trigger a possible drop starting notification',
+    description: 'If greater than zero, a notification is sent if a fast scan reveals more than this many items'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'NewItemsNotificationRepititionMinutes',
+    type: 'number',
+    min: 0,
+    max: 1440,
+    name: 'Number of new minutes to wait before a new possible drop starting notification',
+    description: 'Number of minues to wait before another possible drop notification is sent'
+});
 
-SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Colors and Styles', description: '', key: 'TITLE_COLORS'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorNewProducts', type: 'color', name: 'Button Color New Products', description: ''});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorNewProductsBadge', type: 'color', name: 'Button Color New Products Badge', description: ''});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorMarkCurrSiteAsSeen', type: 'color', name: 'Button Color Mark Current Site As Seen', description: ''});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorMarkAllAsSeen', type: 'color', name: 'Button Color Mark All As Seen', description: ''});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorBackToTop', type: 'color', name: 'Button Color Back To Top', description: ''});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorUpdateDB', type: 'color', name: 'Button Color Update Database', description: ''});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorAllProducts', type: 'color', name: 'Button Color All Products', description: ''});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorFavorites', type: 'color', name: 'Button Color Favorites', description: ''});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'BtnColorFavoritesBadge', type: 'color', name: 'Button Color Favorites Badge', description: ''});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'FavStarColorDefault', type: 'color', name: 'Color Favorite Star unchecked', description: ''});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'FavStarColorChecked', type: 'color', name: 'Color Favorite Star checked', description: ''});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DarkModeBackgroundColor', type: 'color', name: 'Dark Mode Background Color', description: ''});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DarkModeColor', type: 'color', name: 'Dark Mode Text Color', description: ''});
+SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Colors and Styles', description: '', key: 'TITLE_COLORS' });
+SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorNewProducts', type: 'color', name: 'Button Color New Products', description: '' });
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'BtnColorNewProductsBadge',
+    type: 'color',
+    name: 'Button Color New Products Badge',
+    description: ''
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'BtnColorMarkCurrSiteAsSeen',
+    type: 'color',
+    name: 'Button Color Mark Current Site As Seen',
+    description: ''
+});
+SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorMarkAllAsSeen', type: 'color', name: 'Button Color Mark All As Seen', description: '' });
+SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorBackToTop', type: 'color', name: 'Button Color Back To Top', description: '' });
+SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorUpdateDB', type: 'color', name: 'Button Color Update Database', description: '' });
+SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorAllProducts', type: 'color', name: 'Button Color All Products', description: '' });
+SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorFavorites', type: 'color', name: 'Button Color Favorites', description: '' });
+SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorFavoritesBadge', type: 'color', name: 'Button Color Favorites Badge', description: '' });
+SETTINGS_USERCONFIG_DEFINES.push({ key: 'FavStarColorDefault', type: 'color', name: 'Color Favorite Star unchecked', description: '' });
+SETTINGS_USERCONFIG_DEFINES.push({ key: 'FavStarColorChecked', type: 'color', name: 'Color Favorite Star checked', description: '' });
+SETTINGS_USERCONFIG_DEFINES.push({ key: 'DarkModeBackgroundColor', type: 'color', name: 'Dark Mode Background Color', description: '' });
+SETTINGS_USERCONFIG_DEFINES.push({ key: 'DarkModeColor', type: 'color', name: 'Dark Mode Text Color', description: '' });
 
-SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Amazon Shopping', description: '', key: 'TITLE_SHOPPING'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableFooterShopping', type: 'bool', name: 'Disable Footer', description: 'Disables the Footer of the Amazon Shopping Page'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DisableSuggestionsShopping', type: 'bool', name: 'Disable Suggestions', description: 'Disables the Suggestions of the Amazon Shopping Page'});
+SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Amazon Shopping', description: '', key: 'TITLE_SHOPPING' });
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'DisableFooterShopping',
+    type: 'bool',
+    name: 'Disable Footer',
+    description: 'Disables the Footer of the Amazon Shopping Page'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'DisableSuggestionsShopping',
+    type: 'bool',
+    name: 'Disable Suggestions',
+    description: 'Disables the Suggestions of the Amazon Shopping Page'
+});
 
-SETTINGS_USERCONFIG_DEFINES.push({type: 'title', name: 'Settings for Developers and Testers', description: '', key: 'TITLE_DEV'});
-SETTINGS_USERCONFIG_DEFINES.push({key: 'DebugLevel', type: 'number', min: 0, max: 15, name: 'Debuglevel', description: ''});
+SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Settings for Developers and Testers', description: '', key: 'TITLE_DEV' });
+SETTINGS_USERCONFIG_DEFINES.push({ key: 'DebugLevel', type: 'number', min: 0, max: 15, name: 'Debuglevel', description: '' });
 
-SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'RESET SETTINGS TO DEFAULT', bgColor: 'rgb(255,128,0)', description: 'It does what it says', key: 'BUTTON_RESET_SETTINGS', btnClick: () => {
-    SETTINGS.reset();
-    /* eslint-disable-next-line no-self-assign */
-    window.location.href = window.location.href;
-}});
-SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DATABSE EXPORT >>>', bgColor: 'lime', description: 'Export the entire Database', key: 'BUTTON_DB_EXPORT', btnClick: () => {exportDatabase();}});
-SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DATABSE IMPORT <<<', bgColor: 'yellow', description: 'Clear the current database and import data from an earlier exported file. Data is imported as is, i.e. there is no validation. Please wait for the completion notification after clicking the button', key: 'BUTTON_DB_IMPORT', btnClick: () => {importDatabase();}});
-SETTINGS_USERCONFIG_DEFINES.push({type: 'button', name: 'DELETE DATABSE', bgColor: 'rgb(255,0,0)', description: 'A USER DOES NOT NEED TO DO THIS ! ITS ONLY FOR DEVELOPMENT PURPOSES', key: 'BUTTON_DB_DELETE', btnClick: () => {
-    database.deleteDatabase().then(() => {
+SETTINGS_USERCONFIG_DEFINES.push({
+    type: 'button',
+    name: 'RESET SETTINGS TO DEFAULT',
+    bgColor: 'rgb(255,128,0)',
+    description: 'It does what it says',
+    key: 'BUTTON_RESET_SETTINGS',
+    btnClick: () => {
+        SETTINGS.reset();
         /* eslint-disable-next-line no-self-assign */
         window.location.href = window.location.href;
-    });
-}});
+    }
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    type: 'button',
+    name: 'DATABSE EXPORT >>>',
+    bgColor: 'lime',
+    description: 'Export the entire Database',
+    key: 'BUTTON_DB_EXPORT',
+    btnClick: () => {
+        exportDatabase();
+    }
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    type: 'button',
+    name: 'DATABSE IMPORT <<<',
+    bgColor: 'yellow',
+    description:
+        'Clear the current database and import data from an earlier exported file. Data is imported as is, i.e. there is no validation. Please wait for the completion notification after clicking the button',
+    key: 'BUTTON_DB_IMPORT',
+    btnClick: () => {
+        importDatabase();
+    }
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    type: 'button',
+    name: 'DELETE DATABSE',
+    bgColor: 'rgb(255,0,0)',
+    description: 'A USER DOES NOT NEED TO DO THIS ! ITS ONLY FOR DEVELOPMENT PURPOSES',
+    key: 'BUTTON_DB_DELETE',
+    btnClick: () => {
+        database.deleteDatabase().then(() => {
+            /* eslint-disable-next-line no-self-assign */
+            window.location.href = window.location.href;
+        });
+    }
+});
 
 class SETTINGS_DEFAULT {
     EnableFullWidth = true;
@@ -311,12 +671,16 @@ class SETTINGS_DEFAULT {
     DisableBtnSeller = false;
     EnableTopLogoChange = true;
     EnableBackgroundScan = true;
+    // NOTE: Known typo 'LiveQuerry' instead of 'LiveQuery'. Kept for backwards
+    //   compatibility with already stored settings (see note above).
     EnableInfiniteScrollLiveQuerry = false;
     EnableInfiniteSpinnerFix = true;
+    // NOTE: Known typo 'Notifikation' instead of 'Notification'. Kept for backwards
+    //   compatibility with already stored settings (see note above).
     EnableDesktopNotifikation = false;
     EnableAutoMarkFavorite = false;
     EnableCleanupFavorites = false;
-EnableBtnAll = true;
+    EnableBtnAll = true;
     EnablePaginationTop = true;
     EnableBtnMarkAllAsSeen = true;
     ShowFirstSeen = false;
@@ -328,7 +692,7 @@ EnableBtnAll = true;
     BtnColorNewProductsBadge = '#ff4343';
     BtnColorMarkCurrSiteAsSeen = '#00FF00';
     BtnColorMarkAllAsSeen = '#FFA28E';
-    BtnColorBackToTop = '#FFFFFF'
+    BtnColorBackToTop = '#FFFFFF';
     BtnColorUpdateDB = '#00FF00';
     BtnColorAllProducts = '#FFFFFF';
 
@@ -341,7 +705,7 @@ EnableBtnAll = true;
     HoursBeforeCleanup = 24;
     PageLoadMinDelay = 750;
     DebugLevel = 0;
-MaxItemsPerPage = 500;
+    MaxItemsPerPage = 500;
     UnseenItemsNotificationThreshold = 0;
     NewItemsNotificationThreshold = 0;
     NewItemsNotificationRepititionMinutes = 30;
@@ -356,17 +720,16 @@ MaxItemsPerPage = 500;
     DesktopNotifikationKeywords = [];
     GotifyUrl = '';
     GotifyToken = '';
-    CssProductNewTag = "border: 2mm ridge rgba(218, 247, 166, .6); background-color: rgba(218, 247, 166, .2)";
-    CssProductSaved = "border: 2mm ridge rgba(105, 163, 0, .6); background-color: rgba(105, 163, 0, .2)";
-    CssProductFavTag = "border: 2mm ridge rgba(255, 255, 102, .6); background-color: rgba(255, 255, 102, .2)";
-    CssProductRemovalTag = "border: 2mm ridge rgba(255, 87, 51, .6); background-color: rgba(255, 87, 51, .2)";
-    CssProductDefault = "border: 2mm ridge rgba(173,216,230, .6); background-color: rgba(173,216,230, .2)";
+    CssProductNewTag = 'border: 2mm ridge rgba(218, 247, 166, .6); background-color: rgba(218, 247, 166, .2)';
+    CssProductSaved = 'border: 2mm ridge rgba(105, 163, 0, .6); background-color: rgba(105, 163, 0, .2)';
+    CssProductFavTag = 'border: 2mm ridge rgba(255, 255, 102, .6); background-color: rgba(255, 255, 102, .2)';
+    CssProductRemovalTag = 'border: 2mm ridge rgba(255, 87, 51, .6); background-color: rgba(255, 87, 51, .2)';
+    CssProductDefault = 'border: 2mm ridge rgba(173,216,230, .6); background-color: rgba(173,216,230, .2)';
 
     constructor() {
-        ave_eventhandler.on('ave-save-cofig', () => {
-            console.log('Got Save Event');
-            this.save(true);
-        })
+        // NOTE: No side effects here. Every instance of this class would register another
+        // listener for the save event. The listener is registered once for the SETTINGS
+        // singleton below.
     }
 
     CssProductFavStar() {
@@ -382,76 +745,145 @@ MaxItemsPerPage = 500;
         }
     }
 
+    /**
+     * Restores the default values, stores them and removes all the state information of AVE.
+     * After the reset AVE behaves like after a fresh installation.
+     */
     reset() {
-        GM_setValue('AVE_SETTINGS', new SETTINGS_DEFAULT());
+        const _defaults = new SETTINGS_DEFAULT();
+        for (const _key of Object.keys(_defaults)) {
+            this[_key] = _defaults[_key];
+        }
+        GM_setValue('AVE_SETTINGS', _defaults);
+        clearAVEState();
     }
 }
 
 const SETTINGS = new SETTINGS_DEFAULT();
 
+// The settings are written to the GM storage when the save event is fired.
+// NOTE: GM_setValue (the old synchronous API) is used here, not GM.setValue.
+//   Therefore SETTINGS.save(true) does not return a Promise and await would have
+//   no effect. The fire-and-forget pattern is safe for this synchronous API.
+ave_eventhandler.on('ave-save-cofig', () => {
+    console.log('Got Save Event');
+    SETTINGS.save(true);
+});
+
+// All keys of the local storage that AVE uses for its state information
+const AVE_LOCAL_STORAGE_KEYS = [
+    'AVE_INIT_AUTO_SCAN',
+    'AVE_AUTO_SCAN_IS_RUNNING',
+    'AVE_AUTO_SCAN_PAGE_CURRENT',
+    'AVE_AUTO_SCAN_PAGE_MAX',
+    'AVE_BACKGROUND_SCAN_IS_RUNNING',
+    'AVE_BACKGROUND_SCAN_LAST_TIME',
+    'AVE_BACKGROUND_SCAN_PAGE_CURRENT',
+    'AVE_BACKGROUND_SCAN_PAGE_MAX',
+    'AVE_BACKGROUND_SCAN_STAGE',
+    'AVE_CLEANUP_LAST_TIME',
+    'AVE_FAST_SCAN_IS_RUNNING',
+    'AVE_FAST_SCAN_LAST_TIME',
+    'AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS',
+    'AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT',
+    'AVE_LAST_BACKGROUND_SCAN_STAGE',
+    'AVE_LAST_DROP',
+    'AVE_LAST_UNSEEN_NOTIFICATION',
+    'AVE_NEW_COUNT',
+    'AVE_OPEN_SETTINGS_TAB',
+    'AVE_SESSIONS',
+    'ave-share-details'
+];
+
 /**
-  * Load Settings from GM Storage
-  */
+ * Removes all the state information of AVE (the state of the scan, the session list, ...).
+ * Is used by the reset of the settings, so that AVE behaves like after a fresh installation.
+ */
+function clearAVEState() {
+    for (const _key of AVE_LOCAL_STORAGE_KEYS) {
+        try {
+            localStorage.removeItem(_key);
+        } catch (error) {
+            console.error(`clearAVEState(): could not remove "${_key}":`, error);
+        }
+    }
+}
+
+/**
+ * Load Settings from GM Storage
+ */
 function loadSettings() {
-    const _settingsStore = GM_getValue('AVE_SETTINGS', {});
-    console.log('Got Settings from GM:(', typeof(_settingsStore),')', _settingsStore);
-    if (typeof(_settingsStore) == 'object' && _settingsStore != null && _settingsStore != undefined) {
+    let _settingsStore = GM_getValue('AVE_SETTINGS', {});
+    console.log('Got Settings from GM:(', typeof _settingsStore, ')', _settingsStore);
+
+    // Older versions of the userscript manager or manual changes can store the settings
+    // as a JSON string. In that case the string has to be parsed first, otherwise the
+    // settings would be silently ignored.
+    if (typeof _settingsStore === 'string') {
+        try {
+            _settingsStore = JSON.parse(_settingsStore);
+        } catch (error) {
+            console.error('loadSettings(): the stored settings could not be parsed:', error);
+            _settingsStore = {};
+        }
+    }
+
+    if (typeof _settingsStore == 'object' && _settingsStore != null && _settingsStore != undefined) {
         const _keys = Object.keys(_settingsStore);
         const _keysLength = _keys.length;
 
         for (let i = 0; i < _keysLength; i++) {
             const _currKey = _keys[i];
-            console.log(`Restore Setting: ${_currKey} with Value: ${_settingsStore[_currKey]}`)
+            console.log(`Restore Setting: ${_currKey} with Value: ${_settingsStore[_currKey]}`);
             SETTINGS[_currKey] = _settingsStore[_currKey];
         }
     }
 }
 
 /**
-  * Save Settings to GM Storage
-  */
+ * Save Settings to GM Storage
+ */
 function saveSettings() {
     SETTINGS.save();
 }
 
 /**
-  * Timestamp in Seconds
-  * @return {number} unixTimestamp
-  */
-function unixTimeStamp () {
-    return Math.floor(Date.now() / 1000)
+ * Timestamp in Seconds
+ * @return {number} unixTimestamp
+ */
+function unixTimeStamp() {
+    return Math.floor(Date.now() / 1000);
 }
 
 /**
-    * Convert Millis Timestamp to Seconds Timestamp
-    * @param {number} now Millis Timestamp as from Date.now();
-    * @return {number} unix Timestamp
-    */
+ * Convert Millis Timestamp to Seconds Timestamp
+ * @param {number} now Millis Timestamp as from Date.now();
+ * @return {number} unix Timestamp
+ */
 function toUnixTimestamp(now) {
-    return Math.floor(now / 1000)
+    return Math.floor(now / 1000);
 }
 
-
 /**
-    * Convert Seconds Timestamp to Millis Timestamp
-    * @param {number} unixTimestamp unix Timestamp
-    * @return {number} Millis Timestamp as from Date.now();
-    */
+ * Convert Seconds Timestamp to Millis Timestamp
+ * @param {number} unixTimestamp unix Timestamp
+ * @return {number} Millis Timestamp as from Date.now();
+ */
 function toTimestamp(unixTimestamp) {
-    return (unixTimestamp * 1000);
+    return unixTimestamp * 1000;
 }
 
-
 /**
-    * Waits until a HTML Element exists ans fires callback if it is found
-    * @param {string} selector querySelector
-    * @param {function} cb Callback Function
-    * @param {object} [altDocument] Alternativ document root
-    * @param {number} [timeout] Timeout in milliseconds
-    */
-async function waitForHtmlElement(selector, cb, altDocument = document, timeout = 10000) {
-    if (typeof (selector) !== 'string') throw new Error('waitForHtmlElement(): selector is not defined or is not type of string');
-    if (typeof (cb) !== 'function') throw new Error('waitForHtmlElement(): cb is not defined or is not type of string');
+ * Waits until a HTML Element exists ans fires callback if it is found
+ * @param {string} selector querySelector
+ * @param {function} cb Callback Function
+ * @param {object} [altDocument] Alternativ document root
+ * @param {number} [timeout] Timeout in milliseconds
+ * @param {boolean} [logTimeout] Set to false to suppress the warning if the element is not found
+ */
+async function waitForHtmlElement(selector, cb, altDocument = document, timeout = 10000, logTimeout = true) {
+    if (typeof selector !== 'string') throw new Error('waitForHtmlElement(): selector is not defined or is not type of string');
+    if (typeof cb !== 'function') throw new Error('waitForHtmlElement(): cb is not defined or is not type of string');
 
     if (altDocument.querySelector(selector)) {
         cb(altDocument.querySelector(selector));
@@ -460,6 +892,7 @@ async function waitForHtmlElement(selector, cb, altDocument = document, timeout 
 
     const _observer = new MutationObserver(() => {
         if (altDocument.querySelector(selector)) {
+            clearTimeout(timeoutId);
             _observer.disconnect();
             cb(altDocument.querySelector(selector));
             return;
@@ -471,52 +904,85 @@ async function waitForHtmlElement(selector, cb, altDocument = document, timeout 
         subtree: true
     });
 
-const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
         _observer.disconnect();
-        console.warn(`Timeout: element ${selector} not found`);
+        if (logTimeout) console.warn(`Timeout: element ${selector} not found`);
         cb(null);
     }, timeout);
 }
 
-// Wrap waitForHtmlElement in a Promise to use it with async/await
-async function waitForHtmlElementPromise(selector, altDocument = document, timeout = 10000) {
+/**
+ * Waits for an optional element and applies a style change to it.
+ * In contrast to waitForHtmlElement() no warning is logged, if the element is not found,
+ * because the element is optional (e.g. the Amazon navbar is not on every page).
+ * @param {string} selector querySelector
+ * @param {function} cb Callback Function
+ */
+function waitForStyleElement(selector, cb) {
+    return waitForHtmlElement(selector, cb, document, 10000, false);
+}
+
+/**
+ * Waits for an element and resolves with it, so that it can be used with
+ * async/await.
+ *
+ * NOTE: waitForHtmlElement() is async, so it can reject. The rejection has to be
+ * forwarded here, otherwise this promise would never settle and the caller would
+ * wait forever (e.g. if the element or the document root is undefined).
+ *
+ * @param {string} selector The CSS selector of the element
+ * @param {Document|Element} altDocument The document root to search in
+ * @param {number} timeout The timeout in milliseconds
+ * @param {boolean} logTimeout Set to false to suppress the warning
+ * @returns {Promise<Element>} The element, or null if it was not found
+ */
+async function waitForHtmlElementPromise(selector, altDocument = document, timeout = 10000, logTimeout = true) {
     return new Promise((resolve, reject) => {
-        waitForHtmlElement(selector, resolve, altDocument, timeout);
+        waitForHtmlElement(selector, resolve, altDocument, timeout, logTimeout).catch(reject);
     });
 }
 
+/**
+ * Returns the country of the current Amazon page, based on its hostname.
+ * @returns {string} The two letter country code (e.g. "DE" or "UK")
+ */
 function getCountry() {
-    return document.location.hostname.replace(/.*amazon\./i, "")
-        .replace(/com$/, "US")
-        .replace(/ca$/, "CA")
-        .replace(/de$/, "DE")
-        .replace(/fr$/, "FR")
-        .replace(/it$/, "IT")
-        .replace(/es$/, "ES")
-        .replace(/co.uk$/, "UK")
-        .replace(/co.jp$/, "JP");     
+    return document.location.hostname
+        .replace(/.*amazon\./i, '')
+        .replace(/com$/, 'US')
+        .replace(/ca$/, 'CA')
+        .replace(/de$/, 'DE')
+        .replace(/fr$/, 'FR')
+        .replace(/it$/, 'IT')
+        .replace(/es$/, 'ES')
+        .replace(/co.uk$/, 'UK')
+        .replace(/co.jp$/, 'JP');
 }
 
-// Function to find the active menu button (used for top pagination)
+/**
+ * Finds the id of the menu button of the Vine navigation that is currently
+ * active. It is used to decide whether the pagination can be shown on top of
+ * the page.
+ *
+ * @returns {Promise<string|null>} The id of the active button, or null if none
+ *                               of the buttons was found
+ */
 async function findActiveMenuButton() {
-    // Array of menu IDs
+    // The ids of the buttons of the Vine navigation
     let buttonIds;
     switch (getCountry()) {
         case 'DE':
-            buttonIds = [
-                'vvp-items-button--recommended',
-                'vvp-all-items-button'
-            ];
+            // NOTE: 'vvp-all-items-button' is the outdated German id. Current Vine
+            //   pages use 'vvp-items-button--all' like other locales. The mismatch
+            //   means findActiveMenuButton() may return null for DE, but the only
+            //   caller (EnablePaginationTop) degrades gracefully.
+            buttonIds = ['vvp-items-button--recommended', 'vvp-all-items-button'];
             break;
         default:
-            buttonIds = [
-                'vvp-items-button--recommended',
-                'vvp-items-button--all',
-                'vvp-items-button--seller'
-            ];
+            buttonIds = ['vvp-items-button--recommended', 'vvp-items-button--all', 'vvp-items-button--seller'];
             break;
     }
-    
+
     for (const id of buttonIds) {
         try {
             const buttonSpan = await waitForHtmlElementPromise(`#${id}`, document);
@@ -549,70 +1015,67 @@ async function findActiveMenuButton() {
  * @returns
  */
 async function delay(milliseconds) {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
         setTimeout(() => {
             resolve();
         }, milliseconds);
     });
 }
 
-
-
 /**
-    * This Function will Monitor and fire Style Changes asap
-    */
+ * This Function will Monitor and fire Style Changes asap
+ */
 async function fastStyleChanges() {
-
     if (SITE_IS_VINE) {
         if (SETTINGS.EnableFullWidth) {
-            waitForHtmlElement('.vvp-body', (elem) => {
+            waitForStyleElement('.vvp-body', (elem) => {
                 if (elem) elem.style.maxWidth = '100%';
             });
         }
 
         if (SETTINGS.DisableAmazonNavbar) {
-            waitForHtmlElement('#navbar-main', (elem) => {
+            waitForStyleElement('#navbar-main', (elem) => {
                 if (elem) elem.style.display = 'none';
             });
 
-            waitForHtmlElement('#skiplink', (elem) => {
+            waitForStyleElement('#skiplink', (elem) => {
                 if (elem) elem.style.display = 'none';
             });
 
-            waitForHtmlElement('#vvp-logo-link > img', (elem) => {
+            waitForStyleElement('#vvp-logo-link > img', (elem) => {
                 if (elem) elem.style.display = 'none';
             });
 
-            waitForHtmlElement('#vvp-header', (elem) => {
+            waitForStyleElement('#vvp-header', (elem) => {
                 if (elem) {
                     elem.style.marginTop = '0';
                     elem.style.marginBottom = '0';
                 }
             });
 
-            waitForHtmlElement('.a-container.vvp-body > .a-section:not(#vvp-header)', (elem) => {
+            waitForStyleElement('.a-container.vvp-body > .a-section:not(#vvp-header)', (elem) => {
                 if (elem) elem.style.display = 'none';
             });
 
-            waitForHtmlElement('.a-tab-container.vvp-tab-set-container', (elem) => {
+            waitForStyleElement('.a-tab-container.vvp-tab-set-container', (elem) => {
                 if (elem) elem.style.marginTop = '0';
             });
         }
 
         if (SETTINGS.DisableCategories) {
-            waitForHtmlElement('#vvp-browse-nodes-container', (elem) => {
+            waitForStyleElement('#vvp-browse-nodes-container', (elem) => {
                 if (elem) elem.style.display = 'none';
             });
         }
 
         if (SETTINGS.DisableSuggestions) {
-            waitForHtmlElement('.copilot-secure-display', (elem) => {
+            waitForStyleElement('.copilot-secure-display', (elem) => {
                 if (elem) elem.style.display = 'none';
             });
         }
 
         if (SETTINGS.DisableFooter) {
-            waitForHtmlElement('#navFooter', (elem) => {
+            waitForStyleElement('#navFooter', (elem) => {
                 if (elem) {
                     elem.style.display = 'none';
                     elem.style.visibility = 'hidden';
@@ -621,42 +1084,45 @@ async function fastStyleChanges() {
         }
 
         if (SETTINGS.DisableBtnPotLuck) {
-            waitForHtmlElement('#vvp-items-button--recommended', (elem) => {
+            waitForStyleElement('#vvp-items-button--recommended', (elem) => {
                 if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableBtnLastChance) {
-            waitForHtmlElement('#vvp-items-button--all', (elem) => {
+            waitForStyleElement('#vvp-items-button--all', (elem) => {
                 if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableBtnSeller) {
-            waitForHtmlElement('#vvp-items-button--seller', (elem) => {
+            waitForStyleElement('#vvp-items-button--seller', (elem) => {
                 if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.EnableTopLogoChange) {
-            waitForHtmlElement('#vvp-logo-link > img', (elem) => {
+            waitForStyleElement('#vvp-logo-link > img', (elem) => {
                 if (elem) {
-                    elem.src = 'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_notification_image.png';
+                    // NOTE: The 'dev-main' branch no longer exists; this URL returns 404.
+                    //   Fixing it would require changing CDN URLs and testing across
+                    //   regions, so it is left as a known warning.
+                    elem.src =
+                        'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_notification_image.png';
                     elem.style.height = '100px';
                 }
             });
-
         }
 
         if (SETTINGS.EnablePaginationTop) {
             const activeButtonId = await findActiveMenuButton();
             if (activeButtonId) {
                 console.log('EnablePaginationTop: Active menu button ID:', activeButtonId);
-                if (activeButtonId == "vvp-items-button--seller" || activeButtonId == "vvp-all-items-button") {
-                    waitForHtmlElement('nav.a-text-center', (elem) => {
+                if (activeButtonId == 'vvp-items-button--seller' || activeButtonId == 'vvp-all-items-button') {
+                    waitForStyleElement('nav.a-text-center', (elem) => {
                         if (!elem) return;
 
                         var clonedDiv = elem.cloneNode(true);
@@ -681,17 +1147,16 @@ async function fastStyleChanges() {
             }
         }
     } else if (SITE_IS_SHOPPING) {
-
         if (SETTINGS.DisableSuggestionsShopping) {
             //rhf-frame
-            waitForHtmlElement('#rhf', (elem) => {
+            waitForStyleElement('#rhf', (elem) => {
                 if (elem) elem.style.display = 'none';
                 // elem.style.visibility = 'hidden';
             });
         }
 
         if (SETTINGS.DisableFooterShopping) {
-            waitForHtmlElement('#navFooter', (elem) => {
+            waitForStyleElement('#navFooter', (elem) => {
                 if (elem) {
                     elem.style.display = 'none';
                     elem.style.visibility = 'hidden';
@@ -706,5 +1171,5 @@ async function fastStyleChanges() {
  * @returns {string} Session ID
  */
 function generateSessionID() {
-    return 'aaaa-aaaaa-AVE-SESSION-aaaaaaa-aaaaaaaa'.replace(/[a]/g, ( c ) => { return Math.round(Math.random() * 36).toString(36) });
+    return 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'.replace(/a/g, () => Math.floor(Math.random() * 36).toString(36));
 }

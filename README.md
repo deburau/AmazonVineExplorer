@@ -40,7 +40,64 @@ AVE should work now and can be configured to your needs.
 
 Do not try to install it using copy and paste, as the requirements then could not be fulfilled, because they use relative paths. Please do not ask me to use absolute paths since I will not change it.
 
+## Development
+
+```bash
+npm install       # install the dev dependencies (prettier, eslint)
+npm run check     # prettier --check . and eslint .
+npm run format    # prettier --write .
+```
+
+The refactorings are verified automatically, because a refactoring must not
+change the behaviour. Before a refactoring the current state is frozen as the
+baseline, afterwards the old and the new implementation are compared:
+
+```bash
+npm run verify:baseline   # freeze the current git commit as the baseline
+# ... make the refactoring ...
+npm run verify            # compare the baseline with the current state
+```
+
+The verification scripts are in `scripts/verify/`. See `AGENTS.md` for the
+details.
+
 ## Changelog Deburau
+
+##### [2026-10-28] - Version 0.13.0
+
+* Fix: the background scan reused a single iframe for all scanned pages. The frame accumulated a session history with one entry per navigation and the renderer kept the documents of those entries in memory, so the memory usage grew by about 270 MB per hour until the container ran out of memory. The iframe is now created for every scanned page and removed again after the page was scanned, which reduces the memory usage by about 670 MB (measured). The scanned document is also no longer kept in `unsafeWindow.ave.backGroundIFrame` outside of the debug mode.
+* Fix: a Vine page that was loaded with a trailing slash (`https://www.amazon.de/vine/vine-items/`) broke all relative links of Amazon. The navigation button "Für Sie empfohlen" pointed to `vine-items?queue=potluck`, which was resolved against the directory `/vine/vine-items/` and therefore led to the error page `/vine/vine-items/vine-items?queue=potluck`. The trailing slash is now removed from the URL and the relative links of the navigation and of the pagination are made absolute. The auto scan and the "Gelesen ->" pagination button use absolute URLs as well.
+* Fix: clicking on a parent-ASIN product that was removed from the Vine enrollment caused a TypeError, because `requestProductDetails()` set `forceRemove = true` but continued to access `res.result` afterwards.
+* Fix: the branding turned red for up to ~10 seconds after navigating inside the same tab, because a new session id was generated on every page load and the old ghost session blocked the master role until the timeout expired. The session id is now persisted in sessionStorage and reused across reloads and stale entries with the same id are cleaned up on init.
+* Fix: the heartbeat interval passed a fallback `'[]'` as the second argument to `localStorage.getItem()`, which only accepts one parameter. If the key was missing, `JSON.parse(null)` was called and the interval threw a TypeError on `_sessions.length`.
+* Fix: the generation of the session id could produce strings longer than intended, because `Math.round(Math.random() * 36).toString(36)` could yield two characters (`"10"`).
+* Fix: the database handler stops the request when the input is invalid instead of continuing after the error, the error messages of the methods are correct now and the database import updates the badge and the title.
+* Fix: the database cleanup does not hang anymore if a write to the database fails, the symbol of the running cleanup is removed in every case and the writes to the database are no longer left unhandled.
+* Fix: the search for the keywords is only done if a new product was really added and not after every update of an existing product, which made the background scan unnecessarily slow.
+* Fix: the products that could not be processed are reported on every page instead of being lost silently, and a failed product no longer leaves the page unfinished.
+* Fix: the background scan waits for the requested page instead of reading the dom of the previous page, so that the last page of a scan is not skipped anymore. The promise for waiting for an element no longer stays pending forever if the wait fails, so that a single broken product cannot stop the background scan anymore.
+* Fix: the diagnostic output of the background scan can no longer throw an error, which had stopped the scan in an endless loop.
+* Fix: a nearly white button of the navigation bar does not glare anymore in the dark mode and the text of the buttons in the navigation bar is always readable, because it uses a contrast color that fits to the background of the button.
+* Fix: the "all products" button had the same id as the "favorites" button, so the wrong button was highlighted when the favorites were opened.
+* Fix: the button "mark all as seen" updates the tiles of the current page right away, so that the "new" frame disappears without a reload. The callback of "mark the current site as seen" is now always called, so that the pagination does not get stuck anymore, and the callback of "mark all products as seen" is called again, because the database update returns a promise and not a callback.
+* Fix: the settings are also read if they were stored as a JSON string, they were silently ignored before. The reset of the settings removes the state information of AVE too (the state of the scan, the current page, the sessions), so that AVE behaves like after a fresh installation, and the settings do not register a new listener for every reset.
+* Fix: the helpers of globals.js (e.g. addBranding) were lost, because the object for the console was replaced.
+* Fix: if an other tab takes over the master role, the background scan of this tab is stopped, so that only one tab scans. A tab in the background does not lose its session anymore, because the browser throttles its timers. A tab on a shopping page does not take over the master role anymore, the background scan crashed there.
+* Fix: the branding is not shown on the pages that are not vine pages anymore and it is not red there, because there is no master and no slave on those pages.
+* Fix: the unload handler does not overwrite the handler of the page anymore and does not crash if the session list is not readable. The heartbeat does not crash anymore if the own session is missing from the session list.
+* Fix: the error "AmazonVineExplorer: running inside a frame - aborted" is not shown anymore and the script does not run in frames anymore (e.g. in the hidden iframe of the background scan).
+* Fix: the timeout warnings of the optional style changes (Amazon navbar, footer, buttons, ...) are not shown anymore and the warning "Timeout: element .vvp-no-offers-msg not found" is not shown anymore on every page with products. The badges of a product are only waited for 3 seconds, they are optional.
+* Fix: `waitForHtmlElement()` no longer calls the callback a second time with null after the element was found.
+* Debug: the background scan logs the requested url and the url that is really loaded in the iframe, to check whether the scanner reads the dom of the previous page. The helper "ave.storeSettingsAsJsonString()" in the browser console stores the settings as a JSON string.
+* Refactoring: the background scan was split into small functions, one per responsibility (`initBackgroundScan`, `initBackgroundScanStorage`, `getBackgroundScanStageZeroSites`, `backgroundScanLoop`, `prepareFastScan`, `prepareScanIteration`, `scanStageZero` … `scanStageIdle`, `backgroundScanFinished` and `formatDuration`). The state that has to survive the iterations of the scan loop is kept in a `BackgroundScanState` object.
+* Refactoring: the fast scan of the background scan was split up. The five conditions for starting a fast scan in `prepareFastScan()` are now one combined expression, and `backgroundScanFinished()` was split into `handleFastScanFinished()`, `shouldStopFastScan()`, `stopFastScan()` and `notifyAboutProductDrop()`.
+* Refactoring: the database helpers `markAllCurrentSiteProductsAsSeen()`, `markAllCurrentDatabaseProductsAsSeen()` and `cleanUpDatabase()` now use promises and `async`/`await` instead of callbacks. `cleanUpDatabase()` was split into `cleanUpDatabase()` and `cleanUpDatabaseEntry()`, so that the checks for a single entry live in their own function.
+* Refactoring: `updateNewProductsBtn()` was split up. The notification about the number of unseen products moved into `notifyAboutUnseenItems()`, the notification about the number of new products into `notifyAboutNewProducts()`, the keyword search into `searchKeywordsInProducts()` and the check of a single product into `checkKeywordsForProduct()`.
+* Refactoring: the settings UI was split up. The CSS of the settings menu moved into the constant `AVE_SETTINGS_CSS` and `createSettingsMenuElement()` was split into one function per setting type, which are called by a switch statement.
+* Refactoring: `init()` was split up. The parsing of the tiles moved into `initTileParsing()`, the buttons for the product sites into `initNavigationButtons()`, the search bar into `initSearchBar()` and the manipulation of the pagination into `initPagination()`.
+* Tooling: all source files are formatted uniformly with Prettier and the ESLint configuration was reworked, so the linter reports real issues instead of hundreds of false positives. The linter now runs without any warning. The verification scripts of the refactorings are part of the repository under `scripts/verify/`, with the npm scripts `npm run verify` and `npm run verify:baseline`.
+* Docs: all comments are written in English and follow a uniform style. Every function whose purpose is not obvious got a JSDoc block and the known issues that are intentionally not fixed are documented in the source code. The `AGENTS.md` documents the working style, the rules for the comments and the procedure of a refactoring, the `HANDOVER.md` explains how to move the project to another system.
+* Cleanup: added "exported" headers to all files, to document the shared global scope of the userscript.
 
 ##### [2026-10-09] - Version 0.12.1
 
