@@ -19,7 +19,7 @@ class Product {
     data_tax_currency;
     data_contributors;
     data_feature_bullets;
-data_limited_quantity;
+    data_limited_quantity;
     data_catalogSize;
     real_prize;
     isFav = 0;
@@ -33,5 +33,5 @@ data_limited_quantity;
     gotFromDB = undefined;
     constructor(id) {
         this.id = id;
-    };
+    }
 }
