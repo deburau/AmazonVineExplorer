@@ -10,15 +10,15 @@ reicht ein `git clone` – der Stand ist danach identisch.
 ```bash
 git clone https://github.com/deburau/AmazonVineExplorer.git
 cd AmazonVineExplorer
-git checkout dev-0-13.0          # der Arbeits-Branch
+git checkout dev-0.13.0          # der Arbeits-Branch
 npm install                       # nur für ESLint nötig (node_modules ist ignoriert)
 ```
 
 Kontrolle:
 
 ```bash
-git log --oneline -1              # erwartet: 23cddfd docs(agents): document how screenshots are shared
-grep "@version" VineExplorer.user.js   # erwartet: 0.12.1.22
+git log --oneline -1              # der letzte Commit des Branches
+grep "@version" VineExplorer.user.js   # erwartet: 0.13.0
 npx eslint .                      # erwartet: keine Ausgabe
 ```
 
@@ -60,7 +60,7 @@ Beim ersten Push nach dem Wechsel fragt Git nach Benutzername und Passwort:
 
 | Branch | Zweck | Push erlaubt? |
 |---|---|---|
-| `dev-0-13.0` | aktuelle Entwicklung | **ja**, ohne Nachfrage |
+| `dev-0.13.0` | aktuelle Entwicklung | **ja**, ohne Nachfrage |
 | `main` | veröffentlichte Version für die Nutzer | **nur auf ausdrückliche Anforderung** |
 | `dev-0.11.x` | alte Entwicklungsstände | nach Absprache |
 
@@ -172,7 +172,7 @@ Das Userscript wird **nicht** aus dem Repo installiert, sondern aus dem Raw-Link
 Branches, in dem entwickelt wird:
 
 ```
-https://raw.githubusercontent.com/deburau/AmazonVineExplorer/dev-0-13.0/VineExplorer.user.js
+https://raw.githubusercontent.com/deburau/AmazonVineExplorer/dev-0.13.0/VineExplorer.user.js
 ```
 
 > Der `@updateURL` im Script zeigt bewusst auf `main`. Das Script aktualisiert sich
@@ -200,7 +200,7 @@ füllt sie dann mit ~36 Produkten der ersten Seite).
 
 ## 5. Empfohlene Reihenfolge auf dem neuen System
 
-1. `git clone` + `git checkout dev-0-13.0` + `npm install`
+1. `git clone` + `git checkout dev-0.13.0` + `npm install`
 2. `npx eslint .` → muss ohne Ausgabe durchlaufen
 3. `git log --oneline -1` → `23cddfd`
 4. pi installieren + Modell/Key konfigurieren
@@ -310,10 +310,8 @@ bleiben davon unberührt, weil `exclude` nur unversionierte Dateien betrifft.
 
 | Punkt | Stand |
 |---|---|
-| Branch | `dev-0-13.0` |
-| Letzter Commit | `d80e07e` docs(handover): correct the pi model configuration (`pi config` is for packages) |
-| Version | `0.12.1.22` |
-| `origin/dev-0-13.0` | identisch mit lokal |
-| `main` | `379193c` – **unverändert** |
+| Branch | `dev-0.13.0` |
+| Version | `0.13.0` |
+| `main` | enthält den Stand von `dev-0.13.0` (Release 0.13.0) |
 | Arbeitsverzeichnis | sauber, keine offenen Änderungen |
-| Tests | manuell (Browser), kein Test-Framework |
+| Tests | manuell (Browser) für das Verhalten, `npm run verify` für die Refactorings |

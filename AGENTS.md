@@ -76,16 +76,19 @@ change the behaviour. See the section "Verifying a refactoring".
 ### Branches
 - `main` is the branch that is published to the users (see `@updateURL`/`@downloadURL`).
   **Never push to `main` without the explicit request of the maintainer.**
-- Development happens in the `dev-*` branches (e.g. `dev-0-13.0`). Pushing to a `dev-*`
+- Development happens in the `dev-*` branches (e.g. `dev-0.13.0`). Pushing to a `dev-*`
   branch is allowed without asking.
 - The `@updateURL`/`@downloadURL` in `VineExplorer.user.js` deliberately point to `main`,
   so that the dev branches can be tested without affecting the other users.
 
 ### Versioning and Changelog
 - Every user visible change gets a new version number in the `@version` line of
-  `VineExplorer.user.js` (patch level, e.g. `0.12.1.17` -> `0.12.1.18`).
+  `VineExplorer.user.js` (patch level, e.g. `0.13.0` -> `0.13.1`).
 - Every change gets an entry in the `Changelog Deburau` section of `README.md`.
   The heading is `##### [YYYY-MM-DD] - Version <version>` followed by a short bullet list.
+- A release consolidates all the entries of the patch versions of a minor
+  version into one entry of the new minor version (e.g. all entries of
+  `0.12.1.1` to `0.12.1.49` become one entry of `0.13.0`).
 - Commit messages follow the pattern `type(scope): short description`
   (e.g. `fix(settings): read the settings if they are stored as a JSON string`).
 
