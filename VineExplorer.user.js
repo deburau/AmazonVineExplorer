@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.43
+// @version      0.12.1.44
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -53,7 +53,8 @@
    sort_by_key, startAutoScan, stickElementToTopScrollEVhandler, timeAgo, translate,
    updateAutoScanScreenText, updateBackgroundScanScreenText, updateFavoritesBtn,
    updateNewProductsBtn, updateTileStyle, stopBackgroundScan, aveFixRelativeVineLinks,
-   aveResolveUrl, aveUrlWithPage */
+   aveResolveUrl, aveUrlWithPage, notifyAboutUnseenItems, notifyAboutNewProducts,
+   searchKeywordsInProducts, checkKeywordsForProduct, stringToRegex */
 console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 
 /**
@@ -3616,16 +3617,203 @@ function updateFavoritesBtn() {
 }
 
 /**
+ * Sends the notification about the number of unseen products, if the threshold
+ * is reached and the repetition time has passed.
+ * @param {number} _prodArrLength The number of the new entries
+ * @param {number} _badgeCount The number that is currently shown in the badge
+ */
+function notifyAboutUnseenItems(_prodArrLength, _badgeCount) {
+    // Threshold/cooldown gate for "new entries" notifications.
+    if (
+        SETTINGS.UnseenItemsNotificationThreshold <= 0 ||
+        _prodArrLength < SETTINGS.UnseenItemsNotificationThreshold ||
+        _badgeCount >= SETTINGS.UnseenItemsNotificationThreshold
+    ) {
+        return;
+    }
+
+    let _shouldNotify = true;
+    if (SETTINGS.UnseenItemsNotificationRepitionMinutes > 0) {
+        const _lastUnseenMS = Date.now() - (localStorage.getItem('AVE_LAST_UNSEEN_NOTIFICATION') || 0);
+        const _lastUnseenMinutes = _lastUnseenMS / 1000 / 60;
+
+        if (_lastUnseenMinutes < SETTINGS.UnseenItemsNotificationRepitionMinutes) {
+            _shouldNotify = false;
+        }
+    }
+
+    if (!_shouldNotify) return;
+
+    localStorage.setItem('AVE_LAST_UNSEEN_NOTIFICATION', Date.now());
+
+    if (SETTINGS.GotifyUrl) {
+        gotifyNotification(
+            translate('notifications', 'unseenItemsBody', `Es wurden ${_prodArrLength} neue Eintraege gefunden`, _prodArrLength)
+        );
+    }
+    if (SETTINGS.EnableDesktopNotifikation) {
+        desktopNotifikation(
+            translate('notifications', 'unseenItemsTitle', `Amazon Vine Explorer - ${AVE_VERSION}`, AVE_VERSION),
+            translate('notifications', 'unseenItemsBody', `Es wurden ${_prodArrLength} neue Eintraege gefunden`, _prodArrLength)
+        );
+    }
+}
+
+/**
+ * Converts a keyword of the form "/pattern/flags" into a regular expression.
+ * A keyword without the slashes returns undefined.
+ * see https://stackoverflow.com/questions/874709/converting-user-input-string-to-regular-expression
+ * @param {string} s The keyword
+ * @returns {RegExp|undefined} The regular expression, if the keyword is one
+ */
+function stringToRegex(s) {
+    const _match = s.match(/^\/(.*?)\/([gimsuy]*)$/);
+    if (!_match) return undefined;
+    const _flags = _match[2]
+        .split('')
+        .filter((i, p, arr) => arr.indexOf(i) === p)
+        .join('');
+    return new RegExp(_match[1], _flags);
+}
+
+/**
+ * Searches a keyword in the description of a product and sends the
+ * notifications if the keyword was found.
+ * @param {Product} _prod The product to check
+ * @param {string[]} _configKeyWords The keywords to search for
+ * @returns {boolean} true if a keyword was found
+ */
+function checkKeywordsForProduct(_prod, _configKeyWords) {
+    const _descFull = _prod.description_full.toLowerCase();
+
+    if (_prod.isNotified) {
+        if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Skipping Product which was already notified: ${_descFull}`);
+        return false;
+    }
+
+    if (SETTINGS.DebugLevel > 1)
+        console.log(`updateNewProductsBtn(): Search Product Description: ${_descFull} for keys: `, _configKeyWords);
+    const _configkeyWordsLength = _configKeyWords.length;
+
+    for (let j = 0; j < _configkeyWordsLength; j++) {
+        const _currKey = _configKeyWords[j].toLowerCase();
+        let _keyFound = false;
+        const _regExp = stringToRegex(_currKey);
+        if (_regExp !== undefined) {
+            if (SETTINGS.DebugLevel > 1)
+                console.log(`updateNewProductsBtn(): Search Product Description for Regular Expression: ${_regExp}`);
+            _keyFound = _regExp.test(_descFull);
+        } else {
+            if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Search Product Description for Keyword: ${_currKey}`);
+            _keyFound = _descFull.includes(_currKey);
+        }
+        if (!_keyFound) continue;
+
+        if (SETTINGS.EnableDesktopNotifikation) {
+            desktopNotifikation(
+                `Amazon Vine Explorer - ${AVE_VERSION}`,
+                `${_prod.description_full}\nkey: ${_currKey}`,
+                fixProductImageUrl(_prod.data_img_url),
+                true,
+                function (event) {
+                    event.preventDefault();
+                    const newUrl = `${window.location.origin}/vine/vine-items?vine-data=${encodeURIComponent(
+                        JSON.stringify({
+                            asin: _prod.data_asin,
+                            isParentAsin: _prod.data_asin_is_parent,
+                            recommendationId: _prod.data_recommendation_id,
+                            tax: _prod.data_estimated_tax
+                        })
+                    )}`;
+                    window.open(newUrl, '_blank');
+                }
+            );
+        }
+        if (SETTINGS.GotifyUrl) {
+            if (_prod.link) {
+                gotifyNotification(
+                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \nMatched key: ${_currKey}`,
+                    _prod
+                );
+            } else {
+                gotifyNotification(
+                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \nMatched key: ${_currKey}`
+                );
+            }
+        }
+        _prod.isNotified = true;
+        if (SETTINGS.EnableAutoMarkFavorite) {
+            _prod.isFav = 1;
+        }
+        database.update(_prod).catch((error) => {
+            console.error(`Could not save the notified product ${_prod.id}: ${error}`);
+        });
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Searches the keywords in the new products and sends the notifications.
+ *
+ * NOTE: The search is expensive, because every new product is checked against
+ * every keyword. It is only done if a new product was added and not after every
+ * update of an existing product (e.g. after every timestamp update of the
+ * background scan).
+ *
+ * @param {Product[]} _prodArr The new entries
+ * @returns {boolean} true if at least one product was notified
+ */
+function searchKeywordsInProducts(_prodArr) {
+    if (
+        !(SETTINGS.EnableDesktopNotifikation || SETTINGS.EnableAutoMarkFavorite || SETTINGS.GotifyUrl) ||
+        !SETTINGS.DesktopNotifikationKeywords?.length
+    ) {
+        return false;
+    }
+
+    if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Inside IF`);
+
+    const _configKeyWords = SETTINGS.DesktopNotifikationKeywords;
+    let _notifyed = false;
+
+    for (let i = 0; i < _prodArr.length; i++) {
+        const _prod = _prodArr[i];
+        if (checkKeywordsForProduct(_prod, _configKeyWords)) {
+            _notifyed = true;
+        }
+    }
+    return _notifyed;
+}
+
+/**
+ * Sends the notification about the number of new products, if the delay
+ * between the notifications has passed.
+ * @param {number} _prodArrLength The number of the new entries
+ * @param {boolean} _notifyed true, if a product was already notified
+ */
+function notifyAboutNewProducts(_prodArrLength, _notifyed) {
+    if (!SETTINGS.EnableDesktopNotifikation || SETTINGS.DesktopNotifikationDelay <= 0 || _notifyed) return;
+    if (_prodArrLength <= oldCountOfNewItems) return;
+    if (unixTimeStamp() - lastDesktopNotifikationTimestamp < SETTINGS.DesktopNotifikationDelay) return;
+
+    oldCountOfNewItems = _prodArrLength;
+    lastDesktopNotifikationTimestamp = unixTimeStamp();
+
+    desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `Es wurden ${_prodArrLength} neue Vine Produkte gefunden`);
+}
+
+/**
  * Update the "new entries" badge and trigger threshold notifications.
  */
 function updateNewProductsBtn() {
     if (AUTO_SCAN_IS_RUNNING) return;
     if (SETTINGS.DebugLevel > 1) console.log('Called updateNewProductsBtn()');
 
-    // The search for the keywords below is expensive, because every new product is
-    // checked against every keyword. It is only done if a new product was added and
-    // not after every update of an existing product (e.g. after every timestamp update
-    // of the background scan).
+    // The search for the keywords is expensive, because every new product is
+    // checked against every keyword. It is only done if a new product was added
+    // and not after every update of an existing product (e.g. after every
+    // timestamp update of the background scan).
     const _checkForKeywords = newProductWasAdded;
     newProductWasAdded = false;
 
@@ -3637,49 +3825,7 @@ function updateNewProductsBtn() {
 
         if (_prodArrLength > 0) {
             const _badgeCount = parseInt(_btnBadge && _btnBadge.innerText ? _btnBadge.innerText : '0', 10) || 0;
-            // Threshold/cooldown gate for "new entries" notifications.
-            if (
-                SETTINGS.UnseenItemsNotificationThreshold > 0 &&
-                _prodArrLength >= SETTINGS.UnseenItemsNotificationThreshold &&
-                _badgeCount < SETTINGS.UnseenItemsNotificationThreshold
-            ) {
-                let _shouldNotify = true;
-
-                if (SETTINGS.UnseenItemsNotificationRepitionMinutes > 0) {
-                    const _lastUnseenMS = Date.now() - (localStorage.getItem('AVE_LAST_UNSEEN_NOTIFICATION') || 0);
-                    const _lastUnseenMinutes = _lastUnseenMS / 1000 / 60;
-
-                    if (_lastUnseenMinutes < SETTINGS.UnseenItemsNotificationRepitionMinutes) {
-                        _shouldNotify = false;
-                    }
-                }
-
-                if (_shouldNotify) {
-                    localStorage.setItem('AVE_LAST_UNSEEN_NOTIFICATION', Date.now());
-
-                    if (SETTINGS.GotifyUrl) {
-                        gotifyNotification(
-                            translate(
-                                'notifications',
-                                'unseenItemsBody',
-                                `Es wurden ${_prodArrLength} neue Eintraege gefunden`,
-                                _prodArrLength
-                            )
-                        );
-                    }
-                    if (SETTINGS.EnableDesktopNotifikation) {
-                        desktopNotifikation(
-                            translate('notifications', 'unseenItemsTitle', `Amazon Vine Explorer - ${AVE_VERSION}`, AVE_VERSION),
-                            translate(
-                                'notifications',
-                                'unseenItemsBody',
-                                `Es wurden ${_prodArrLength} neue Eintraege gefunden`,
-                                _prodArrLength
-                            )
-                        );
-                    }
-                }
-            }
+            notifyAboutUnseenItems(_prodArrLength, _badgeCount);
 
             _btnBadge.style.display = 'inline-block';
             _btnBadge.innerText = _prodArrLength;
@@ -3690,115 +3836,8 @@ function updateNewProductsBtn() {
             document.title = `${_pageTitle}`;
         }
 
-        let _notifyed = false;
-        if (
-            _checkForKeywords &&
-            (SETTINGS.EnableDesktopNotifikation || SETTINGS.EnableAutoMarkFavorite || SETTINGS.GotifyUrl) &&
-            SETTINGS.DesktopNotifikationKeywords?.length > 0
-        ) {
-            if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Inside IF`);
-
-            const _configKeyWords = SETTINGS.DesktopNotifikationKeywords;
-
-            // Converts a keyword of the form "/pattern/flags" into a regular expression.
-            // A keyword without the slashes returns undefined.
-            // see https://stackoverflow.com/questions/874709/converting-user-input-string-to-regular-expression
-            var stringToRegex = (s) => {
-                const _match = s.match(/^\/(.*?)\/([gimsuy]*)$/);
-                if (!_match) return undefined;
-                const _flags = _match[2]
-                    .split('')
-                    .filter((i, p, arr) => arr.indexOf(i) === p)
-                    .join('');
-                return new RegExp(_match[1], _flags);
-            };
-
-            for (let i = 0; i < _prodArrLength; i++) {
-                const _prod = prodArr[i];
-                const _descFull = _prod.description_full.toLowerCase();
-
-                if (_prod.isNotified) {
-                    if (SETTINGS.DebugLevel > 1)
-                        console.log(`updateNewProductsBtn(): Skipping Product which was already notified: ${_descFull}`);
-                    continue;
-                }
-
-                if (SETTINGS.DebugLevel > 1)
-                    console.log(`updateNewProductsBtn(): Search Product Description: ${_descFull} for keys: `, _configKeyWords);
-                const _configkeyWordsLength = _configKeyWords.length;
-
-                for (let j = 0; j < _configkeyWordsLength; j++) {
-                    const _currKey = _configKeyWords[j].toLowerCase();
-                    let _keyFound = false;
-                    const _regExp = stringToRegex(_currKey);
-                    if (_regExp !== undefined) {
-                        if (SETTINGS.DebugLevel > 1)
-                            console.log(`updateNewProductsBtn(): Search Product Description for Regular Expression: ${_regExp}`);
-                        _keyFound = _regExp.test(_descFull);
-                    } else {
-                        if (SETTINGS.DebugLevel > 1)
-                            console.log(`updateNewProductsBtn(): Search Product Description for Keyword: ${_currKey}`);
-                        _keyFound = _descFull.includes(_currKey);
-                    }
-                    if (_keyFound) {
-                        if (SETTINGS.EnableDesktopNotifikation) {
-                            desktopNotifikation(
-                                `Amazon Vine Explorer - ${AVE_VERSION}`,
-                                `${_prod.description_full}\nkey: ${_currKey}`,
-                                fixProductImageUrl(_prod.data_img_url),
-                                true,
-                                function (event) {
-                                    event.preventDefault();
-                                    const newUrl = `${window.location.origin}/vine/vine-items?vine-data=${encodeURIComponent(
-                                        JSON.stringify({
-                                            asin: _prod.data_asin,
-                                            isParentAsin: _prod.data_asin_is_parent,
-                                            recommendationId: _prod.data_recommendation_id,
-                                            tax: _prod.data_estimated_tax
-                                        })
-                                    )}`;
-                                    window.open(newUrl, '_blank');
-                                }
-                            );
-                        }
-                        if (SETTINGS.GotifyUrl) {
-                            if (_prod.link) {
-                                gotifyNotification(
-                                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \nMatched key: ${_currKey}`,
-                                    _prod
-                                );
-                            } else {
-                                gotifyNotification(
-                                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \nMatched key: ${_currKey}`
-                                );
-                            }
-                        }
-                        _notifyed = true;
-                        _prod.isNotified = true;
-                        if (SETTINGS.EnableAutoMarkFavorite) {
-                            _prod.isFav = 1;
-                        }
-                        database.update(_prod).catch((error) => {
-                            console.error(`Could not save the notified product ${_prod.id}: ${error}`);
-                        });
-                        break;
-                    }
-                }
-            }
-        }
-        if (
-            SETTINGS.EnableDesktopNotifikation &&
-            SETTINGS.DesktopNotifikationDelay > 0 &&
-            !_notifyed &&
-            _prodArrLength > oldCountOfNewItems
-        ) {
-            if (unixTimeStamp() - lastDesktopNotifikationTimestamp >= SETTINGS.DesktopNotifikationDelay) {
-                oldCountOfNewItems = _prodArrLength;
-                lastDesktopNotifikationTimestamp = unixTimeStamp();
-
-                desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, `Es wurden ${_prodArrLength} neue Vine Produkte gefunden`);
-            }
-        }
+        const _notifyed = _checkForKeywords ? searchKeywordsInProducts(prodArr) : false;
+        notifyAboutNewProducts(_prodArrLength, _notifyed);
     });
 }
 

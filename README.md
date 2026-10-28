@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.44
+
+* Refactoring: `updateNewProductsBtn()` was split up. The notification about the number of unseen products moved into `notifyAboutUnseenItems()`, the notification about the number of new products into `notifyAboutNewProducts()`, the keyword search into `searchKeywordsInProducts()` and the check of a single product into `checkKeywordsForProduct()`. The helper `stringToRegex()` became a function of its own. The behaviour did not change, it was verified with the helper script `.unotes/verify_new_products_btn.js`, which compares the database accesses, the triggered notifications, the badge, the page title and the changed products of the old and the new implementation in nine scenarios.
+
 ##### [2026-10-26] - Version 0.12.1.43
 
 * Refactoring: the settings UI was split up. The CSS of the settings menu moved from the template literal inside `addAVESettingsMenu()` into the constant `AVE_SETTINGS_CSS`, and `createSettingsMenuElement()` was split into one function per setting type (`createSettingsBoolElement()`, `createSettingsPasswordElement()`, `createSettingsUrlElement()`, `createSettingsNumberElement()`, `createSettingsButtonElement()`, `createSettingsColorElement()`, `createSettingsSelectElement()`, `createSettingsTitleElement()` and `createSettingsKeywordsElement()`), which are called by a switch statement. The behaviour did not change, it was verified with the helper script `.unotes/verify_settings_ui.js`, which compares the created DOM of all nine setting types and the generated CSS of the old and the new implementation.
