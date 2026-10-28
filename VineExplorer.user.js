@@ -113,7 +113,7 @@ let database;
 
             const urlParams = new URLSearchParams(window.location.search);
             const aveData = urlParams.get('vine-data');
-            let aveShareData = localStorage.getItem('ave-share-details');
+            const aveShareData = localStorage.getItem('ave-share-details');
             if (aveData || aveShareData) {
                 let _data;
                 try {
@@ -123,7 +123,7 @@ let database;
                     return;
                 }
                 waitForHtmlElement('body', () => {
-                    let aveShareElementTmp = document.createElement('div');
+                    const aveShareElementTmp = document.createElement('div');
                     aveShareElementTmp.style.display = 'none';
                     aveShareElementTmp.innerHTML = `
                 <span class="a-button a-button-primary vvp-details-btn" id="a-autoid-0">
@@ -1054,7 +1054,7 @@ function shareEventHandlerClick(event, _data) {
                 break;
         }
 
-        let shareText = `
+        const shareText = `
 ${queueParam}
 ${page}
 ${_data.tax}
@@ -1066,7 +1066,7 @@ ${newUrl}`;
         const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
         const scrollY = window.pageYOffset || document.documentElement.scrollTop;
 
-        let avePopup = document.createElement('div');
+        const avePopup = document.createElement('div');
         avePopup.style.position = 'absolute';
         avePopup.style.zIndex = '9999';
         avePopup.style.padding = '5px';
@@ -1149,7 +1149,7 @@ async function createProductSite(siteType, productArray, cb) {
     const _contentContainer = document.querySelector('.a-section.vvp-tab-content');
     if (_contentContainer.querySelector('.vvp-no-offers-msg')) {
         _contentContainer.querySelector('.vvp-no-offers-msg').remove();
-        let _tileStructure = document.createElement('div');
+        const _tileStructure = document.createElement('div');
         _tileStructure.classList = 'a-section vvp-items-container';
         _tileStructure.innerHTML = `
         <div id="vvp-browse-nodes-container">
@@ -1220,7 +1220,7 @@ async function createInfiniteScrollSite(siteType, cb) {
     const _contentContainer = document.querySelector('.a-section.vvp-tab-content');
     if (_contentContainer.querySelector('.vvp-no-offers-msg')) {
         _contentContainer.querySelector('.vvp-no-offers-msg').remove();
-        let _tileStructure = document.createElement('div');
+        const _tileStructure = document.createElement('div');
         _tileStructure.classList = 'a-section vvp-items-container';
         _tileStructure.innerHTML = `
         <div id="vvp-browse-nodes-container">
@@ -2536,8 +2536,8 @@ async function cleanUpDatabase(cb = () => {}) {
                 _normalCleanupDate = unixTimeStamp() - SECONDS_PER_WEEK;
             }
 
-            let secondsBeforeCleanup = SETTINGS.HoursBeforeCleanup * 3600;
-            let currentTimeStamp = unixTimeStamp();
+            const secondsBeforeCleanup = SETTINGS.HoursBeforeCleanup * 3600;
+            const currentTimeStamp = unixTimeStamp();
 
             for (const _currEntry of prodArr) {
                 _workersProms.push(
@@ -2811,18 +2811,18 @@ function initBackgroundScan() {
 
             backGroundScanTimeout = setTimeout(initBackgroundScanSubFunctionScannerLoop, SETTINGS.BackGroundScanDelayPerPage);
             function initBackgroundScanSubFunctionScannerLoop() {
-                let startTime = performance.now(); // Get the Starttime to calculate the speed
+                const startTime = performance.now(); // Get the Starttime to calculate the speed
 
                 if (_loopIsWorking) return;
                 _loopIsWorking = true;
 
                 if (!(localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true')) {
-                    let _backgroundScanStage = localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') || -1;
-                    let _backgroundScanPageMax = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX') || -1;
-                    let _backgroundScanPageCurrent = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT') || -1;
+                    const _backgroundScanStage = localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') || -1;
+                    const _backgroundScanPageMax = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX') || -1;
+                    const _backgroundScanPageCurrent = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT') || -1;
 
-                    let _fastTimeWaitingMS = Date.now() - (localStorage.getItem('AVE_FAST_SCAN_LAST_TIME') || 0);
-                    let _fastTimeWaitingSec = _fastTimeWaitingMS / 1000;
+                    const _fastTimeWaitingMS = Date.now() - (localStorage.getItem('AVE_FAST_SCAN_LAST_TIME') || 0);
+                    const _fastTimeWaitingSec = _fastTimeWaitingMS / 1000;
                     let _fastTimeIntervalSec =
                         ((SETTINGS.BackGroundScanDelayPerPage + SETTINGS.BackGroundScannerRandomness / 2) * 15) / 1000;
                     if (_fastTimeIntervalSec < 30) _fastTimeIntervalSec = 30;
@@ -2861,8 +2861,8 @@ function initBackgroundScan() {
                     }
                 }
 
-                let TimeWaitingMS = Date.now() - (localStorage.getItem('AVE_BACKGROUND_SCAN_LAST_TIME') || 0);
-                let TimeWaitingMin = TimeWaitingMS / 1000 / 60;
+                const TimeWaitingMS = Date.now() - (localStorage.getItem('AVE_BACKGROUND_SCAN_LAST_TIME') || 0);
+                const TimeWaitingMin = TimeWaitingMS / 1000 / 60;
 
                 if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): TimeWaitingMin ', TimeWaitingMin);
 
@@ -2933,7 +2933,7 @@ function initBackgroundScan() {
                         /* NOTE: The pagination of the last scanned page is used. It cannot
                            be read from the iframe anymore, because the iframe is removed
                            after every scanned page (see createScanIframe()). */
-                        let _pagedate = lastScanPaginationData;
+                        const _pagedate = lastScanPaginationData;
                         if (_pagedate) {
                             _PageMax = _pagedate.maxPage;
                             localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_MAX', _PageMax);
@@ -3007,8 +3007,8 @@ function initBackgroundScan() {
                         localStorage.setItem('AVE_NEW_COUNT', _newCount);
 
                         if (SETTINGS.NewItemsNotificationThreshold > 0 && _newCount >= SETTINGS.NewItemsNotificationThreshold) {
-                            let _lastDropMS = Date.now() - (localStorage.getItem('AVE_LAST_DROP') || 0);
-                            let _lastDropMinutes = _lastDropMS / 1000 / 60;
+                            const _lastDropMS = Date.now() - (localStorage.getItem('AVE_LAST_DROP') || 0);
+                            const _lastDropMinutes = _lastDropMS / 1000 / 60;
 
                             if (_lastDropMinutes > SETTINGS.NewItemsNotificationRepititionMinutes) {
                                 localStorage.setItem('AVE_LAST_DROP', Date.now());
@@ -3071,8 +3071,8 @@ function initBackgroundScan() {
                         }
                     }
 
-                    let delay = SETTINGS.BackGroundScanDelayPerPage + Math.round(Math.random() * SETTINGS.BackGroundScannerRandomness);
-                    let timeElapsed = performance.now() - startTime;
+                    const delay = SETTINGS.BackGroundScanDelayPerPage + Math.round(Math.random() * SETTINGS.BackGroundScannerRandomness);
+                    const timeElapsed = performance.now() - startTime;
                     if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): Scantime: ', timeElapsed, ' Delay: ', delay);
 
                     backGroundScanTimeout = setTimeout(initBackgroundScanSubFunctionScannerLoop, delay);
@@ -3405,8 +3405,8 @@ function updateNewProductsBtn() {
                 let _shouldNotify = true;
 
                 if (SETTINGS.UnseenItemsNotificationRepitionMinutes > 0) {
-                    let _lastUnseenMS = Date.now() - (localStorage.getItem('AVE_LAST_UNSEEN_NOTIFICATION') || 0);
-                    let _lastUnseenMinutes = _lastUnseenMS / 1000 / 60;
+                    const _lastUnseenMS = Date.now() - (localStorage.getItem('AVE_LAST_UNSEEN_NOTIFICATION') || 0);
+                    const _lastUnseenMinutes = _lastUnseenMS / 1000 / 60;
 
                     if (_lastUnseenMinutes < SETTINGS.UnseenItemsNotificationRepitionMinutes) {
                         _shouldNotify = false;
