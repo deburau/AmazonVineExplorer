@@ -237,6 +237,30 @@ try {
 4. **Infinite Scroll**: Dynamic content loading with buffering
 5. **Settings System**: Dynamic UI generation from configuration
 
+### Background Scan Structure
+
+The background scan is split into small functions, one per responsibility. The
+state that has to survive the single iterations of the scan loop is kept in a
+`BackgroundScanState` object:
+
+| Function | Responsibility |
+|----------|----------------|
+| `initBackgroundScan()` | Starts the scan and the pagination wait loop |
+| `initBackgroundScanStorage()` | Writes the initial values to the local storage |
+| `getBackgroundScanStageZeroSites()` | The queues of the first stage |
+| `backgroundScanLoop()` | One iteration of the loop, it selects the stage |
+| `prepareFastScan()` | Decides if a fast scan is started |
+| `prepareScanIteration()` | Determines the stage and the sub stage |
+| `scanStageZero()` … `scanStageIdle()` | The five stages of the scan |
+| `backgroundScanFinished()` | Stores the state, stops the fast scan, starts the next iteration |
+| `formatDuration()` | Formats a duration for the screen text |
+
+**NOTE:** The scan must be verified with a comparison, because a change of the
+order of the local storage accesses changes the behaviour of the scan. The
+helper script `.unotes/verify_scan.js` runs the old and the new implementation
+in a sandbox with mocked browser APIs and compares the resulting local storage
+accesses step by step.
+
 ## Development Best Practices
 
 ### When Adding New Features

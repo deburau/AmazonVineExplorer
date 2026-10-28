@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.40
+// @version      0.12.1.41
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2760,6 +2760,37 @@ function stopBackgroundScan() {
     removeScanIframe(document.getElementById('ave-iframe-backgroundloader'));
 }
 
+/**
+ * The shared state of the background scan.
+ *
+ * The state outlives a single iteration of the scan loop, because the loop is
+ * restarted with a delay after every scanned page.
+ *
+ * @typedef {object} BackgroundScanState
+ * @property {boolean} loopIsWorking True while a page is being scanned
+ * @property {number} stage The stage of the scan (0 - 4)
+ * @property {number} subStage The current page inside the current stage
+ * @property {number} pageMax The number of pages of the current queue
+ * @property {string[]} stageZeroSites The queues that belong to the first stage
+ */
+
+/**
+ * The values of a single iteration of the background scan loop.
+ *
+ * @typedef {object} BackgroundScanIteration
+ * @property {number} startTime The start time of the iteration (performance.now)
+ * @property {number} timeWaitingMS The milliseconds since the last finished scan
+ * @property {number} timeWaitingMin The minutes since the last finished scan
+ * @property {string} scannerName The name of the scanner for the screen text
+ */
+
+/**
+ * Starts the background scan.
+ *
+ * The scan itself runs in a loop that is started with a delay and restarted
+ * after every scanned page. The stages of the scan are handled by the
+ * scanStage*() functions.
+ */
 function initBackgroundScan() {
     if (SETTINGS.DebugLevel > 10) console.log('Called initBackgroundScan()');
     if (BackGroundScanIsRunning) {
@@ -2781,330 +2812,441 @@ function initBackgroundScan() {
 
     showBackgroundScanScreen('Start Background Scanner');
 
-    const _paginatinWaitLoop = setInterval(() => {
+    const _state = {
+        loopIsWorking: false,
+        stage: 0,
+        subStage: 0,
+        pageMax: 0,
+        stageZeroSites: []
+    };
+
+    const _paginationWaitLoop = setInterval(() => {
         const _maxPage = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX') || 100;
         if (_maxPage) {
-            clearInterval(_paginatinWaitLoop);
+            clearInterval(_paginationWaitLoop);
             if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): pagination WaitLoop');
 
-            if (!(localStorage.getItem('AVE_BACKGROUND_SCAN_IS_RUNNING') == 'true')) {
-                if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): init localStorage Variables');
-                localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_MAX', _maxPage);
-                localStorage.setItem('AVE_BACKGROUND_SCAN_IS_RUNNING', true);
-                localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', 0);
-                localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', 0);
-                localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
-            }
+            initBackgroundScanStorage(_maxPage);
 
-            let _loopIsWorking = false;
-            let _subStage = 0;
-            let _PageMax = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX')) || 0;
-            let _stageZeroSites;
-            switch (getCountry()) {
-                case 'DE':
-                    _stageZeroSites = ['queue=potluck'];
-                    break;
-                default:
-                    _stageZeroSites = ['queue=potluck', 'queue=last_chance'];
-                    break;
-            }
+            _state.stageZeroSites = getBackgroundScanStageZeroSites();
+            _state.pageMax = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX')) || 0;
 
-            backGroundScanTimeout = setTimeout(initBackgroundScanSubFunctionScannerLoop, SETTINGS.BackGroundScanDelayPerPage);
-            function initBackgroundScanSubFunctionScannerLoop() {
-                const startTime = performance.now(); // Get the Starttime to calculate the speed
+            backGroundScanTimeout = setTimeout(() => {
+                backgroundScanLoop(_baseUrl, _state);
+            }, SETTINGS.BackGroundScanDelayPerPage);
+        }
+    }, 250); //scan every 250ms
+}
 
-                if (_loopIsWorking) return;
-                _loopIsWorking = true;
+/**
+ * Writes the initial values of the background scan to the local storage.
+ * A running scan is not reset, so that a reload continues where it stopped.
+ *
+ * @param {string|number} maxPage The maximum number of pages of the scan
+ */
+function initBackgroundScanStorage(maxPage) {
+    if (localStorage.getItem('AVE_BACKGROUND_SCAN_IS_RUNNING') == 'true') return;
+    if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): init localStorage Variables');
+    localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_MAX', maxPage);
+    localStorage.setItem('AVE_BACKGROUND_SCAN_IS_RUNNING', true);
+    localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', 0);
+    localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', 0);
+    localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
+}
 
-                if (!(localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true')) {
-                    const _backgroundScanStage = localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') || -1;
-                    const _backgroundScanPageMax = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX') || -1;
-                    const _backgroundScanPageCurrent = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT') || -1;
+/**
+ * The queues that belong to the first stage of the background scan.
+ * The last chance queue does not exist in Germany.
+ *
+ * @returns {string[]} The queues of the first stage
+ */
+function getBackgroundScanStageZeroSites() {
+    switch (getCountry()) {
+        case 'DE':
+            return ['queue=potluck'];
+        default:
+            return ['queue=potluck', 'queue=last_chance'];
+    }
+}
 
-                    const _fastTimeWaitingMS = Date.now() - (localStorage.getItem('AVE_FAST_SCAN_LAST_TIME') || 0);
-                    const _fastTimeWaitingSec = _fastTimeWaitingMS / 1000;
-                    let _fastTimeIntervalSec =
-                        ((SETTINGS.BackGroundScanDelayPerPage + SETTINGS.BackGroundScannerRandomness / 2) * 15) / 1000;
-                    if (_fastTimeIntervalSec < 30) _fastTimeIntervalSec = 30;
+/**
+ * One iteration of the background scan loop.
+ *
+ * The iteration only decides what has to be scanned, the scanning itself is
+ * done by backGroundTileScanner(). The next iteration is started by
+ * backgroundScanFinished(), as soon as the page was scanned.
+ *
+ * @param {string} baseUrl The base url of the Vine pages
+ * @param {BackgroundScanState} state The state of the scan
+ */
+function backgroundScanLoop(baseUrl, state) {
+    const startTime = performance.now(); // Get the Starttime to calculate the speed
 
-                    let _startFastScan = true;
-                    if (_startFastScan && _fastTimeWaitingSec < _fastTimeIntervalSec) {
-                        _startFastScan = false;
-                    }
-                    if (_startFastScan && _backgroundScanStage <= 0) {
-                        _startFastScan = false;
-                    }
-                    if (_startFastScan && _backgroundScanPageMax <= 0) {
-                        _startFastScan = false;
-                    }
-                    if (_startFastScan && _backgroundScanStage == 1 && _backgroundScanPageCurrent <= 0) {
-                        _startFastScan = false;
-                    }
-                    if (_startFastScan && _backgroundScanStage == 1 && _backgroundScanPageCurrent < _backgroundScanPageMax / 20) {
-                        _startFastScan = false;
-                    }
+    if (state.loopIsWorking) return;
+    state.loopIsWorking = true;
 
-                    if (_startFastScan) {
-                        if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): starting fast scan');
-                        localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', true);
-                        localStorage.setItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS', '-1:-1:-1:-1');
-                        localStorage.setItem(
-                            'AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT',
-                            localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT')
-                        );
-                        localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_STAGE', localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE'));
-                        localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', 0);
-                        localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', 0);
-                        localStorage.setItem('AVE_NEW_COUNT', 0);
-                    } else {
-                        localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
-                    }
+    prepareFastScan();
+
+    const _iteration = prepareScanIteration(state, startTime);
+
+    switch (state.stage) {
+        case 0:
+            scanStageZero(baseUrl, state, _iteration);
+            break;
+        case 1:
+            scanStageEncore(baseUrl, state, _iteration);
+            break;
+        case 2:
+            scanStageSkip(baseUrl, state, _iteration);
+            break;
+        case 3:
+            scanStageCleanup(baseUrl, state, _iteration);
+            break;
+        case 4:
+            scanStageIdle(baseUrl, state, _iteration);
+            break;
+    }
+}
+
+/**
+ * Decides if a fast scan should be started.
+ *
+ * A fast scan is a shortened version of the background scan. It is only started
+ * if the last scan is long enough ago and the scan is at the beginning, so that
+ * a possible product drop is found early.
+ */
+function prepareFastScan() {
+    if (localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true') return;
+
+    const _backgroundScanStage = localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') || -1;
+    const _backgroundScanPageMax = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX') || -1;
+    const _backgroundScanPageCurrent = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT') || -1;
+
+    const _fastTimeWaitingMS = Date.now() - (localStorage.getItem('AVE_FAST_SCAN_LAST_TIME') || 0);
+    const _fastTimeWaitingSec = _fastTimeWaitingMS / 1000;
+    let _fastTimeIntervalSec = ((SETTINGS.BackGroundScanDelayPerPage + SETTINGS.BackGroundScannerRandomness / 2) * 15) / 1000;
+    if (_fastTimeIntervalSec < 30) _fastTimeIntervalSec = 30;
+
+    let _startFastScan = true;
+    if (_startFastScan && _fastTimeWaitingSec < _fastTimeIntervalSec) {
+        _startFastScan = false;
+    }
+    if (_startFastScan && _backgroundScanStage <= 0) {
+        _startFastScan = false;
+    }
+    if (_startFastScan && _backgroundScanPageMax <= 0) {
+        _startFastScan = false;
+    }
+    if (_startFastScan && _backgroundScanStage == 1 && _backgroundScanPageCurrent <= 0) {
+        _startFastScan = false;
+    }
+    if (_startFastScan && _backgroundScanStage == 1 && _backgroundScanPageCurrent < _backgroundScanPageMax / 20) {
+        _startFastScan = false;
+    }
+
+    if (_startFastScan) {
+        if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): starting fast scan');
+        localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', true);
+        localStorage.setItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS', '-1:-1:-1:-1');
+        localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT', localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT'));
+        localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_STAGE', localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE'));
+        localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', 0);
+        localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', 0);
+        localStorage.setItem('AVE_NEW_COUNT', 0);
+    } else {
+        localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
+    }
+}
+
+/**
+ * Determines the stage and the sub stage of the current iteration.
+ *
+ * @param {BackgroundScanState} state The state of the scan
+ * @param {number} startTime The start time of the iteration (performance.now)
+ * @returns {BackgroundScanIteration} The values of the current iteration
+ */
+function prepareScanIteration(state, startTime) {
+    const _timeWaitingMS = Date.now() - (localStorage.getItem('AVE_BACKGROUND_SCAN_LAST_TIME') || 0);
+    const _timeWaitingMin = _timeWaitingMS / 1000 / 60;
+
+    if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): TimeWaitingMin ', _timeWaitingMin);
+
+    //Nach 10 Stunden wird neu gestartet
+    if (_timeWaitingMin > 600) {
+        state.stage = 0;
+        state.subStage = 0;
+        localStorage.setItem('AVE_BACKGROUND_SCAN_LAST_TIME', Date.now());
+        localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
+    } else {
+        state.stage = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE')) || 0;
+        state.subStage = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT')) || 0;
+    }
+
+    if (SETTINGS.DebugLevel > 10)
+        console.log('initBackgroundScan(): loop with _backgroundScanStage ', state.stage, ' and Substage: ', state.subStage);
+
+    let _scannerName;
+    if (localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true') {
+        _scannerName = 'Fast Scanner';
+    } else {
+        _scannerName = 'Background Scanner';
+    }
+
+    return {
+        startTime: startTime,
+        timeWaitingMS: _timeWaitingMS,
+        timeWaitingMin: _timeWaitingMin,
+        scannerName: _scannerName
+    };
+}
+
+/**
+ * Stage 0 of the background scan: the potluck and the last chance queue.
+ *
+ * @param {string} baseUrl The base url of the Vine pages
+ * @param {BackgroundScanState} state The state of the scan
+ * @param {BackgroundScanIteration} iteration The values of the current iteration
+ */
+function scanStageZero(baseUrl, state, iteration) {
+    if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.0 with _subStage: ', state.subStage);
+    if (state.stageZeroSites[state.subStage]) {
+        updateBackgroundScanScreenText(
+            `${iteration.scannerName} ${state.stageZeroSites[state.subStage].replace('queue=', '')} Page: ${state.subStage + 1} / ${state.pageMax}`
+        );
+        if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.0 with _subStage: ', state.subStage, ' inside IF');
+        backGroundTileScanner(`${baseUrl}?${state.stageZeroSites[state.subStage]}`, (newCount) => {
+            backgroundScanFinished(baseUrl, state, iteration, newCount);
+        });
+        state.subStage++;
+    } else {
+        if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.0 with _subStage: ', state.subStage, ' inside ELSE');
+        state.subStage = 0;
+        localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', state.subStage);
+        state.stage++;
+        backgroundScanFinished(baseUrl, state, iteration);
+    }
+}
+
+/**
+ * Stage 1 of the background scan: the encore queue, page by page.
+ *
+ * @param {string} baseUrl The base url of the Vine pages
+ * @param {BackgroundScanState} state The state of the scan
+ * @param {BackgroundScanIteration} iteration The values of the current iteration
+ */
+function scanStageEncore(baseUrl, state, iteration) {
+    state.subStage = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT')) || 0;
+
+    if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.1 update PAGE_MAX');
+
+    /* NOTE: The pagination of the last scanned page is used. It cannot
+       be read from the iframe anymore, because the iframe is removed
+       after every scanned page (see createScanIframe()). */
+    const _pagedate = lastScanPaginationData;
+    if (_pagedate) {
+        state.pageMax = _pagedate.maxPage;
+        localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_MAX', state.pageMax);
+    } else {
+        state.pageMax = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX')) || 0;
+    }
+
+    if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.1 with _subStage: ', state.subStage);
+
+    // Wenn die aktuelle Seite die erste ist oder die maximale Seitenzahl nicht erreicht ist, wird gescannt
+    if (state.subStage == 0 || state.subStage < state.pageMax) {
+        updateBackgroundScanScreenText(`${iteration.scannerName} encore Page: ${state.subStage + 1} / ${state.pageMax}`);
+        backGroundTileScanner(`${baseUrl}?queue=encore&pn=&cn=&page=${state.subStage + 1}`, (newCount) => {
+            backgroundScanFinished(baseUrl, state, iteration, newCount);
+        });
+        state.subStage++;
+        localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', state.subStage);
+    } else {
+        localStorage.setItem('AVE_BACKGROUND_SCAN_LAST_TIME', Date.now());
+        state.subStage = 0;
+        state.stage++;
+        backgroundScanFinished(baseUrl, state, iteration);
+    }
+}
+
+/**
+ * Stage 2 of the background scan.
+ *
+ * This stage would query additional values (tax, real prize, ...), but it is
+ * disabled because of the bugs with fetching the tax.
+ *
+ * @param {string} baseUrl The base url of the Vine pages
+ * @param {BackgroundScanState} state The state of the scan
+ * @param {BackgroundScanIteration} iteration The values of the current iteration
+ */
+function scanStageSkip(baseUrl, state, iteration) {
+    //Disaled due to Bugs fetching the Tax
+    state.stage++;
+    backgroundScanFinished(baseUrl, state, iteration);
+}
+
+/**
+ * Stage 3 of the background scan: the cleanup of the database.
+ *
+ * @param {string} baseUrl The base url of the Vine pages
+ * @param {BackgroundScanState} state The state of the scan
+ * @param {BackgroundScanIteration} iteration The values of the current iteration
+ */
+function scanStageCleanup(baseUrl, state, iteration) {
+    cleanUpDatabase();
+    state.stage++;
+    backgroundScanFinished(baseUrl, state, iteration);
+}
+
+/**
+ * Stage 4 of the background scan: waiting for the next scan.
+ *
+ * @param {string} baseUrl The base url of the Vine pages
+ * @param {BackgroundScanState} state The state of the scan
+ * @param {BackgroundScanIteration} iteration The values of the current iteration
+ */
+function scanStageIdle(baseUrl, state, iteration) {
+    updateBackgroundScanScreenText(
+        `${iteration.scannerName} Time Waiting: ${formatDuration(SETTINGS.IdlePeriodAfterScan * 60 * 1000 - iteration.timeWaitingMS)}`
+    );
+
+    if (iteration.timeWaitingMin > SETTINGS.IdlePeriodAfterScan) {
+        state.stage = 0;
+        state.subStage = 0;
+    }
+    backgroundScanFinished(baseUrl, state, iteration);
+}
+
+/**
+ * Finishes the current iteration of the background scan.
+ *
+ * The state is written to the local storage, a possible fast scan is stopped
+ * and the next iteration is started with a delay.
+ *
+ * @param {string} baseUrl The base url of the Vine pages
+ * @param {BackgroundScanState} state The state of the scan
+ * @param {BackgroundScanIteration} iteration The values of the current iteration
+ * @param {number} [newCount] The number of new products of the scanned page
+ */
+function backgroundScanFinished(baseUrl, state, iteration, newCount) {
+    if (SETTINGS.DebugLevel > 10)
+        console.log(
+            `initBackgroundScan()._scanFinished(): newCount=${newCount} _backGroundScanStage=${state.stage} _subStage=${state.subStage} AVE_FAST_SCAN_IS_RUNNING=${localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING')}`
+        );
+    localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', state.stage);
+    localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', state.subStage);
+    state.loopIsWorking = false;
+
+    if (localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true') {
+        let _stopFastScan = false;
+
+        const _backGroundScanStage = localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') || 0;
+        const _lastBackGroundScanStage = localStorage.getItem('AVE_LAST_BACKGROUND_SCAN_STAGE') || 0;
+        const _lastScanPageCurrent = localStorage.getItem('AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT') || 0;
+        const _scanPageCurrent = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT') || 0;
+        const _newCount = parseInt(newCount || 0, 10) + parseInt(localStorage.getItem('AVE_NEW_COUNT') || 0, 10);
+        localStorage.setItem('AVE_NEW_COUNT', _newCount);
+
+        if (SETTINGS.NewItemsNotificationThreshold > 0 && _newCount >= SETTINGS.NewItemsNotificationThreshold) {
+            const _lastDropMS = Date.now() - (localStorage.getItem('AVE_LAST_DROP') || 0);
+            const _lastDropMinutes = _lastDropMS / 1000 / 60;
+
+            if (_lastDropMinutes > SETTINGS.NewItemsNotificationRepititionMinutes) {
+                localStorage.setItem('AVE_LAST_DROP', Date.now());
+
+                if (SETTINGS.GotifyUrl) {
+                    gotifyNotification(`Possible new product drop starting, Amazon Vine Explorer has ${_newCount} new products`);
                 }
 
-                const TimeWaitingMS = Date.now() - (localStorage.getItem('AVE_BACKGROUND_SCAN_LAST_TIME') || 0);
-                const TimeWaitingMin = TimeWaitingMS / 1000 / 60;
-
-                if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): TimeWaitingMin ', TimeWaitingMin);
-
-                let _backGroundScanStage;
-
-                //Nach 10 Stunden wird neu gestartet
-                if (TimeWaitingMin > 600) {
-                    _backGroundScanStage = 0;
-                    _subStage = 0;
-                    localStorage.setItem('AVE_BACKGROUND_SCAN_LAST_TIME', Date.now());
-                    localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
-                } else {
-                    _backGroundScanStage = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE')) || 0;
-                    _subStage = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT')) || 0;
-                }
-
-                if (SETTINGS.DebugLevel > 10)
-                    console.log(
-                        'initBackgroundScan(): loop with _backgroundScanStage ',
-                        _backGroundScanStage,
-                        ' and Substage: ',
-                        _subStage
+                if (SETTINGS.EnableDesktopNotifikation) {
+                    desktopNotifikation(
+                        `Amazon Vine Explorer - ${AVE_VERSION}`,
+                        `Possible new product drop starting, Amazon Vine Explorer has ${_newCount} new products`
                     );
-
-                let _scannerName;
-                if (localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true') {
-                    _scannerName = 'Fast Scanner';
-                } else {
-                    _scannerName = 'Background Scanner';
-                }
-
-                /* NOTE: The iframe for the scan is created inside
-                   backGroundTileScanner() and removed again after the page was
-                   scanned. It is intentionally not kept, because a reused iframe
-                   accumulates a session history that holds the memory of every
-                   scanned page (see createScanIframe()). */
-
-                switch (_backGroundScanStage) {
-                    case 0: {
-                        // potluck, last_chance
-                        if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.0 with _subStage: ', _subStage);
-                        if (_stageZeroSites[_subStage]) {
-                            updateBackgroundScanScreenText(
-                                `${_scannerName} ${_stageZeroSites[_subStage].replace('queue=', '')} Page: ${_subStage + 1} / ${_PageMax}`
-                            );
-                            if (SETTINGS.DebugLevel > 10)
-                                console.log('initBackgroundScan().loop.case.0 with _subStage: ', _subStage, ' inside IF');
-                            backGroundTileScanner(`${_baseUrl}?${_stageZeroSites[_subStage]}`, (newCount) => {
-                                _scanFinished(newCount);
-                            });
-                            _subStage++;
-                        } else {
-                            if (SETTINGS.DebugLevel > 10)
-                                console.log('initBackgroundScan().loop.case.0 with _subStage: ', _subStage, ' inside ELSE');
-                            _subStage = 0;
-                            localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', _subStage);
-                            _backGroundScanStage++;
-                            _scanFinished();
-                        }
-                        break;
-                    }
-                    case 1: {
-                        // queue=encore | queue=encore&pn=&cn=&page=2...x
-                        _subStage = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT')) || 0;
-
-                        if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.1 update PAGE_MAX');
-
-                        /* NOTE: The pagination of the last scanned page is used. It cannot
-                           be read from the iframe anymore, because the iframe is removed
-                           after every scanned page (see createScanIframe()). */
-                        const _pagedate = lastScanPaginationData;
-                        if (_pagedate) {
-                            _PageMax = _pagedate.maxPage;
-                            localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_MAX', _PageMax);
-                        } else {
-                            _PageMax = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX')) || 0;
-                        }
-
-                        if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.1 with _subStage: ', _subStage);
-
-                        // Wenn die aktuelle Seite die erste ist oder die maximale Seitenzahl nicht erreicht ist, wird gescannt
-                        if (_subStage == 0 || _subStage < _PageMax) {
-                            updateBackgroundScanScreenText(`${_scannerName} encore Page: ${_subStage + 1} / ${_PageMax}`);
-                            backGroundTileScanner(`${_baseUrl}?queue=encore&pn=&cn=&page=${_subStage + 1}`, (newCount) => {
-                                _scanFinished(newCount);
-                            });
-                            _subStage++;
-                            localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', _subStage);
-                        } else {
-                            localStorage.setItem('AVE_BACKGROUND_SCAN_LAST_TIME', Date.now());
-                            _subStage = 0;
-                            _backGroundScanStage++;
-                            _scanFinished();
-                        }
-                        break;
-                    }
-                    case 2: {
-                        // qerry about other values (tax, real prize, ....) ~ 20 - 30 Products then loopover to stage 1
-
-                        //Disaled due to Bugs fetching the Tax
-                        _backGroundScanStage++;
-                        _scanFinished();
-                        break;
-                    }
-                    case 3: {
-                        cleanUpDatabase();
-                        _backGroundScanStage++;
-                        _scanFinished();
-                        break;
-                    }
-                    case 4: {
-                        updateBackgroundScanScreenText(
-                            `${_scannerName} Time Waiting: ${_timeConversion(SETTINGS.IdlePeriodAfterScan * 60 * 1000 - TimeWaitingMS)}`
-                        );
-
-                        if (TimeWaitingMin > SETTINGS.IdlePeriodAfterScan) {
-                            _backGroundScanStage = 0;
-                            _subStage = 0;
-                        }
-                        _scanFinished();
-                        break;
-                    }
-                }
-
-                function _scanFinished(newCount) {
-                    if (SETTINGS.DebugLevel > 10)
-                        console.log(
-                            `initBackgroundScan()._scanFinished(): newCount=${newCount} _backGroundScanStage=${_backGroundScanStage} _subStage=${_subStage} AVE_FAST_SCAN_IS_RUNNING=${localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING')}`
-                        );
-                    localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', _backGroundScanStage);
-                    localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', _subStage);
-                    _loopIsWorking = false;
-
-                    if (localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true') {
-                        let _stopFastScan = false;
-
-                        const _backGroundScanStage = localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') || 0;
-                        const _lastBackGroundScanStage = localStorage.getItem('AVE_LAST_BACKGROUND_SCAN_STAGE') || 0;
-                        const _lastScanPageCurrent = localStorage.getItem('AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT') || 0;
-                        const _scanPageCurrent = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT') || 0;
-                        const _newCount = parseInt(newCount || 0, 10) + parseInt(localStorage.getItem('AVE_NEW_COUNT') || 0, 10);
-                        localStorage.setItem('AVE_NEW_COUNT', _newCount);
-
-                        if (SETTINGS.NewItemsNotificationThreshold > 0 && _newCount >= SETTINGS.NewItemsNotificationThreshold) {
-                            const _lastDropMS = Date.now() - (localStorage.getItem('AVE_LAST_DROP') || 0);
-                            const _lastDropMinutes = _lastDropMS / 1000 / 60;
-
-                            if (_lastDropMinutes > SETTINGS.NewItemsNotificationRepititionMinutes) {
-                                localStorage.setItem('AVE_LAST_DROP', Date.now());
-
-                                if (SETTINGS.GotifyUrl) {
-                                    gotifyNotification(
-                                        `Possible new product drop starting, Amazon Vine Explorer has ${_newCount} new products`
-                                    );
-                                }
-
-                                if (SETTINGS.EnableDesktopNotifikation) {
-                                    desktopNotifikation(
-                                        `Amazon Vine Explorer - ${AVE_VERSION}`,
-                                        `Possible new product drop starting, Amazon Vine Explorer has ${_newCount} new products`
-                                    );
-                                }
-                            }
-                        }
-
-                        if (_backGroundScanStage > 1) {
-                            _stopFastScan = true;
-                        }
-                        if (SETTINGS.DebugLevel > 10)
-                            console.log(
-                                `checking fast scan AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS=${localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS')} _backGroundScanStage=${_backGroundScanStage} newCount=${newCount}`
-                            );
-                        if (
-                            _backGroundScanStage > 0 &&
-                            newCount === 0 &&
-                            (!localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS').match(/^[-0-9]+(:[-0-9]+){3}/) ||
-                                localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS') == '0:0:0:0')
-                        ) {
-                            _stopFastScan = true;
-                        }
-                        if (
-                            _backGroundScanStage == 1 &&
-                            _lastBackGroundScanStage == 1 &&
-                            _scanPageCurrent > 0 &&
-                            _scanPageCurrent - _lastScanPageCurrent >= 0
-                        ) {
-                            _stopFastScan = true;
-                        }
-
-                        if (_backGroundScanStage > 0 && newCount >= 0) {
-                            localStorage.setItem(
-                                'AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS',
-                                (localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS') + ':' + newCount).replace(/^[^:]+:/, '')
-                            );
-                        }
-
-                        if (_stopFastScan) {
-                            if (SETTINGS.DebugLevel > 10)
-                                console.log(
-                                    `stopping fast scan AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS=${localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS')} _backGroundScanStage=${_backGroundScanStage} newCount=${newCount}`
-                                );
-                            localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
-                            localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', _lastScanPageCurrent);
-                            localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', _lastBackGroundScanStage);
-                            localStorage.setItem('AVE_FAST_SCAN_LAST_TIME', Date.now());
-                        }
-                    }
-
-                    const delay = SETTINGS.BackGroundScanDelayPerPage + Math.round(Math.random() * SETTINGS.BackGroundScannerRandomness);
-                    const timeElapsed = performance.now() - startTime;
-                    if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): Scantime: ', timeElapsed, ' Delay: ', delay);
-
-                    backGroundScanTimeout = setTimeout(initBackgroundScanSubFunctionScannerLoop, delay);
-                }
-
-                function _timeConversion(duration) {
-                    const portions = [];
-
-                    const msInHour = 1000 * 60 * 60;
-                    const hours = Math.trunc(duration / msInHour);
-                    if (hours > 0) {
-                        portions.push(hours + 'h');
-                        duration = duration - hours * msInHour;
-                    }
-
-                    const msInMinute = 1000 * 60;
-                    const minutes = Math.trunc(duration / msInMinute);
-                    if (minutes > 0) {
-                        portions.push(minutes + 'm');
-                        duration = duration - minutes * msInMinute;
-                    }
-
-                    const seconds = Math.trunc(duration / 1000);
-                    if (seconds > 0) {
-                        portions.push(seconds + 's');
-                    }
-
-                    return portions.join(' ');
                 }
             }
         }
-    }, 250); //scan every 250ms
+
+        if (_backGroundScanStage > 1) {
+            _stopFastScan = true;
+        }
+        if (SETTINGS.DebugLevel > 10)
+            console.log(
+                `checking fast scan AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS=${localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS')} _backGroundScanStage=${_backGroundScanStage} newCount=${newCount}`
+            );
+        if (
+            _backGroundScanStage > 0 &&
+            newCount === 0 &&
+            (!localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS').match(/^[-0-9]+(:[-0-9]+){3}/) ||
+                localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS') == '0:0:0:0')
+        ) {
+            _stopFastScan = true;
+        }
+        if (
+            _backGroundScanStage == 1 &&
+            _lastBackGroundScanStage == 1 &&
+            _scanPageCurrent > 0 &&
+            _scanPageCurrent - _lastScanPageCurrent >= 0
+        ) {
+            _stopFastScan = true;
+        }
+
+        if (_backGroundScanStage > 0 && newCount >= 0) {
+            localStorage.setItem(
+                'AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS',
+                (localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS') + ':' + newCount).replace(/^[^:]+:/, '')
+            );
+        }
+
+        if (_stopFastScan) {
+            if (SETTINGS.DebugLevel > 10)
+                console.log(
+                    `stopping fast scan AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS=${localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS')} _backGroundScanStage=${_backGroundScanStage} newCount=${newCount}`
+                );
+            localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
+            localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', _lastScanPageCurrent);
+            localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', _lastBackGroundScanStage);
+            localStorage.setItem('AVE_FAST_SCAN_LAST_TIME', Date.now());
+        }
+    }
+
+    const _delay = SETTINGS.BackGroundScanDelayPerPage + Math.round(Math.random() * SETTINGS.BackGroundScannerRandomness);
+    const _timeElapsed = performance.now() - iteration.startTime;
+    if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): Scantime: ', _timeElapsed, ' Delay: ', _delay);
+
+    backGroundScanTimeout = setTimeout(() => {
+        backgroundScanLoop(baseUrl, state);
+    }, _delay);
+}
+
+/**
+ * Converts a duration in milliseconds into a readable string.
+ *
+ * @param {number} duration The duration in milliseconds
+ * @returns {string} The duration as a string (e.g. "1h 5m 3s")
+ */
+function formatDuration(duration) {
+    const portions = [];
+
+    const msInHour = 1000 * 60 * 60;
+    const hours = Math.trunc(duration / msInHour);
+    if (hours > 0) {
+        portions.push(hours + 'h');
+        duration = duration - hours * msInHour;
+    }
+
+    const msInMinute = 1000 * 60;
+    const minutes = Math.trunc(duration / msInMinute);
+    if (minutes > 0) {
+        portions.push(minutes + 'm');
+        duration = duration - minutes * msInMinute;
+    }
+
+    const seconds = Math.trunc(duration / 1000);
+    if (seconds > 0) {
+        portions.push(seconds + 's');
+    }
+
+    return portions.join(' ');
 }
 
 /**

@@ -86,6 +86,8 @@ const mainFile = [
     'aveFixRelativeVineLinks',
     'aveResolveUrl',
     'aveUrlWithPage',
+    'backgroundScanFinished',
+    'backgroundScanLoop',
     'backGroundTileScanner',
     'btnEventhandlerClick',
     'cleanUpDatabase',
@@ -112,27 +114,37 @@ const mainFile = [
     'exportDatabase',
     'favStarEventhandlerClick',
     'fixProductImageUrl',
+    'formatDuration',
     'getContrastColor',
     'getPageinationData',
     'getTilesFromURL',
     'getUrlParameter',
+    'getBackgroundScanStageZeroSites',
     'gotifyNotification',
     'handleAutoScan',
     'handleInfiniteScroll',
     'importDatabase',
     'init',
     'initBackgroundScan',
+    'initBackgroundScanStorage',
     'initTileEventHandlers',
     'injectDarkMode',
     'markAllCurrentDatabaseProductsAsSeen',
     'markAllCurrentSiteProductsAsSeen',
     'parseTileData',
     'populateSettingsContainer',
+    'prepareFastScan',
+    'prepareScanIteration',
     'readFile',
     'reloadPageWithSubpageTarget',
     'requestProductDetails',
     'rgbToHex',
     'rgbaToHex',
+    'scanStageCleanup',
+    'scanStageEncore',
+    'scanStageIdle',
+    'scanStageSkip',
+    'scanStageZero',
     'shareEventHandlerClick',
     'showAutoScanScreen',
     'showBackgroundScanScreen',
@@ -190,6 +202,11 @@ function foreignGlobals(currentFile) {
 }
 
 export default [
+    {
+        // The local notes folder contains helper scripts and measurements.
+        // It is not part of the repository and must not be linted.
+        ignores: ['.unotes/**']
+    },
     pluginJs.configs.recommended,
     {
         files: allProjectFiles,
