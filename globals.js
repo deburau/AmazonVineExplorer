@@ -40,7 +40,8 @@ const AUTO_SCAN_PAGE_CURRENT = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE
 const AUTO_SCAN_PAGE_MAX = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_MAX')) || -1;
 const PAGE_LOAD_TIMESTAMP = Date.now();
 
-// Obsolete sobald die Datenbank über Tampermonkey läuft
+// NOTE: The database is still stored in IndexedDB of the browser and not in the
+// storage of the userscript manager, so these constants are needed.
 const DATABASE_NAME = 'VineVoiceExplorer';
 const DATABASE_OBJECT_STORE_NAME = `${DATABASE_NAME}_Objects`;
 const DATABASE_VERSION = 4;
@@ -83,8 +84,15 @@ const AVE_SESSION_TIMEOUT = 10000;
 // Shared event bus for cross-file coordination.
 const ave_eventhandler = new AVE_EVENTHANDLER();
 
+/**
+ * Shows the branding of AVE in the bottom left corner of the page.
+ *
+ * The badge is green if this tab is the master session (the one that runs the
+ * background scan) and red if it is not, so that only one tab does the work.
+ */
 function addBranding() {
-    // sometimes document.body is null. I don't know why, but at least, it does not throw an error then
+    // NOTE: The document body is not always available, depending on when the
+    // function is called. Without this check the function would throw an error.
     if (!document?.body) return;
 
     // The branding is only shown on the vine pages.
@@ -145,10 +153,10 @@ function addBranding() {
     _text.style.position = 'fixed';
     _text.style.bottom = '10px';
     _text.style.left = '10px';
-    _text.style.color = 'blue'; // Textfarbe
+    _text.style.color = 'blue'; // Text colour
     _text.style.backgroundColor = _brandingColor;
     _text.style.textAlign = 'left';
-    _text.style.fontSize = '20px'; // Ändere die Schriftgröße hier
+    _text.style.fontSize = '20px'; // Font size of the branding
     _text.style.zIndex = '2000';
     _text.style.borderRadius = '3px';
     _text.innerHTML = `
@@ -181,12 +189,12 @@ unsafeWindow.ave.storeSettingsAsJsonString = () => {
     console.log('The settings are stored as a JSON string now. Reload the page.');
 };
 
-/* Small randomized delay reduces race conditions when multiple tabs start.
-
-   KNOWN: The session list is stored as a single JSON blob in localStorage without
-   compare-and-swap, so two tabs writing at the same time could overwrite each other.
-   This is ignored because only the master tab writes meaningful state and the session
-   list is rebuilt by the heartbeat within one second anyway. */
+// Small randomized delay reduces race conditions when multiple tabs start.
+//
+//   KNOWN: The session list is stored as a single JSON blob in localStorage without
+//   compare-and-swap, so two tabs writing at the same time could overwrite each other.
+//   This is ignored because only the master tab writes meaningful state and the session
+//   list is rebuilt by the heartbeat within one second anyway.
 setTimeout(
     () => {
         if (!localStorage.getItem('AVE_SESSIONS')) {
@@ -213,11 +221,11 @@ setTimeout(
             addBranding();
         }
 
-        /* Heartbeat: keep session list fresh and elect a master when needed.
-       KNOWN: The heartbeat also runs on Amazon shopping pages (SITE_IS_VINE is only
-       checked inside the interval). This causes a small overhead and unnecessary
-       session entries for shopping tabs, but it is needed to keep the master election
-       consistent when the user navigates from shopping back to a Vine page. */
+        // Heartbeat: keep session list fresh and elect a master when needed.
+        //   KNOWN: The heartbeat also runs on Amazon shopping pages (SITE_IS_VINE is only
+        //   checked inside the interval). This causes a small overhead and unnecessary
+        //   session entries for shopping tabs, but it is needed to keep the master election
+        //   consistent when the user navigates from shopping back to a Vine page.
         setInterval(() => {
             //
             let _sessions;
@@ -404,9 +412,9 @@ SETTINGS_USERCONFIG_DEFINES.push({
     name: 'Enable Background Scan',
     description: 'Enables the Background scan, if disabled you will find a Button for Autoscan on the Vine Website'
 });
-/* NOTE: 'EnableInfiniteScrollLiveQuerry' is a known typo for '...Query'. It is used
-   consistently in globals.js and VineExplorer.user.js and is part of the persisted
-   settings, so renaming it would invalidate existing user configurations. */
+// NOTE: 'EnableInfiniteScrollLiveQuerry' is a known typo for '...Query'. It is used
+//   consistently in globals.js and VineExplorer.user.js and is part of the persisted
+//   settings, so renaming it would invalidate existing user configurations.
 SETTINGS_USERCONFIG_DEFINES.push({
     key: 'EnableInfiniteScrollLiveQuerry',
     type: 'bool',
@@ -663,12 +671,12 @@ class SETTINGS_DEFAULT {
     DisableBtnSeller = false;
     EnableTopLogoChange = true;
     EnableBackgroundScan = true;
-    /* NOTE: Known typo 'LiveQuerry' instead of 'LiveQuery'. Kept for backwards
-       compatibility with already stored settings (see note above). */
+    // NOTE: Known typo 'LiveQuerry' instead of 'LiveQuery'. Kept for backwards
+    //   compatibility with already stored settings (see note above).
     EnableInfiniteScrollLiveQuerry = false;
     EnableInfiniteSpinnerFix = true;
-    /* NOTE: Known typo 'Notifikation' instead of 'Notification'. Kept for backwards
-       compatibility with already stored settings (see note above). */
+    // NOTE: Known typo 'Notifikation' instead of 'Notification'. Kept for backwards
+    //   compatibility with already stored settings (see note above).
     EnableDesktopNotifikation = false;
     EnableAutoMarkFavorite = false;
     EnableCleanupFavorites = false;
@@ -754,9 +762,9 @@ class SETTINGS_DEFAULT {
 const SETTINGS = new SETTINGS_DEFAULT();
 
 // The settings are written to the GM storage when the save event is fired.
-/* NOTE: GM_setValue (the old synchronous API) is used here, not GM.setValue.
-   Therefore SETTINGS.save(true) does not return a Promise and await would have
-   no effect. The fire-and-forget pattern is safe for this synchronous API. */
+// NOTE: GM_setValue (the old synchronous API) is used here, not GM.setValue.
+//   Therefore SETTINGS.save(true) does not return a Promise and await would have
+//   no effect. The fire-and-forget pattern is safe for this synchronous API.
 ave_eventhandler.on('ave-save-cofig', () => {
     console.log('Got Save Event');
     SETTINGS.save(true);
@@ -914,16 +922,30 @@ function waitForStyleElement(selector, cb) {
     return waitForHtmlElement(selector, cb, document, 10000, false);
 }
 
-// Wrap waitForHtmlElement in a Promise to use it with async/await
-// NOTE: waitForHtmlElement() is async, so it can reject. The rejection has to be
-// forwarded here, otherwise this promise would never settle and the caller would
-// wait forever (e.g. if the element or the document root is undefined).
+/**
+ * Waits for an element and resolves with it, so that it can be used with
+ * async/await.
+ *
+ * NOTE: waitForHtmlElement() is async, so it can reject. The rejection has to be
+ * forwarded here, otherwise this promise would never settle and the caller would
+ * wait forever (e.g. if the element or the document root is undefined).
+ *
+ * @param {string} selector The CSS selector of the element
+ * @param {Document|Element} altDocument The document root to search in
+ * @param {number} timeout The timeout in milliseconds
+ * @param {boolean} logTimeout Set to false to suppress the warning
+ * @returns {Promise<Element>} The element, or null if it was not found
+ */
 async function waitForHtmlElementPromise(selector, altDocument = document, timeout = 10000, logTimeout = true) {
     return new Promise((resolve, reject) => {
         waitForHtmlElement(selector, resolve, altDocument, timeout, logTimeout).catch(reject);
     });
 }
 
+/**
+ * Returns the country of the current Amazon page, based on its hostname.
+ * @returns {string} The two letter country code (e.g. "DE" or "UK")
+ */
 function getCountry() {
     return document.location.hostname
         .replace(/.*amazon\./i, '')
@@ -937,16 +959,23 @@ function getCountry() {
         .replace(/co.jp$/, 'JP');
 }
 
-// Function to find the active menu button (used for top pagination)
+/**
+ * Finds the id of the menu button of the Vine navigation that is currently
+ * active. It is used to decide whether the pagination can be shown on top of
+ * the page.
+ *
+ * @returns {Promise<string|null>} The id of the active button, or null if none
+ *                               of the buttons was found
+ */
 async function findActiveMenuButton() {
-    // Array of menu IDs
+    // The ids of the buttons of the Vine navigation
     let buttonIds;
     switch (getCountry()) {
         case 'DE':
-            /* NOTE: 'vvp-all-items-button' is the outdated German id. Current Vine
-               pages use 'vvp-items-button--all' like other locales. The mismatch
-               means findActiveMenuButton() may return null for DE, but the only
-               caller (EnablePaginationTop) degrades gracefully. */
+            // NOTE: 'vvp-all-items-button' is the outdated German id. Current Vine
+            //   pages use 'vvp-items-button--all' like other locales. The mismatch
+            //   means findActiveMenuButton() may return null for DE, but the only
+            //   caller (EnablePaginationTop) degrades gracefully.
             buttonIds = ['vvp-items-button--recommended', 'vvp-all-items-button'];
             break;
         default:
@@ -1078,9 +1107,9 @@ async function fastStyleChanges() {
         if (SETTINGS.EnableTopLogoChange) {
             waitForStyleElement('#vvp-logo-link > img', (elem) => {
                 if (elem) {
-                    /* NOTE: The 'dev-main' branch no longer exists; this URL returns 404.
-                       Fixing it would require changing CDN URLs and testing across
-                       regions, so it is left as a known warning. */
+                    // NOTE: The 'dev-main' branch no longer exists; this URL returns 404.
+                    //   Fixing it would require changing CDN URLs and testing across
+                    //   regions, so it is left as a known warning.
                     elem.src =
                         'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_notification_image.png';
                     elem.style.height = '100px';

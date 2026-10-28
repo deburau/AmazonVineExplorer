@@ -319,7 +319,10 @@ const I18N = {
     }
 };
 
-// Resolve current UI language from settings, with a safe fallback.
+/**
+ * Resolves the current UI language from the settings, with a safe fallback.
+ * @returns {string} The language code ("de" or "en")
+ */
 function detectLanguage() {
     if (!SETTINGS || typeof SETTINGS.UI_LANGUAGE === 'undefined') {
         return 'de';
@@ -329,7 +332,16 @@ function detectLanguage() {
     return 'de';
 }
 
-// Translation lookup with optional formatter functions.
+/**
+ * Looks up a translation and formats it if the entry is a function.
+ *
+ * If the translation is missing, the key is returned and a warning is logged.
+ *
+ * @param {string} category The category of the translation (e.g. "buttons")
+ * @param {string} key The key of the translation
+ * @param {...any} args The arguments of the formatter function
+ * @returns {string} The translated text
+ */
 function t(category, key, ...args) {
     const lang = detectLanguage();
     if (!I18N[lang] || !I18N[lang][category]) {

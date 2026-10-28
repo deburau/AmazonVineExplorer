@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.48
+// @version      0.12.1.49
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -38,7 +38,8 @@
 
 /* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
-   appendInfiniteScrollTiles, backGroundTileScanner, btnEventhandlerClick, cleanUpDatabase,
+   appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveResolveUrl, aveUrlWithPage,
+   backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct, cleanUpDatabase,
    colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
    createProductSite, createSettingsKeywordsTableElement, createSettingsMenuElement,
@@ -46,17 +47,16 @@
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, getContrastColor, getPageinationData,
    getTilesFromURL, getUrlParameter, gotifyNotification, handleAutoScan, handleInfiniteScroll,
-   importDatabase, init, initBackgroundScan, initTileEventHandlers, injectDarkMode,
-   markAllCurrentDatabaseProductsAsSeen, markAllCurrentSiteProductsAsSeen, parseTileData,
+   handleFastScanFinished, importDatabase, init, initBackgroundScan, initNavigationButtons,
+   initPagination, initSearchBar, initTileEventHandlers, initTileParsing, injectDarkMode,
+   markAllCurrentDatabaseProductsAsSeen, markAllCurrentSiteProductsAsSeen,
+   notifyAboutNewProducts, notifyAboutProductDrop, notifyAboutUnseenItems, parseTileData,
    populateSettingsContainer, readFile, reloadPageWithSubpageTarget, requestProductDetails,
-   rgbToHex, rgbaToHex, shareEventHandlerClick, showAutoScanScreen, showBackgroundScanScreen,
-   sort_by_key, startAutoScan, stickElementToTopScrollEVhandler, timeAgo, translate,
-   updateAutoScanScreenText, updateBackgroundScanScreenText, updateFavoritesBtn,
-   updateNewProductsBtn, updateTileStyle, stopBackgroundScan, aveFixRelativeVineLinks,
-   aveResolveUrl, aveUrlWithPage, notifyAboutUnseenItems, notifyAboutNewProducts,
-   searchKeywordsInProducts, checkKeywordsForProduct, stringToRegex,
-   notifyAboutProductDrop, shouldStopFastScan, stopFastScan, handleFastScanFinished,
-   initTileParsing, initNavigationButtons, initSearchBar, initPagination */
+   rgbToHex, rgbaToHex, searchKeywordsInProducts, shareEventHandlerClick,
+   shouldStopFastScan, showAutoScanScreen, showBackgroundScanScreen, sort_by_key,
+   startAutoScan, stickElementToTopScrollEVhandler, stopBackgroundScan, stopFastScan,
+   stringToRegex, timeAgo, translate, updateAutoScanScreenText, updateBackgroundScanScreenText,
+   updateFavoritesBtn, updateNewProductsBtn, updateTileStyle */
 console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 
 /**
@@ -100,10 +100,10 @@ let database;
     try {
         database = await DB_HANDLER.init(DATABASE_NAME, DATABASE_OBJECT_STORE_NAME, DATABASE_VERSION);
 
-        /* Prevent duplicate initialization when multiple DOM targets appear.
-           NOTE: The check `if (_execLock) return; _execLock = true;` is atomic enough
-           because JS in the browser is single-threaded. Both observers run sequentially
-           in the event loop, so a true race condition cannot occur in practice. */
+        // Prevent duplicate initialization when multiple DOM targets appear.
+        //   NOTE: The check `if (_execLock) return; _execLock = true;` is atomic enough
+        //   because JS in the browser is single-threaded. Both observers run sequentially
+        //   in the event loop, so a true race condition cannot occur in practice.
         let _execLock = false;
         console.log('Lets Check where we are....');
         if (SITE_IS_VINE) {
@@ -273,12 +273,18 @@ window.onscroll = () => {
 let blockHandleInfiniteScroll = false;
 let infiniteScrollLastPreloadedPage = 1;
 let infiniteScrollMaxPreloadPage = 125; // Hardcoded for scrolltest, must later get extracted from Pagination
-/* NOTE: 'inifiniteScrollBlockAppend' is a known typo for 'infiniteScroll...'. It is
-   consistent across all usages in this file, so renaming it would be purely cosmetic
-   and risks introducing regressions. */
+// NOTE: 'inifiniteScrollBlockAppend' is a known typo for 'infiniteScroll...'. It is
+//   consistent across all usages in this file, so renaming it would be purely cosmetic
+//   and risks introducing regressions.
 let inifiniteScrollBlockAppend = false;
 let infiniteScrollTilesBufferArray = [];
 
+/**
+ * Adds the styles of the dark mode to the page.
+ *
+ * The rules are inserted at the beginning of the head, so that the styles of
+ * Amazon cannot overwrite them.
+ */
 function injectDarkMode() {
     const _darkModeIgnoreBackgroundColor = `
     i,
@@ -355,14 +361,15 @@ function injectDarkMode() {
       filter: invert(1) !important;
     }
     `;
-    // Erstelle ein neues Style-Element
+    // Create a new style element
     var styleElement = document.createElement('style');
     styleElement.type = 'text/css';
 
-    // Füge die CSS-Variable und den Wert am Anfang des Style-Elements hinzu
+    // The style element holds the CSS variables and the rules of the dark mode
     styleElement.textContent = darkCSS;
 
-    // Füge das Style-Element am Anfang des <head>-Tags hinzu
+    // The style element has to be the first element of the head, so that the
+    // rules of Amazon cannot overwrite it
     document.head.insertBefore(styleElement, document.head.firstChild);
     document.body.classList.add('ave-color', 'ave-background-color');
 }
@@ -398,9 +405,9 @@ function handleInfiniteScroll() {
             blockHandleInfiniteScroll = false;
             return;
         } else if (infiniteScrollTilesBufferArray.length < 1000 && infiniteScrollLastPreloadedPage < infiniteScrollMaxPreloadPage) {
-            /* NOTE: The unescaped dots in the regex match any character, but Amazon's
-               URL structure is stable. A null return from .exec() is theoretically
-               possible only if Amazon changes domains, in which case AVE is unusable. */
+            // NOTE: The unescaped dots in the regex match any character, but Amazon's
+            //   URL structure is stable. A null return from .exec() is theoretically
+            //   possible only if Amazon changes domains, in which case AVE is unusable.
             const _baseUrl = /(http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items)/.exec(window.location.href)[1];
             infiniteScrollLastPreloadedPage++;
             getTilesFromURL(`${_baseUrl}?queue=encore&pn=&cn=&page=${infiniteScrollLastPreloadedPage}`, (tiles) => {
@@ -415,6 +422,11 @@ function handleInfiniteScroll() {
     }
 }
 
+/**
+ * Reads a parameter from the query string of the current URL.
+ * @param {string} name The name of the parameter
+ * @returns {string|null} The value of the parameter, or null if it is not set
+ */
 function getUrlParameter(name) {
     const _queryString = window.location.search;
     const _urlParams = new URLSearchParams(_queryString);
@@ -673,6 +685,14 @@ async function parseTileData(tile) {
     }
 }
 
+/**
+ * Reloads the page and tells it to show the given subpage of AVE.
+ *
+ * The subpage is passed as a parameter of the URL, because the page has to be
+ * reloaded to show the products of the database instead of the ones of Amazon.
+ *
+ * @param {number} target The subpage (a value of PAGETYPE)
+ */
 function reloadPageWithSubpageTarget(target) {
     if (window.location.href.includes('?')) {
         window.location.href = window.location.href + `&ave-subpage=${target}`;
@@ -681,6 +701,12 @@ function reloadPageWithSubpageTarget(target) {
     }
 }
 
+/**
+ * Adds the buttons on the left side of the page (mark as seen, mark all as
+ * seen and back to top).
+ *
+ * @param {boolean} forceClean Set to true to remove the existing buttons
+ */
 function addLeftSideButtons(forceClean) {
     const _nodesContainer = document.getElementById('vvp-browse-nodes-container');
     if (!_nodesContainer) return;
@@ -811,6 +837,15 @@ async function markAllCurrentDatabaseProductsAsSeen() {
     await Promise.allSettled(_workersProms);
 }
 
+/**
+ * Creates a button in the style of the buttons of Amazon.
+ *
+ * @param {string} text The text of the button
+ * @param {string} id The id of the button
+ * @param {string} style The inline style of the button
+ * @param {function} clickHandler The function that is called on a click
+ * @returns {Element} The created button
+ */
 function createButton(text, id, style, clickHandler) {
     const _btnSpan = document.createElement('span');
     _btnSpan.setAttribute('id', id);
@@ -833,6 +868,14 @@ function createButton(text, id, style, clickHandler) {
     return _btnSpan;
 }
 
+/**
+ * Creates the tile of a product from the data of the database.
+ *
+ * @param {Product} product The product of the tile
+ * @param {number} btnID The id of the button of the tile
+ * @param {function} cb The function that is called with the created tile
+ * @returns {Promise<Element>} The created tile
+ */
 async function createTileFromProduct(product, btnID, cb) {
     if (!product) {
         throw new Error('createTileFromProduct(): no valid product element');
@@ -910,6 +953,13 @@ async function createTileFromProduct(product, btnID, cb) {
     });
 }
 
+/**
+ * Creates the star that marks a product as favorite.
+ *
+ * @param {Product} prod The product of the tile
+ * @param {number} index The id of the star
+ * @returns {Element} The created star
+ */
 function createFavStarElement(prod, index = Math.round(Math.random() * 10000)) {
     const _favElement = document.createElement('div');
     _favElement.setAttribute('id', `p-fav-${index || Math.round(Math.random() * 5000)}`);
@@ -920,10 +970,25 @@ function createFavStarElement(prod, index = Math.round(Math.random() * 10000)) {
     return _favElement;
 }
 
+/**
+ * Creates the element that shows the date of the first or the last sighting.
+ *
+ * @param {Product} prod The product of the tile
+ * @param {number} index The id of the element
+ * @returns {Element} The created element
+ */
 function createFirstSeenElement(prod, index = Math.round(Math.random() * 10000)) {
     return createTimeSeenElement(prod, index, true);
 }
 
+/**
+ * Creates the element that shows how long ago the product was seen.
+ *
+ * @param {Product} prod The product of the tile
+ * @param {number} index The id of the element
+ * @param {boolean} showFirstSeen true, if the first sighting should be shown
+ * @returns {Element} The created element
+ */
 function createTimeSeenElement(prod, index = Math.round(Math.random() * 10000), showFirstSeen) {
     const _showFirstSeen = showFirstSeen === false || showFirstSeen === true ? showFirstSeen : SETTINGS.ShowFirstSeen || false;
 
@@ -940,6 +1005,11 @@ function createTimeSeenElement(prod, index = Math.round(Math.random() * 10000), 
     return _timeSeenElement;
 }
 
+/**
+ * Formats a timestamp as a readable duration (e.g. "3 days ago").
+ * @param {number} date The timestamp in seconds
+ * @returns {string} The formatted duration
+ */
 function timeAgo(date) {
     const seconds = Math.floor((new Date() - date) / 1000);
 
@@ -987,6 +1057,13 @@ function timeAgo(date) {
     return 'just now';
 }
 
+/**
+ * Creates the button that shares the product.
+ *
+ * @param {Product} prod The product of the tile
+ * @param {number} index The id of the button
+ * @returns {Element} The created button
+ */
 function createShareElement(prod, index = Math.round(Math.random() * 10000)) {
     const _shareElement = document.createElement('div');
     _shareElement.setAttribute('id', `ave-p-share-${index || Math.round(Math.random() * 5000)}`);
@@ -999,6 +1076,11 @@ function createShareElement(prod, index = Math.round(Math.random() * 10000)) {
     return _shareElement;
 }
 
+/**
+ * Handles a click on the share button of a tile.
+ * @param {Event} event The click event
+ * @param {Product} _data The product of the tile
+ */
 function shareEventHandlerClick(event, _data) {
     if (_data.recommendation_id) {
         if (SETTINGS.DebugLevel > 1) console.log('[AVE]', _data);
@@ -1088,8 +1170,14 @@ ${newUrl}`;
     }
 }
 
+/**
+ * Creates the element that shows the tax prize of the product.
+ *
+ * @param {Product} prod The product of the tile
+ * @param {number} index The id of the element
+ * @returns {Element} The created element
+ */
 function createTaxInfoElement(prod, index = Math.round(Math.random() * 10000)) {
-    if (SETTINGS.DebugLevel > 10) 'Called createTaxInfo()';
     let _currencySymbol = '';
     if (prod.data_tax_currency && prod.data_tax_currency == 'EUR') _currencySymbol = '€';
 
@@ -1101,19 +1189,32 @@ function createTaxInfoElement(prod, index = Math.round(Math.random() * 10000)) {
     _taxElement_span.setAttribute('id', `ave-taxinfo-${index}-text`);
     _taxElement_span.classList.add('ave-taxinfo-text');
     const _prize = prod.data_estimated_tax_prize;
-    if (SETTINGS.DebugLevel > 10) console.log('Called createTaxInfo(): We have a Taxprize of: ', _prize);
+    if (SETTINGS.DebugLevel > 10) console.log('createTaxInfoElement(): We have a Taxprize of: ', _prize);
     _taxElement_span.innerText = `Tax Price: ${typeof _prize == 'number' ? Intl.NumberFormat(undefined, { minimumFractionDigits: 2 }).format(_prize) : '--.--'} ${_currencySymbol}`;
-    if (SETTINGS.DebugLevel > 10) console.log('createTaxInfo(): After innerText');
+    if (SETTINGS.DebugLevel > 10) console.log('createTaxInfoElement(): After innerText');
 
     _taxElement.appendChild(_taxElement_span);
-    if (SETTINGS.DebugLevel > 10) console.log('createTaxInfo(): END', _taxElement);
+    if (SETTINGS.DebugLevel > 10) console.log('createTaxInfoElement(): END', _taxElement);
     return _taxElement;
 }
 
+/**
+ * Inserts an element directly after another one.
+ * @param {Element} referenceNode The element to insert after
+ * @param {Element} newNode The element to insert
+ */
 function insertHtmlElementAfter(referenceNode, newNode) {
     referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
 }
 
+/**
+ * Shows a list of products (new entries, favorites or search result) instead of
+ * the products of Amazon.
+ *
+ * @param {number} siteType The type of the site (a value of PAGETYPE)
+ * @param {Product[]} productArray The products to show
+ * @param {function} cb The function that is called when the list is complete
+ */
 async function createProductSite(siteType, productArray, cb) {
     if (!productArray) return;
 
@@ -1154,9 +1255,9 @@ async function createProductSite(siteType, productArray, cb) {
 
     // Items Grid Container
     const _tilesContainer = document.getElementById('vvp-items-grid-container');
-    /* NOTE: If the container is missing we trigger a reload, but JS execution
-       continues briefly. In practice these DOM elements always exist on loaded
-       Vine pages, so the TypeError below is a theoretical fallback only. */
+    // NOTE: If the container is missing we trigger a reload, but JS execution
+    //   continues briefly. In practice these DOM elements always exist on loaded
+    //   Vine pages, so the TypeError below is a theoretical fallback only.
     if (!_tilesContainer) reloadPageWithSubpageTarget(siteType);
 
     // Edit Top Line
@@ -1167,8 +1268,8 @@ async function createProductSite(siteType, productArray, cb) {
 
     const _tilesGrid = document.getElementById('vvp-items-grid');
     if (!_tilesGrid) reloadPageWithSubpageTarget(siteType);
-    /* NOTE: See above — the reload is a fallback. In practice _tilesGrid is never
-       null here, so the following line is safe. */
+    // NOTE: See above — the reload is a fallback. In practice _tilesGrid is never
+    //   null here, so the following line is safe.
     _tilesGrid.innerHTML = '';
 
     let _index = 0;
@@ -1192,6 +1293,15 @@ async function createProductSite(siteType, productArray, cb) {
     addLeftSideButtons(true);
 }
 
+/**
+ * Prepares the page for the infinite scroll of the products.
+ *
+ * The pagination of Amazon is removed, because the products are appended while
+ * the user scrolls.
+ *
+ * @param {number} siteType The type of the site (a value of PAGETYPE)
+ * @param {function} cb The function that is called with the tile container
+ */
 async function createInfiniteScrollSite(siteType, cb) {
     if (SETTINGS.DebugLevel > 10) console.log(`Called createInfiniteScrollSite()`);
 
@@ -1225,8 +1335,8 @@ async function createInfiniteScrollSite(siteType, cb) {
 
     // Items Grid Container
     const _tilesContainer = document.getElementById('vvp-items-grid-container');
-    /* NOTE: See createProductSite() for the same pattern. In practice the DOM is
-       always present when this code runs, making the reload a theoretical fallback. */
+    // NOTE: See createProductSite() for the same pattern. In practice the DOM is
+    //   always present when this code runs, making the reload a theoretical fallback.
     if (!_tilesContainer) reloadPageWithSubpageTarget(siteType);
 
     // Edit Top Line
@@ -1237,15 +1347,21 @@ async function createInfiniteScrollSite(siteType, cb) {
 
     const _tilesGrid = document.getElementById('vvp-items-grid');
     if (!_tilesGrid) reloadPageWithSubpageTarget(siteType);
-    /* NOTE: Same as createProductSite(): _tilesGrid is never null in practice. */
+    // NOTE: Same as createProductSite(): _tilesGrid is never null in practice.
     _tilesGrid.innerHTML = '';
 
     addLeftSideButtons(true);
     cb(_tilesGrid);
 }
 
+/**
+ * Appends the buffered tiles to the page, until the content is again above the
+ * visible area.
+ *
+ * @param {function} cb The function that is called when the tiles were added
+ */
 async function appendInfiniteScrollTiles(cb = () => {}) {
-    // So lange tiles hinzufügen bis wir wieder über dem sichtbaren bereich sind
+    // Add tiles until the content is again above the visible area
     if (SETTINGS.DebugLevel > 10) console.log('appendInfiniteScrollTiles(): ', infiniteScrollTilesBufferArray);
     const _tilesContainer = document.getElementById('vvp-items-grid');
 
@@ -1294,8 +1410,6 @@ async function appendInfiniteScrollTiles(cb = () => {}) {
     if (SETTINGS.DebugLevel > 10)
         console.log(`appendInfiniteScrollTiles(): After WHILE: left tile to create: ${infiniteScrollTilesBufferArray.length}`);
     cb(true);
-
-    // },100);
 }
 
 /**
@@ -1303,10 +1417,10 @@ async function appendInfiniteScrollTiles(cb = () => {}) {
  * @readonly
  * @enum {number}
  */
-/* NOTE: 'OROGINAL_POTLUCK' is a known typo for 'ORIGINAL_POTLUCK'. It is kept as-is
-   because the misspelling is consistent across all three usages (definition,
-   detectCurrentPageType, and createProductSite). Changing it now risks breaking any
-   external code or bookmarks that rely on the current enum value. */
+// NOTE: 'OROGINAL_POTLUCK' is a known typo for 'ORIGINAL_POTLUCK'. It is kept as-is
+//   because the misspelling is consistent across all three usages (definition,
+//   detectCurrentPageType, and createProductSite). Changing it now risks breaking any
+//   external code or bookmarks that rely on the current enum value.
 const PAGETYPE = {
     NEW_ITEMS: 0,
     FAVORITES: 1,
@@ -1318,6 +1432,13 @@ const PAGETYPE = {
     ORIGINAL_SELLER: 102
 };
 
+/**
+ * Shows one of the sites of AVE (all products, favorites, new entries or the
+ * result of a search).
+ *
+ * @param {number} type The type of the site (a value of PAGETYPE)
+ * @param {Product[]} [data] The products of a search result
+ */
 function createNewSite(type, data) {
     // Unhightlight nav buttons
     const _btnContainer = document.getElementById('vvp-items-button-container');
@@ -1366,8 +1487,8 @@ function createNewSite(type, data) {
                     _btn.classList.add('a-button-selected');
                     _btn.setAttribute('aria-checked', true);
                 }
-                /* NOTE: Same regex caveat as in handleInfiniteScroll: unescaped dots
-                   are lax, but the URL structure is stable for the Vine platform. */
+                // NOTE: Same regex caveat as in handleInfiniteScroll: unescaped dots
+                //   are lax, but the URL structure is stable for the Vine platform.
                 const _baseUrl = /(http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items)/.exec(
                     window.location.href
                 )[1];
@@ -1414,6 +1535,15 @@ function createNewSite(type, data) {
 }
 
 let lastGetTilesFromURLQuerry = 0;
+/**
+ * Loads a page of the Vine site and extracts its tiles.
+ *
+ * The page is fetched with the request of the userscript manager, so that it
+ * does not need the cookies of the browser.
+ *
+ * @param {string} url The URL of the page
+ * @param {function} cb The function that is called with the tiles
+ */
 function getTilesFromURL(url, cb = (_tilesArray) => {}) {
     if (lastGetTilesFromURLQuerry + SETTINGS.PageLoadMinDelay > Date.now()) {
         const _delay = Math.max(1, lastGetTilesFromURLQuerry + SETTINGS.PageLoadMinDelay - Date.now());
@@ -1435,7 +1565,7 @@ function getTilesFromURL(url, cb = (_tilesArray) => {}) {
                 (itemsContainer) => {
                     if (!itemsContainer) return;
 
-                    if (SETTINGS.DebugLevel > 10) console.log('getTileFromURL(): itemsContainer:', itemsContainer);
+                    if (SETTINGS.DebugLevel > 10) console.log('getTilesFromURL(): itemsContainer:', itemsContainer);
                     const _retArr = [];
                     const _elemArr = itemsContainer.querySelectorAll('.vvp-item-tile');
                     for (let i = 0; i < _elemArr.length; i++) {
@@ -1453,6 +1583,13 @@ function getTilesFromURL(url, cb = (_tilesArray) => {}) {
 }
 
 let lastBtnEventhandlerClickTimeStamp = 0;
+/**
+ * Handles a click on the "more details" button of a tile. It loads the details
+ * of the product from the Vine API and stores them in the database.
+ *
+ * @param {Event} event The click event
+ * @param {Product} data The product of the tile
+ */
 function btnEventhandlerClick(event, data) {
     if (lastBtnEventhandlerClickTimeStamp + 1000 >= Date.now()) return;
     lastBtnEventhandlerClickTimeStamp = Date.now();
@@ -1481,6 +1618,13 @@ function btnEventhandlerClick(event, data) {
     }
 }
 
+/**
+ * Handles a click on the star of a tile. It marks the product as favorite and
+ * removes the mark again on the next click.
+ *
+ * @param {Event} event The click event
+ * @param {Product} data The product of the tile
+ */
 function favStarEventhandlerClick(event, data) {
     if (SETTINGS.DebugLevel > 10) console.log(`called favStarEventhandlerClick(${JSON.stringify(event)}, ${JSON.stringify(data)})`);
     if (data.recommendation_id) {
@@ -1538,6 +1682,9 @@ function updateTileStyle(prod) {
 }
 
 // Adds Eventhandler to Product Buttons
+/**
+ * Adds the event handlers to all tiles of the current page.
+ */
 function initTileEventHandlers() {
     if (SETTINGS.DebugLevel > 10)
         console.log(
@@ -1552,6 +1699,10 @@ function initTileEventHandlers() {
     }
 }
 
+/**
+ * Adds the event handlers to a single tile.
+ * @param {Element} _currTile The tile
+ */
 function addTileEventhandlers(_currTile) {
     if (SETTINGS.DebugLevel > 10) console.log('Tile Event Handler');
     const _btn = _currTile.querySelector('.vvp-details-btn input');
@@ -1606,10 +1757,17 @@ function addTileEventhandlers(_currTile) {
     );
 }
 
+/**
+ * Finishes the initialisation of the page after all tiles were processed.
+ */
 function completeDelayedInit() {
     initTileEventHandlers();
 }
 
+/**
+ * Shows the overlay of the auto scan, which covers the whole page.
+ * @param {string} text The text that is shown in the overlay
+ */
 function showAutoScanScreen(text) {
     const _overlay = document.createElement('div');
     _overlay.style.position = 'fixed';
@@ -1617,17 +1775,17 @@ function showAutoScanScreen(text) {
     _overlay.style.left = '0';
     _overlay.style.width = '100%';
     _overlay.style.height = '100%';
-    _overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'; // Grauer Hintergrund mit Transparenz
-    _overlay.style.zIndex = '1000'; // Stelle sicher, dass das Overlay über anderen Elementen liegt
+    _overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'; // Semi transparent dark background
+    _overlay.style.zIndex = '1000'; // The overlay has to be above the other elements
 
     const _text = document.createElement('div');
     _text.style.position = 'absolute';
     _text.style.top = '50%';
     _text.style.left = '50%';
     _text.style.transform = 'translate(-50%, -50%)';
-    _text.style.color = 'orange'; // Textfarbe
+    _text.style.color = 'orange'; // Text colour
     _text.style.textAlign = 'center';
-    _text.style.fontSize = '50px'; // Ändere die Schriftgröße hier
+    _text.style.fontSize = '50px'; // Font size of the text
     _text.style.lineHeight = '1';
     _text.style.zIndex = '1001';
     const _autoScanText = document.getElementById('ave-autoscan-text');
@@ -1641,6 +1799,10 @@ function showAutoScanScreen(text) {
     document.body.appendChild(_text);
 }
 
+/**
+ * Updates the text of the overlay of the auto scan.
+ * @param {string} text The new text
+ */
 function updateAutoScanScreenText(text = '') {
     const _elem = document.getElementById('ave-autoscan-text');
     _elem.textContent = text;
@@ -1771,14 +1933,14 @@ const AVE_SETTINGS_CSS = `
   color: red;
 }
 
-/* Add this attribute to the element that needs a tooltip */
+// Add this attribute to the element that needs a tooltip
 [data-ave-tooltip] {
   position: relative;
   z-index: 2;
   cursor: pointer;
 }
 
-/* Hide the tooltip content by default */
+// Hide the tooltip content by default
 [data-ave-tooltip]:before,
 [data-ave-tooltip]:after {
   visibility: hidden;
@@ -1786,11 +1948,11 @@ const AVE_SETTINGS_CSS = `
   pointer-events: none;
 }
 
-/* Position tooltip above the element */
+// Position tooltip above the element
 [data-ave-tooltip]:before {
   position: absolute;
   bottom: -50%;
-  /*left: calc(150% + 10px);*/
+  /* left: calc(150% + 10px); */
   margin-bottom: 5px;
   margin-left: calc(100% + 10px);
   padding: 7px;
@@ -1806,11 +1968,11 @@ const AVE_SETTINGS_CSS = `
   line-height: 1.2;
 }
 
-/* Triangle hack to make tooltip look like a speech bubble */
+// Triangle hack to make tooltip look like a speech bubble
 [data-ave-tooltip]:after {
   position: absolute;
   bottom: 25%;
-  /*left: 50%;*/
+  /* left: 50%; */
   margin-left: calc(0% + 5px);
   width: 0;
   border-right: 5px solid hsla(0, 0%, 20%, 0.9);
@@ -1821,7 +1983,7 @@ const AVE_SETTINGS_CSS = `
   line-height: 0;
 }
 
-/* Show tooltip content on hover */
+// Show tooltip content on hover
 [data-ave-tooltip]:hover:before,
 [data-ave-tooltip]:hover:after,
 [data-ave-tooltip]:focus-within:before,
@@ -1947,11 +2109,12 @@ font-weight: bold;
 }
 `;
 
+/**
+ * Adds the panel with the settings of AVE to the tab set of the Vine page.
+ */
 function addAVESettingsMenu() {
     waitForHtmlElement('.a-tab-container.vvp-tab-set-container', (_tabContainer) => {
         if (!_tabContainer) return;
-
-        //const _tabContainer = document.body.querySelector('.a-tab-container.vvp-tab-set-container');
 
         const _boxContainer = document.createElement('div');
         _boxContainer.setAttribute('data-a-name', 'ave-settings');
@@ -2416,6 +2579,14 @@ function createSettingsMenuElement(dat) {
     return _elem;
 }
 
+/**
+ * Creates one row of the table that lists the keywords of a setting.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {number} index The index of the keyword in the list
+ * @param {string} entry The keyword
+ * @returns {Element} The created row
+ */
 function createSettingsKeywordsTableElement(dat, index, entry) {
     const _tableRow = document.createElement('tr');
     _tableRow.setAttribute('index', index);
@@ -2440,20 +2611,45 @@ function createSettingsKeywordsTableElement(dat, index, entry) {
     return _tableRow;
 }
 
+/**
+ * Converts one channel of a colour into its hexadecimal representation.
+ * @param {number} c The value of the channel (0-255)
+ * @returns {string} The hexadecimal value with two digits
+ */
 function componentToHex(c) {
     const _c = Math.min(c, 255);
     const _hex = _c.toString(16);
     return _hex.length == 1 ? '0' + _hex : _hex;
 }
 
+/**
+ * Converts an RGB colour into its hexadecimal representation.
+ * @param {number} r The red channel (0-255)
+ * @param {number} g The green channel (0-255)
+ * @param {number} b The blue channel (0-255)
+ * @returns {string} The hexadecimal colour
+ */
 function rgbToHex(r, g, b) {
     return '#' + componentToHex(r) + componentToHex(g) + componentToHex(b);
 }
 
+/**
+ * Converts an RGBA colour into its hexadecimal representation.
+ * @param {number} r The red channel (0-255)
+ * @param {number} g The green channel (0-255)
+ * @param {number} b The blue channel (0-255)
+ * @param {number} a The alpha channel (0-255)
+ * @returns {string} The hexadecimal colour
+ */
 function rgbaToHex(r, g, b, a) {
     return '#' + componentToHex(a) + componentToHex(r) + componentToHex(g) + componentToHex(b);
 }
 
+/**
+ * Converts a colour of any format into its hexadecimal representation.
+ * @param {string|number} color The colour, e.g. "rgb(255, 0, 0)"
+ * @returns {string} The hexadecimal colour
+ */
 function colorToHex(color) {
     const _color = color.replace(/\s/g, ''); // Remove all spaces
     let _cache;
@@ -2476,6 +2672,10 @@ function colorToHex(color) {
 
 unsafeWindow.ave.colorToHex = colorToHex;
 
+/**
+ * Adds the symbol that shows the cleaning state of the database to the page.
+ * @returns {Element} The created symbol
+ */
 function addDBCleaningSymbol() {
     const _cleaningDiv = document.createElement('div');
     _cleaningDiv.style.width = '25px';
@@ -2518,6 +2718,10 @@ function addDBCleaningSymbol() {
     return _cleaningDiv;
 }
 
+/**
+ * Adds the symbol that shows the loading state of the database to the page.
+ * @returns {Element} The created symbol
+ */
 function addDBLoadingSymbol() {
     const _loadingDiv = document.createElement('div');
     _loadingDiv.style.width = '25px';
@@ -2557,6 +2761,10 @@ function addDBLoadingSymbol() {
     return _loadingDiv;
 }
 
+/**
+ * Adds the symbol that shows the loading state of a scan to the page.
+ * @returns {Element} The created symbol
+ */
 function addLoadingSymbol() {
     const _loadingDiv = document.createElement('div');
     _loadingDiv.style.width = '25px';
@@ -2595,6 +2803,14 @@ function addLoadingSymbol() {
     return _loadingDiv;
 }
 
+/**
+ * Reads the pagination of a page of the Vine site.
+ *
+ * @param {Document|Element} localDocument The document of the page
+ * @returns {object|undefined} The href of the last page and the number of the
+ *                               last page, or undefined if the page has no
+ *                               pagination
+ */
 function getPageinationData(localDocument = document) {
     if (SETTINGS.DebugLevel > 10) console.log('Called getPageinationData()');
     const _ret = new Object();
@@ -2743,6 +2959,9 @@ async function cleanUpDatabase() {
 
 unsafeWindow.ave.dbCleanup = cleanUpDatabase;
 
+/**
+ * Exports the whole database as a JSON file.
+ */
 function exportDatabase() {
     console.log('Create Database Dump...');
 
@@ -2764,6 +2983,10 @@ function exportDatabase() {
  * Opens a file selector dialog and imports a database from a JSON file.
  * @async
  * @returns {Promise<void>}
+ */
+/**
+ * Imports a previously exported database and replaces the current one.
+ * @returns {Promise<void>} Resolves when the import is done
  */
 async function importDatabase() {
     return new Promise((resolve, reject) => {
@@ -2826,6 +3049,11 @@ unsafeWindow.ave.importDB = importDatabase;
  * Reads the content of a file as text.
  * @param {File} file - The file to read.
  * @returns {Promise<string>} - A Promise that resolves to the file content as a string.
+ */
+/**
+ * Reads a file that the user selected and returns its content.
+ * @param {File} file The selected file
+ * @returns {Promise<string>} The content of the file
  */
 function readFile(file) {
     return new Promise((resolve, reject) => {
@@ -2910,8 +3138,8 @@ function initBackgroundScan() {
         return;
     }
     BackGroundScanIsRunning = true;
-    /* NOTE: Same regex caveat as above: .exec() is safe because Amazon's Vine URLs
-       are stable. If Amazon changes domains, AVE is broken regardless of this check. */
+    // NOTE: Same regex caveat as above: .exec() is safe because Amazon's Vine URLs
+    //   are stable. If Amazon changes domains, AVE is broken regardless of this check.
     const _baseUrl = /(http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items)/.exec(window.location.href)[1];
 
     showBackgroundScanScreen('Start Background Scanner');
@@ -3031,10 +3259,10 @@ function prepareFastScan() {
     let _fastTimeIntervalSec = ((SETTINGS.BackGroundScanDelayPerPage + SETTINGS.BackGroundScannerRandomness / 2) * 15) / 1000;
     if (_fastTimeIntervalSec < 30) _fastTimeIntervalSec = 30;
 
-    /* The fast scan is started if the last scan is long enough ago, if the scan
-       is not at the very beginning and if it did not just start with the encore
-       queue. The conditions are combined into one expression, because every
-       single one of them would set the same flag. */
+    // The fast scan is started if the last scan is long enough ago, if the scan
+    //   is not at the very beginning and if it did not just start with the encore
+    //   queue. The conditions are combined into one expression, because every
+    //   single one of them would set the same flag.
     const _startFastScan =
         !(_fastTimeWaitingSec < _fastTimeIntervalSec) &&
         !(_backgroundScanStage <= 0) &&
@@ -3069,7 +3297,7 @@ function prepareScanIteration(state, startTime) {
 
     if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): TimeWaitingMin ', _timeWaitingMin);
 
-    //Nach 10 Stunden wird neu gestartet
+    // The scan is restarted after 10 hours
     if (_timeWaitingMin > 600) {
         state.stage = 0;
         state.subStage = 0;
@@ -3137,9 +3365,9 @@ function scanStageEncore(baseUrl, state, iteration) {
 
     if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.1 update PAGE_MAX');
 
-    /* NOTE: The pagination of the last scanned page is used. It cannot
-       be read from the iframe anymore, because the iframe is removed
-       after every scanned page (see createScanIframe()). */
+    // NOTE: The pagination of the last scanned page is used. It cannot
+    //   be read from the iframe anymore, because the iframe is removed
+    //   after every scanned page (see createScanIframe()).
     const _pagedate = lastScanPaginationData;
     if (_pagedate) {
         state.pageMax = _pagedate.maxPage;
@@ -3150,7 +3378,8 @@ function scanStageEncore(baseUrl, state, iteration) {
 
     if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.1 with _subStage: ', state.subStage);
 
-    // Wenn die aktuelle Seite die erste ist oder die maximale Seitenzahl nicht erreicht ist, wird gescannt
+    // The scan continues as long as the first page was not reached or the
+    // maximum number of pages is not reached yet
     if (state.subStage == 0 || state.subStage < state.pageMax) {
         updateBackgroundScanScreenText(`${iteration.scannerName} encore Page: ${state.subStage + 1} / ${state.pageMax}`);
         backGroundTileScanner(`${baseUrl}?queue=encore&pn=&cn=&page=${state.subStage + 1}`, (newCount) => {
@@ -3435,6 +3664,16 @@ function removeScanIframe(iframe) {
     if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
 }
 
+/**
+ * Loads a page of the Vine site in a hidden iframe and reads its tiles.
+ *
+ * The page is loaded in an iframe, so that the user does not see it and the
+ * products of the page are not shown.
+ *
+ * @param {string} url The URL of the page
+ * @param {function} cb The function that is called with the number of the new
+ *                       products
+ */
 function backGroundTileScanner(url, cb) {
     if (SETTINGS.DebugLevel > 10) console.log(`Called backgroundTileScanner(${url})`);
     const _iconLoading = addLoadingSymbol();
@@ -3443,11 +3682,11 @@ function backGroundTileScanner(url, cb) {
     // does not grow with every scanned page (see createScanIframe()).
     const _iframe = createScanIframe(url);
 
-    /* NOTE: The iframe is created with the target URL, so it starts with an empty
-       about:blank document. The scanner waits until the requested page is loaded.
-
-       KNOWN: Accessing contentWindow.document could throw SecurityError on cross-origin
-       navigation, but Amazon Vine keeps the iframe on the same origin in practice. */
+    // NOTE: The iframe is created with the target URL, so it starts with an empty
+    //   about:blank document. The scanner waits until the requested page is loaded.
+    //
+    //   KNOWN: Accessing contentWindow.document could throw SecurityError on cross-origin
+    //   navigation, but Amazon Vine keeps the iframe on the same origin in practice.
 
     // Maximum number of checks (every 100ms) before the scan gives up on this page.
     // Without it the scan could wait forever if the page does not load.
@@ -3458,9 +3697,9 @@ function backGroundTileScanner(url, cb) {
         _tickCount++;
         const _liveDoc = _iframe.contentWindow.document;
         const _liveUrl = _liveDoc.location ? _liveDoc.location.href : '';
-        /* The page counts as loaded when the document is complete, the URL is not
-           about:blank and the body has content. The about:blank document of the
-           fresh iframe is already "complete", so readyState alone is not enough. */
+        // The page counts as loaded when the document is complete, the URL is not
+        //   about:blank and the body has content. The about:blank document of the
+        //   fresh iframe is already "complete", so readyState alone is not enough.
         const _hasContent = !!(_liveDoc.body && _liveDoc.body.childElementCount > 0);
         const _hasNewPage = _liveUrl !== '' && _liveUrl !== 'about:blank' && _hasContent;
         const _isLoaded = _liveDoc.readyState === 'complete';
@@ -3477,9 +3716,9 @@ function backGroundTileScanner(url, cb) {
             console.warn(`BACKGROUNDSCAN => the page ${url} was not loaded in time, the scan continues with the next page`);
         }
 
-        /* NOTE: The document is only kept for debugging. It would otherwise retain
-           the whole page (including the decoded images) in the memory of the
-           renderer for the rest of the session. */
+        // NOTE: The document is only kept for debugging. It would otherwise retain
+        //   the whole page (including the decoded images) in the memory of the
+        //   renderer for the rest of the session.
         if (SETTINGS.DebugLevel > 10) unsafeWindow.ave.backGroundIFrame = _liveDoc;
         const _tiles = _liveDoc.querySelectorAll('.vvp-item-tile');
         const _tilesLength = _tiles.length;
@@ -3509,10 +3748,10 @@ function backGroundTileScanner(url, cb) {
                             console.log(`BACKGROUNDSCAN => Got TileData Back: Tile ${_returned}/${_tilesLength} =>`, prod);
                         if (!prod.gotFromDB) {
                             ++_newCount;
-                            /* NOTE: database.add() is fire-and-forget on purpose. Awaiting it
-                           would delay the scan unnecessarily. Failed writes are caught by
-                           .catch() and logged. _newCount may be slightly off if a write
-                           fails, but the scan catches the product on the next cycle. */
+                            // NOTE: database.add() is fire-and-forget on purpose. Awaiting it
+                            //   would delay the scan unnecessarily. Failed writes are caught by
+                            //   .catch() and logged. _newCount may be slightly off if a write
+                            //   fails, but the scan catches the product on the next cycle.
                             database.add(prod).catch((error) => {
                                 console.error(`BACKGROUNDSCAN => Could not save the product ${prod.id}: ${error}`);
                             });
@@ -3548,14 +3787,18 @@ function backGroundTileScanner(url, cb) {
     }, 100);
 }
 
+/**
+ * Shows the text of the background scan in the bottom left corner of the page.
+ * @param {string} text The text that is shown
+ */
 function showBackgroundScanScreen(text) {
     const _text = document.createElement('div');
     _text.style.position = 'fixed';
     _text.style.bottom = '35px';
     _text.style.left = '35px';
-    _text.style.color = 'orange'; // Textfarbe
+    _text.style.color = 'orange'; // Text colour
     _text.style.textAlign = 'center';
-    _text.style.fontSize = '10px'; // Ändere die Schriftgröße hier
+    _text.style.fontSize = '10px'; // Font size of the text
     _text.style.lineHeight = '1';
     _text.style.zIndex = '9999';
     _text.innerHTML = `<p id="ave-backgroundscan-text">${text}</p>`;
@@ -3563,11 +3806,18 @@ function showBackgroundScanScreen(text) {
     document.body.appendChild(_text);
 }
 
+/**
+ * Updates the text of the background scan in the bottom left corner.
+ * @param {string} text The new text
+ */
 function updateBackgroundScanScreenText(text = '') {
     const _elem = document.getElementById('ave-backgroundscan-text');
     _elem.textContent = text;
 }
 
+/**
+ * Starts the auto scan, which walks through all pages of the Vine site.
+ */
 async function startAutoScan() {
     if (SETTINGS.DebugLevel > 10) console.log('Called startAutoScan()');
     showAutoScanScreen('Init Autoscan, please wait...');
@@ -3588,6 +3838,10 @@ async function startAutoScan() {
     }, 5000);
 }
 
+/**
+ * Advances the auto scan by one page, or finishes it if the last page was
+ * reached.
+ */
 async function handleAutoScan() {
     const _delay = Math.max(SETTINGS.PageLoadMinDelay - (Date.now() - PAGE_LOAD_TIMESTAMP), 0) + 500;
     if (SETTINGS.DebugLevel > 10) console.log(`handleAutoScan() - _delay: ${_delay}`);
@@ -3615,6 +3869,15 @@ async function handleAutoScan() {
     }
 }
 
+/**
+ * Keeps an element at a fixed position, while the page is scrolled.
+ *
+ * The element is only moved, if the user scrolled past the position where it
+ * was when the page was loaded.
+ *
+ * @param {string} elemID The id of the element
+ * @param {string} dist The distance to the top of the viewport
+ */
 function stickElementToTopScrollEVhandler(elemID, dist) {
     const _elem = document.getElementById(elemID);
     if (_elem) {
@@ -3649,6 +3912,9 @@ let lastDesktopNotifikationTimestamp = 0;
 
 /**
  * Update the favorites badge count in the navigation bar.
+ */
+/**
+ * Updates the badge of the favorites button with the number of the favorites.
  */
 function updateFavoritesBtn() {
     database.getFavEntries().then((favArr) => {
@@ -3895,17 +4161,27 @@ function updateNewProductsBtn() {
  * @param {string} icon
  *
  */
-/* NOTE: 'desktopNotifikation' and all related settings use the misspelling
-   'Notifikation' instead of 'Notification'. The spelling is consistent across
-   globals.js and VineExplorer.user.js and is part of the public settings API,
-   so it is kept to avoid breaking existing user configurations. */
+// NOTE: 'desktopNotifikation' and all related settings use the misspelling
+//   'Notifikation' instead of 'Notification'. The spelling is consistent across
+//   globals.js and VineExplorer.user.js and is part of the public settings API,
+//   so it is kept to avoid breaking existing user configurations.
+/**
+ * Sends a desktop notification of the browser.
+ *
+ * @param {string} title The title of the notification
+ * @param {string} message The text of the notification
+ * @param {string|null} image The icon of the notification
+ * @param {boolean|null} requireInteraction true, if the notification has to stay
+ *                                        until the user clicks on it
+ * @param {function} onClick The function that is called on a click
+ */
 function desktopNotifikation(title, message, image = null, requireInteraction = null, onClick = () => {}) {
     const _vineLogo = 'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/main/vine_logo.png';
-    /* NOTE: The 'dev-main' branch no longer exists; this URL returns 404.
-       The notification still works, it just falls back to the default icon. */
+    // NOTE: The 'dev-main' branch no longer exists; this URL returns 404.
+    //   The notification still works, it just falls back to the default icon.
     const _vineLogoImp = 'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_important.png';
-    /* NOTE: Same as above — 'dev-main' no longer exists, this URL returns 404.
-       The notification still works, it just falls back to the default icon. */
+    // NOTE: Same as above — 'dev-main' no longer exists, this URL returns 404.
+    //   The notification still works, it just falls back to the default icon.
     const _defaultImage =
         'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_notification_image.png';
 
@@ -3929,6 +4205,12 @@ function desktopNotifikation(title, message, image = null, requireInteraction = 
     }
 }
 
+/**
+ * Sends a notification to the Gotify server.
+ *
+ * @param {string} message The text of the notification
+ * @param {Product} [prod] The product, if the notification belongs to one
+ */
 function gotifyNotification(message, prod = null) {
     const url = SETTINGS.GotifyUrl + 'message?token=' + SETTINGS.GotifyToken;
     const bodyFormData = prod
@@ -3973,6 +4255,12 @@ function gotifyNotification(message, prod = null) {
     });
 }
 
+/**
+ * Calculates the colour that has the best contrast to the given colour.
+ *
+ * @param {string} hexColor The colour in the hexadecimal format
+ * @returns {string} "black" or "white"
+ */
 function getContrastColor(hexColor) {
     // Remove the leading '#' if present
     const hex = hexColor.replace('#', '');
@@ -3997,6 +4285,12 @@ function getContrastColor(hexColor) {
  * dark mode instead. All other colors are kept, the text color is calculated from them.
  * @param {string} color The configured color of the button
  * @returns {object} An object with the properties "background" and "text"
+ */
+/**
+ * Calculates the colours of a navigation button for the given background.
+ *
+ * @param {string} color The background colour of the button
+ * @returns {object} The text colour and the border colour of the button
  */
 function getNavButtonColors(color) {
     const _hex = colorToHex(color) || '#ffffff';
@@ -4029,6 +4323,19 @@ function getNavButtonColors(color) {
     };
 }
 
+/**
+ * Creates a button for the navigation of the Vine page.
+ *
+ * @param {string} mainID The id of the button
+ * @param {string} text The text of the button
+ * @param {string} textID The id of the text element of the button
+ * @param {string} color The background colour of the button
+ * @param {function} onclick The function that is called on a click
+ * @param {string} [badgeId] The id of the badge of the button
+ * @param {string} [badgeValue] The initial text of the badge
+ * @param {string} [badgeColor] The colour of the badge
+ * @returns {Element} The created button
+ */
 function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeValue, badgeColor) {
     const _btn = document.createElement('span');
     _btn.setAttribute('id', mainID);
@@ -4073,6 +4380,13 @@ function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeVal
     return _btn;
 }
 
+/**
+ * Applies the style of the product to its tile and adds the elements of AVE
+ * (favorites star, dates, share button and tax info) to it.
+ *
+ * @param {Element} _currTile The tile of the product
+ * @param {Product} _product The product of the tile
+ */
 function addStyleToTile(_currTile, _product) {
     if (!_product.gotFromDB) {
         // We have a new one ==> Save it to our Database ;)
@@ -4123,6 +4437,13 @@ function addStyleToTile(_currTile, _product) {
     );
 }
 
+/**
+ * Loads the details of a product from the Vine API and adds them to the
+ * product.
+ *
+ * @param {Product} prod The product to load the details for
+ * @returns {Promise<Product>} The product with the details
+ */
 async function requestProductDetails(prod) {
     if (prod.data_asin_is_parent) {
         const res = await vineFetch(`${window.location.origin}/vine/api/recommendations/${prod.id}`.replace(/#/g, '#')).then((r) =>
@@ -4314,7 +4635,6 @@ function initPagination() {
         const _btn = _nextBtn.cloneNode(true);
         const anchorTag = _btn.querySelector('a');
 
-        //const _aveNextPageButtonText = 'Alle als gesehen markieren und Nächste <span class="a-letter-space"></span><span class="a-letter-space"></span><span class="larr">→</span>';
         const _aveNextPageButtonText =
             'Gelesen <span class="a-letter-space"></span><span class="a-letter-space"></span><span class="larr">→</span>';
 
@@ -4331,7 +4651,6 @@ function initPagination() {
         if (anchorTag) {
             anchorTag.innerHTML = _aveNextPageButtonText;
         } else {
-            //_btn.innerHTML = _aveNextPageButtonText;
             _btn.innerHTML = 'Gelesen';
         }
 
@@ -4352,6 +4671,11 @@ function initPagination() {
     });
 }
 
+/**
+ * Initialises the page of AVE.
+ *
+ * @param {boolean} hasTiles true, if the page shows products of Amazon
+ */
 function init(hasTiles) {
     // Get all Products on this page ;)
 
@@ -4385,6 +4709,14 @@ function init(hasTiles) {
 }
 
 //Sort Items by key
+/**
+ * Sorts an array of products by one of their properties.
+ *
+ * @param {Product[]} array The array to sort
+ * @param {string} key The property to sort by
+ * @param {string} [order] "asc" for ascending, anything else for descending
+ * @returns {Product[]} The sorted array
+ */
 function sort_by_key(array, key, order) {
     return array.sort(function (a, b) {
         var x = a[key];
@@ -4396,6 +4728,13 @@ function sort_by_key(array, key, order) {
 
 // fix product image url
 // fix for deburau/AmazonVineExplorer#30
+/**
+ * Removes the size information from the URL of a product image, so that the
+ * browser loads the original image.
+ *
+ * @param {string} url The URL of the image
+ * @returns {string} The corrected URL
+ */
 function fixProductImageUrl(url) {
     return url.replace(/\/images\/.*\/images\//, '/images/');
 }

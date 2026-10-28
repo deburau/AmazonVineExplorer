@@ -198,6 +198,23 @@ async function waitForHtmlElement(selector, cb, altDocument = document, timeout 
 }
 ```
 
+### Comment Style
+All comments are written in **English**, also the ones in the German user
+interface. The rules for the different kinds of comments:
+
+| Kind | Format | Example |
+|------|--------|---------|
+| Description of a function | JSDoc `/** ... */` above the function | `/** Creates the tile of a product. */` |
+| Important information in the code | `// NOTE: ...` | `// NOTE: The URL is relative and has to be resolved.` |
+| A known problem that is not fixed | `// KNOWN: ...` | `// KNOWN: The document body is not always available.` |
+| A normal explanation | `// ...` | `// The badge shows the number of new products.` |
+| A CSS rule in a template literal | `/* ... */` | `/* Hide the tooltip content by default */` |
+
+A function whose purpose is not obvious **must** have a JSDoc block that
+explains what it does, what the parameters are and what it returns. A
+comment that explains *why* something is done in that way is more valuable
+than one that repeats *what* the code does.
+
 ### Error Handling Patterns
 - **Always use try-catch** for async operations and JSON parsing
 - **Provide descriptive error messages** with context

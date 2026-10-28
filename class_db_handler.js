@@ -24,10 +24,20 @@ class DB_HANDLER {
         this.#dbName = dbName;
         this.#version = version || 1;
         this.#storeName = storeName || dbName + '_ObjectStore';
-        // Note: do NOT call async code here!
+        // NOTE: Do NOT call async code here!
     }
 
-    // Async initializer avoids running async code in the constructor.
+    /**
+     * Creates the handler and opens the database.
+     *
+     * The database cannot be opened in the constructor, because the constructor
+     * must not run async code.
+     *
+     * @param {string} dbName Name of the database
+     * @param {string} [storeName] Object store name
+     * @param {number} [version] Version of the database
+     * @returns {Promise<DB_HANDLER>} The initialised handler
+     */
     static async init(dbName, storeName, version) {
         const instance = new DB_HANDLER(dbName, storeName, version);
         await instance.#init();
@@ -128,7 +138,7 @@ class DB_HANDLER {
                     console.warn('Duplikate in "data_asin" gefunden. Bereinigen oder löschen Sie die Datenbank');
                     return false;
                 } else {
-                    // Keine Duplikate gefunden, Sie können den Index jetzt als eindeutig markieren
+                    // No duplicates found, the index can be marked as unique
                     return true;
                 }
             }
@@ -246,7 +256,6 @@ class DB_HANDLER {
                                 if (_prod) {
                                     if (SETTINGS.DebugLevel > 1)
                                         console.debug(`got object with ID "${id}" and ASIN "${_data_asin}": "${_prod}"`);
-                                    // } else {
                                 }
 
                                 _resolve(_prod);
@@ -328,7 +337,7 @@ class DB_HANDLER {
             const _request = this.#getStore().openCursor();
             const _result = [];
 
-            // Use a Array of words for search
+            // Use an array of words for the search
             const _keys = typeof query == 'string' ? [query] : query;
             for (let _key of _keys) {
                 _key = _key.toLowerCase();

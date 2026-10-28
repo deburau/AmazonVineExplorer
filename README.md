@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.49
+
+* Docs: all comments are now written in English and follow a uniform style. Every function whose purpose is not obvious got a JSDoc block that explains what it does, what the parameters are and what it returns. Comments that referred to functions that were renamed in the meantime (`createTaxInfo` and `getTileFromURL`) were corrected, dead code was removed and the `AGENTS.md` documents the rules for the comments.
+
 ##### [2026-10-26] - Version 0.12.1.48
 
 * Tooling: the verification scripts of the refactorings moved from the local notes folder into `scripts/verify/`, so that they are part of the repository and survive a change of the machine. The new npm scripts `npm run verify` (runs all five verifications) and `npm run verify:baseline` (freezes the current git commit as the baseline) make the workflow of a refactoring reproducible. `AGENTS.md` documents the procedure.
