@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.41
+
+* Refactoring: the background scan was split into small functions, one per responsibility (`initBackgroundScan`, `initBackgroundScanStorage`, `getBackgroundScanStageZeroSites`, `backgroundScanLoop`, `prepareFastScan`, `prepareScanIteration`, `scanStageZero` … `scanStageIdle`, `backgroundScanFinished` and `formatDuration`). The state that has to survive the iterations of the scan loop is kept in a `BackgroundScanState` object. The behaviour did not change, it was verified with a comparison of the local storage accesses of the old and the new implementation over all stages of the scan.
+
 ##### [2026-10-26] - Version 0.12.1.40
 
 * Style: all source files are formatted uniformly with Prettier (configuration in `.prettierrc`). The indentation, quotes, semicolons and line breaks are now consistent. The code was not changed otherwise; the only exception is the helper `stringToRegex()`, which was rewritten from a nested ternary with an assignment into an explicit function body, because the formatter removed the parentheses that satisfied the ESLint rule `no-cond-assign`.
