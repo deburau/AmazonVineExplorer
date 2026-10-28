@@ -170,6 +170,13 @@ function extHelper_installRecommendationFetchHook() {
 
 extHelper_installRecommendationFetchHook();
 
+/* NOTE: The complexity of this function is above the limit of the ESLint rule,
+   because it has to handle three different kinds of requests (voice orders,
+   recommendations and everything else) and every kind needs its own error
+   handling. Splitting the function would change the order of the response
+   hooks, which is relevant for the behaviour of the page, so the warning is
+   accepted instead. */
+// eslint-disable-next-line complexity
 async function vineFetch(...args) {
     let response = await extHelper_pageWindow.fetch.apply(extHelper_pageWindow, args);
     const lastParent = extHelper_LastParentVariant;

@@ -51,6 +51,12 @@ report anything today:
 The rules are warnings, so `npm run lint` stays green. `npm run lint:strict` fails
 on warnings and is meant for a later cleanup, not for the daily workflow.
 
+**Exception:** The complexity of `vineFetch()` in `vine_fetch.js` is above the
+limit. The function handles three kinds of requests and every kind needs its own
+error handling. Splitting it would change the order of the response hooks, which
+is relevant for the behaviour of the page, so the warning is suppressed with an
+`eslint-disable` comment and a note.
+
 **Never run a formatter on the markdown files** - the documentation is written by
 hand and the changelog would be reflowed without any benefit. `*.md` is therefore
 listed in `.prettierignore`.

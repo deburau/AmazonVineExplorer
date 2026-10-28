@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.47
+
+* Style: the last ESLint warning (the complexity of `vineFetch()` in `vine_fetch.js`) is suppressed with an `eslint-disable` comment and a note. The function handles three kinds of requests and splitting it would change the order of the response hooks, which is relevant for the behaviour of the page. The linter now runs without any warning.
+
 ##### [2026-10-26] - Version 0.12.1.46
 
 * Refactoring: `init()` was split up. The parsing of the tiles moved into `initTileParsing()`, the buttons for the product sites into `initNavigationButtons()`, the search bar into `initSearchBar()` and the manipulation of the pagination into `initPagination()`. The behaviour did not change, it was verified with the helper script `.unotes/verify_init.js`, which compares the created DOM, the database accesses and the calls of the old and the new implementation in four scenarios.
