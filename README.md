@@ -42,6 +42,11 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.39
+
+* Fix: the background scan reused a single iframe for all scanned pages. The frame accumulated a session history with one entry per navigation, and the renderer kept the documents of those entries in memory. The memory usage of the renderer grew by about 270 MB per hour until the container ran out of memory. The iframe is now created for every scanned page and removed again after the page was scanned, which reduces the memory usage by about 670 MB (measured).
+* Fix: the scanned document was kept in `unsafeWindow.ave.backGroundIFrame` for the whole session. This is now only done in debug mode.
+
 ##### [2026-10-26] - Version 0.12.1.38
 
 * Fix: a Vine page that was loaded with a trailing slash (`https://www.amazon.de/vine/vine-items/`) broke all relative links of Amazon. The navigation button "Für Sie empfohlen" pointed to `vine-items?queue=potluck`, which was resolved against the directory `/vine/vine-items/` and therefore led to the error page `/vine/vine-items/vine-items?queue=potluck`. The trailing slash is now removed from the URL and the relative links of the navigation and the pagination are made absolute.

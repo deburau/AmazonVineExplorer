@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.38
+// @version      0.12.1.39
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -73,6 +73,14 @@ let searchInputTimeout;
 let backGroundScanTimeout;
 
 let BackGroundScanIsRunning = false;
+
+/**
+ * The pagination data of the last page that was scanned in the background.
+ * The iframe with the scanned document is removed after the scan, so the data
+ * has to be cached to be able to read it later.
+ * @type {object|undefined}
+ */
+let lastScanPaginationData = undefined;
 
 // Make some things accessable from console.
 // NOTE: The object of globals.js is not replaced, otherwise the helpers of globals.js
@@ -2616,6 +2624,9 @@ function stopBackgroundScan() {
         clearTimeout(backGroundScanTimeout);
         backGroundScanTimeout = null;
     }
+    // A running scan can leave its iframe behind, e.g. if the scan is stopped
+    // while a page is loaded. The iframe holds the whole page in memory.
+    removeScanIframe(document.getElementById('ave-iframe-backgroundloader'));
 }
 
 function initBackgroundScan() {
@@ -2734,23 +2745,11 @@ function initBackgroundScan() {
                     _scannerName = 'Background Scanner';
                 }
 
-                // Create iFrame if not exists
-                if (!document.querySelector('#ave-iframe-backgroundloader')) {
-                    // Create iFrame only if scan is running
-                    if (!(_backGroundScanStage == 4)) {
-                        if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): create iFrame');
-                        const iframe = document.createElement('iframe');
-                        iframe.id = 'ave-iframe-backgroundloader';
-                        iframe.style.position = 'fixed';
-                        iframe.style.top = '0';
-                        iframe.style.left = '-10000';
-                        iframe.style.width = '100%';
-                        iframe.style.height = '100%';
-                        iframe.style.display = 'none';
-                        iframe.style.zIndex = '100';
-                        document.body.appendChild(iframe);
-                    }
-                }
+                /* NOTE: The iframe for the scan is created inside
+                   backGroundTileScanner() and removed again after the page was
+                   scanned. It is intentionally not kept, because a reused iframe
+                   accumulates a session history that holds the memory of every
+                   scanned page (see createScanIframe()). */
 
                 switch (_backGroundScanStage) {
                     case 0:{ // potluck, last_chance
@@ -2774,7 +2773,10 @@ function initBackgroundScan() {
                         
                         if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan().loop.case.1 update PAGE_MAX');
 
-                        let _pagedate = getPageinationData(document.querySelector('#ave-iframe-backgroundloader').contentWindow.document);
+                        /* NOTE: The pagination of the last scanned page is used. It cannot
+                           be read from the iframe anymore, because the iframe is removed
+                           after every scanned page (see createScanIframe()). */
+                        let _pagedate = lastScanPaginationData;
                         if (_pagedate) {
                             _PageMax = _pagedate.maxPage;
                             localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_MAX', _PageMax);
@@ -2920,21 +2922,56 @@ function initBackgroundScan() {
     }, 250); //scan every 250ms
 }
 
+/**
+ * Creates the hidden iframe that loads a single page of the background scan.
+ *
+ * NOTE: The iframe is intentionally NOT reused for the next page. A reused iframe
+ * keeps a session history with one entry per navigation, and the renderer holds
+ * the documents of those entries in memory. That made the memory usage of the
+ * renderer grow with every scanned page (measured: ~670 MB less 'anon' memory
+ * with a fresh iframe per page). A new iframe starts with an empty history and
+ * is removed again after the page was scanned.
+ *
+ * @param {string} url The URL that the iframe has to load
+ * @returns {HTMLIFrameElement} The created iframe
+ */
+function createScanIframe(url) {
+    const _iframe = document.createElement('iframe');
+    _iframe.id = 'ave-iframe-backgroundloader';
+    _iframe.style.position = 'fixed';
+    _iframe.style.top = '0';
+    _iframe.style.left = '-10000';
+    _iframe.style.width = '100%';
+    _iframe.style.height = '100%';
+    _iframe.style.display = 'none';
+    _iframe.style.zIndex = '100';
+    _iframe.src = url;
+    document.body.appendChild(_iframe);
+    return _iframe;
+}
+
+/**
+ * Removes the iframe of a background scan page and releases its memory.
+ * @param {HTMLIFrameElement} iframe The iframe to remove
+ */
+function removeScanIframe(iframe) {
+    if (!iframe) return;
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+}
+
 function backGroundTileScanner(url, cb) {
     if (SETTINGS.DebugLevel > 10) console.log(`Called backgroundTileScanner(${url})`);
     const _iconLoading = addLoadingSymbol();
-    const _iframe = document.querySelector('#ave-iframe-backgroundloader');
 
-    /* NOTE: The browser replaces the document of the iframe when the iframe navigates.
-       A document that was captured before the navigation is therefore outdated and still
-       contains the tiles of the previous page. The live document has to be used and the
-       scanner has to wait until the requested page is loaded.
+    // NOTE: A fresh iframe per page, so that the session history of the frame
+    // does not grow with every scanned page (see createScanIframe()).
+    const _iframe = createScanIframe(url);
+
+    /* NOTE: The iframe is created with the target URL, so it starts with an empty
+       about:blank document. The scanner waits until the requested page is loaded.
 
        KNOWN: Accessing contentWindow.document could throw SecurityError on cross-origin
        navigation, but Amazon Vine keeps the iframe on the same origin in practice. */
-    const _docBeforeNavigation = _iframe.contentWindow.document;
-    const _urlBeforeNavigation = _iframe.contentWindow.location.href;
-    _iframe.contentWindow.location.href = url;
 
     // Maximum number of checks (every 100ms) before the scan gives up on this page.
     // Without it the scan could wait forever if the page does not load.
@@ -2945,7 +2982,11 @@ function backGroundTileScanner(url, cb) {
         _tickCount++;
         const _liveDoc = _iframe.contentWindow.document;
         const _liveUrl = (_liveDoc.location) ? _liveDoc.location.href : '';
-        const _hasNewPage = (_liveDoc !== _docBeforeNavigation) || (_liveUrl !== _urlBeforeNavigation);
+        /* The page counts as loaded when the document is complete, the URL is not
+           about:blank and the body has content. The about:blank document of the
+           fresh iframe is already "complete", so readyState alone is not enough. */
+        const _hasContent = !!( _liveDoc.body && _liveDoc.body.childElementCount > 0 );
+        const _hasNewPage = (_liveUrl !== '') && (_liveUrl !== 'about:blank') && _hasContent;
         const _isLoaded = (_liveDoc.readyState === 'complete');
 
         if (SETTINGS.DebugLevel > 10) {
@@ -2960,9 +3001,16 @@ function backGroundTileScanner(url, cb) {
             console.warn(`BACKGROUNDSCAN => the page ${url} was not loaded in time, the scan continues with the next page`);
         }
 
-        unsafeWindow.ave.backGroundIFrame = _liveDoc;
+        /* NOTE: The document is only kept for debugging. It would otherwise retain
+           the whole page (including the decoded images) in the memory of the
+           renderer for the rest of the session. */
+        if (SETTINGS.DebugLevel > 10) unsafeWindow.ave.backGroundIFrame = _liveDoc;
         const _tiles = _liveDoc.querySelectorAll('.vvp-item-tile');
         const _tilesLength = _tiles.length;
+
+        // The pagination of the scanned page is cached, because the iframe (and
+        // with it the document) is removed after the scan.
+        lastScanPaginationData = getPageinationData(_liveDoc);
         if (SETTINGS.DebugLevel > 10) {
             console.log(`BACKGROUNDSCAN DIAG => requested: ${url}`);
             console.log(`BACKGROUNDSCAN DIAG => live iframe url: ${_liveUrl}`);
@@ -3006,11 +3054,15 @@ function backGroundTileScanner(url, cb) {
                         }
                     }
                 }
+                // The iframe is removed after the tiles were processed, so that the
+                // document stays intact while the tiles are parsed.
+                removeScanIframe(_iframe);
                 cb(_newCount);
                 _iconLoading.remove();
             });
         } else {
             if (SETTINGS.DebugLevel > 10) console.log(`BACKGROUNDSCAN => We dont have anything to do here anything => resume autoscan`);
+            removeScanIframe(_iframe);
             cb(); // We dont have to do here anything
             _iconLoading.remove();
         }
