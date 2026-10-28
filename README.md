@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.40
+
+* Style: all source files are formatted uniformly with Prettier (configuration in `.prettierrc`). The indentation, quotes, semicolons and line breaks are now consistent. The code was not changed otherwise; the only exception is the helper `stringToRegex()`, which was rewritten from a nested ternary with an assignment into an explicit function body, because the formatter removed the parentheses that satisfied the ESLint rule `no-cond-assign`.
+
 ##### [2026-10-26] - Version 0.12.1.39
 
 * Fix: the background scan reused a single iframe for all scanned pages. The frame accumulated a session history with one entry per navigation, and the renderer kept the documents of those entries in memory. The memory usage of the renderer grew by about 270 MB per hour until the container ran out of memory. The iframe is now created for every scanned page and removed again after the page was scanned, which reduces the memory usage by about 670 MB (measured).
