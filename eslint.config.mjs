@@ -40,7 +40,8 @@ const vineFetchFile = [
 const mainFile = [
     "PAGETYPE", "addAVESettingsMenu", "addAveSettingsTab", "addDBCleaningSymbol", "addDBLoadingSymbol",
     "addLeftSideButtons", "addLoadingSymbol", "addStyleToTile", "addTileEventhandlers",
-    "appendInfiniteScrollTiles", "backGroundTileScanner", "btnEventhandlerClick", "cleanUpDatabase",
+    "appendInfiniteScrollTiles", "aveFixRelativeVineLinks", "aveResolveUrl", "aveUrlWithPage",
+    "backGroundTileScanner", "btnEventhandlerClick", "cleanUpDatabase",
     "colorToHex", "completeDelayedInit", "componentToHex", "createButton", "createFavStarElement",
     "createFirstSeenElement", "createInfiniteScrollSite", "createNavButton", "createNewSite",
     "createProductSite", "createSettingsKeywordsTableElement", "createSettingsMenuElement",

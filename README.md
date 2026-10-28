@@ -42,6 +42,11 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.38
+
+* Fix: a Vine page that was loaded with a trailing slash (`https://www.amazon.de/vine/vine-items/`) broke all relative links of Amazon. The navigation button "Für Sie empfohlen" pointed to `vine-items?queue=potluck`, which was resolved against the directory `/vine/vine-items/` and therefore led to the error page `/vine/vine-items/vine-items?queue=potluck`. The trailing slash is now removed from the URL and the relative links of the navigation and the pagination are made absolute.
+* Fix: the auto scan and the "Gelesen ->" pagination button used the relative pagination href of Amazon for their navigation, which could produce the same doubled path. They now use absolute URLs.
+
 ##### [2026-10-26] - Version 0.12.1.37
 
 * Docs: added comments in the source code for all known issues that are intentionally not fixed. Each comment describes the problem and explains why it is ignored (e.g. typos that are part of the public settings API, theoretical edge cases that cannot occur in practice, or fallbacks that degrade gracefully).

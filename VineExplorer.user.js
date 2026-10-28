@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.37
+// @version      0.12.1.38
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -52,7 +52,8 @@
    rgbToHex, rgbaToHex, shareEventHandlerClick, showAutoScanScreen, showBackgroundScanScreen,
    sort_by_key, startAutoScan, stickElementToTopScrollEVhandler, timeAgo, translate,
    updateAutoScanScreenText, updateBackgroundScanScreenText, updateFavoritesBtn,
-   updateNewProductsBtn, updateTileStyle, stopBackgroundScan */
+   updateNewProductsBtn, updateTileStyle, stopBackgroundScan, aveFixRelativeVineLinks,
+   aveResolveUrl, aveUrlWithPage */
 console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 
 /**
@@ -66,6 +67,7 @@ const translate = (category, key, fallback, ...args) => typeof t === 'function' 
 
 loadSettings();
 fastStyleChanges();
+aveFixRelativeVineLinks();
 
 let searchInputTimeout;
 let backGroundScanTimeout;
@@ -401,11 +403,151 @@ function getUrlParameter(name) {
 }
 
 /**
+ * Resolves a (possibly relative) URL against the current page.
+ *
+ * Amazon uses relative links on the Vine pages, e.g. the "Für Sie empfohlen"
+ * button points to "vine-items?queue=potluck". A relative URL is resolved
+ * against the DIRECTORY of the current URL. As long as the page was loaded
+ * from "https://www.amazon.de/vine/vine-items" the directory is "/vine/" and
+ * the link resolves to "https://www.amazon.de/vine/vine-items?queue=potluck".
+ * If the page was loaded with a trailing slash
+ * ("https://www.amazon.de/vine/vine-items/") the directory is
+ * "/vine/vine-items/" and the link resolves to
+ * "https://www.amazon.de/vine/vine-items/vine-items?queue=potluck", which is
+ * an error page on Amazon.
+ *
+ * To avoid this, the trailing slash is removed from the path of the base URL
+ * before the resolution.
+ *
+ * @param {string} href The URL to resolve (absolute or relative)
+ * @returns {string} The absolute URL
+ */
+function aveResolveUrl(href) {
+    if (!href) return href;
+    try {
+        // The path of the current page is used without a trailing slash, so that
+        // the relative links are resolved against the directory of the page
+        // ("/vine/") and not against the page itself ("/vine/vine-items/").
+        const _path = window.location.pathname.replace(/\/+$/, '');
+        // A path with only one segment (e.g. "/vine") keeps its slash, because
+        // otherwise the directory would be the root of the domain.
+        const _keepSlash = (_path.split('/').filter(Boolean).length <= 1) ? '/' : '';
+        const _base = `${window.location.origin}${_path}${_keepSlash}${window.location.search}${window.location.hash}`;
+        return new URL(href, _base).href;
+    } catch (error) {
+        console.error(`aveResolveUrl(): could not resolve the URL "${href}":`, error);
+        return href;
+    }
+}
+
+/**
+ * Returns the URL of the current page with the given page number.
+ *
+ * The pagination parameter of the Vine pages is "page". The previous generic
+ * replacement (/=[0-9]+/) could also hit other parameters, e.g. "ave-subpage".
+ *
+ * @param {number} page The page number to set
+ * @returns {string} The URL with the new page number
+ */
+function aveUrlWithPage(page) {
+    const _url = window.location.href;
+    if (/([?&]page=)\d+/.test(_url)) {
+        return _url.replace(/([?&]page=)\d+/, `$1${page}`);
+    }
+    // Fallback for the case that the pagination parameter is not named "page".
+    return _url.replace(/=[0-9]+/, `=${page}`);
+}
+
+/**
+ * Removes a trailing slash from the URL of the current Vine page.
+ *
+ * See aveResolveUrl() for the reason. The URL is only changed in the address
+ * bar of the browser, the page is not reloaded.
+ */
+function aveStripTrailingSlashFromUrl() {
+    if (!SITE_IS_VINE) return;
+    if (!window.location.pathname.endsWith('/')) return;
+    const _newUrl = `${window.location.origin}${window.location.pathname.replace(/\/+$/, '')}${window.location.search}${window.location.hash}`;
+    try {
+        window.history.replaceState(window.history.state, '', _newUrl);
+        if (SETTINGS.DebugLevel > 1) console.log(`aveStripTrailingSlashFromUrl(): the URL was changed to ${_newUrl}`);
+    } catch (error) {
+        console.error('aveStripTrailingSlashFromUrl(): could not change the URL:', error);
+    }
+}
+
+/**
+ * Makes the relative links of the Amazon Vine navigation absolute.
+ *
+ * Amazon renders the Vine navigation buttons with relative links
+ * ("vine-items?queue=potluck"). If the page was loaded with a trailing slash
+ * in the URL, the browser resolves them wrongly and the user ends up on
+ * ".../vine/vine-items/vine-items?queue=potluck" (an Amazon error page).
+ * Making the links absolute removes the dependency on the current URL.
+ *
+ * The function also removes a trailing slash from the URL itself, because
+ * AVE uses relative URLs for its own navigation as well.
+ */
+function aveFixRelativeVineLinks() {
+    if (!SITE_IS_VINE) return;
+
+    aveStripTrailingSlashFromUrl();
+
+    // The selectors of the Amazon links that are relative and would therefore
+    // break on a URL with a trailing slash.
+    const _selectors = ['#vvp-items-button-container a[href]', '.a-pagination a[href]'];
+
+    const _fixLinks = () => {
+        // Amazon can change the URL after the page was loaded (e.g. it adds the
+        // queue parameter), so the trailing slash has to be removed again here.
+        aveStripTrailingSlashFromUrl();
+        for (const _selector of _selectors) {
+            const _links = document.querySelectorAll(_selector);
+            for (const _link of _links) {
+                const _href = _link.getAttribute('href');
+                if (!_href) continue;
+                const _absolute = aveResolveUrl(_href);
+                if (_absolute !== _href) _link.setAttribute('href', _absolute);
+            }
+        }
+    };
+
+    let _observedContainer = null;
+    let _observer = null;
+
+    const _observeContainer = (_container) => {
+        if (!_container || _container === _observedContainer) return;
+        if (_observer) _observer.disconnect();
+        _observedContainer = _container;
+        _observer = new MutationObserver(() => {
+            _fixLinks();
+            // Amazon can replace the whole container, then the new one has to be
+            // observed instead of the old one.
+            const _current = document.getElementById('vvp-items-button-container');
+            if (_current && _current !== _observedContainer) {
+                _observeContainer(_current);
+                _fixLinks();
+            }
+        });
+        _observer.observe(_container, { childList: true, subtree: true });
+    };
+
+    waitForHtmlElement('#vvp-items-button-container', (elem) => {
+        if (!elem) return;
+        _fixLinks();
+        _observeContainer(elem);
+    }, document, 10000, false);
+}
+
+/**
  * Detect the current Vine queue based on URL parameters.
  * Sets currentMainPage for downstream navigation logic.
  */
 function detectCurrentPageType(){
-    if (/http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items$/.test(window.location.href)) {
+    // NOTE: The trailing slash is optional, because Amazon redirects to
+    // ".../vine/vine-items/" and the relative links of the page are resolved
+    // against the directory of the URL (see aveResolveUrl()).
+    if (/http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items\/?$/.test(window.location.href)) {
         currentMainPage = PAGETYPE.ORIGINAL_LAST_CHANCE;
     } else if (getUrlParameter('queue') == 'last_chance') {
         currentMainPage = PAGETYPE.ORIGINAL_LAST_CHANCE;
@@ -2907,7 +3049,10 @@ function startAutoScan() {
         localStorage.setItem('AVE_AUTO_SCAN_PAGE_MAX',_pageiDat.maxPage);
         localStorage.setItem('AVE_AUTO_SCAN_PAGE_CURRENT', 1);
         setTimeout(() => {
-            const _url = `${_pageiDat.href}1`;
+            // NOTE: The pagination href of Amazon is relative ("vine-items?...page=").
+            // It has to be resolved to an absolute URL, otherwise a trailing slash
+            // in the current URL would produce a doubled path (see aveResolveUrl()).
+            const _url = aveResolveUrl(`${_pageiDat.href}1`);
             if (SETTINGS.DebugLevel > 10) console.log(`Loding new Page ${_url}`)
             window.location.href = _url;
         }, 5000);
@@ -2921,7 +3066,9 @@ function handleAutoScan() {
         const _nextPage = AUTO_SCAN_PAGE_CURRENT + 1;
         localStorage.setItem('AVE_AUTO_SCAN_PAGE_CURRENT', _nextPage);
         setTimeout(() => {
-            window.location.href = window.location.href.replace(/=[0-9]+/, `=${_nextPage}`);
+            // NOTE: Only the pagination parameter is replaced, so that other
+            // parameters with a number (e.g. "ave-subpage") stay untouched.
+            window.location.href = aveUrlWithPage(_nextPage);
         }, _delay);
     } else { // We are done ;)
         updateAutoScanScreenText('Success, cleaning up Database...');
@@ -2932,7 +3079,7 @@ function handleAutoScan() {
             setTimeout(() => {
                 updateAutoScanScreenText('Finished Database\nupdate and cleanup\n\nPage reloading incoming... please wait');
                 setTimeout(()=> {
-                    window.location.href = window.location.href.replace(/=[0-9]+/, '=1');
+                    window.location.href = aveUrlWithPage(1);
                 }, 10000);
             }, _delay + 2000);
         });
@@ -3490,7 +3637,10 @@ _paginationContainers.forEach(_paginationContainer => {
 
         const _nextBtn = _paginationContainer.lastChild;
         const _isNextBtnDisabled = _nextBtn.classList.contains('a-disabled');
-        const _nextBtnLink = _nextBtn.lastChild.getAttribute('href');
+        // NOTE: The pagination href of Amazon is relative ("vine-items?...page=2").
+        // It has to be resolved to an absolute URL, otherwise a trailing slash in
+        // the current URL would produce a doubled path (see aveResolveUrl()).
+        const _nextBtnLink = aveResolveUrl(_nextBtn.lastChild.getAttribute('href'));
         const _btn = _nextBtn.cloneNode(true);
         const anchorTag = _btn.querySelector('a');
 
