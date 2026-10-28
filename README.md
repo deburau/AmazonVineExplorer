@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.35
+
+* Fix: session id generation could produce strings longer than intended because `Math.round(Math.random() * 36).toString(36)` could yield two characters (`"10"`). Replaced with `Math.floor(Math.random() * 36)` so that every replacement is exactly one base-36 character.
+
 ##### [2026-10-26] - Version 0.12.1.34
 
 * Fix: clicking on a parent-ASIN product that was removed from the Vine enrollment caused a TypeError because `requestProductDetails()` set `forceRemove = true` but continued to access `res.result` afterwards.

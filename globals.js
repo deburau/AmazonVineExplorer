@@ -861,5 +861,5 @@ async function fastStyleChanges() {
  * @returns {string} Session ID
  */
 function generateSessionID() {
-    return 'aaaa-aaaaa-AVE-SESSION-aaaaaaa-aaaaaaaa'.replace(/[a]/g, ( c ) => { return Math.round(Math.random() * 36).toString(36) });
+    return 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'.replace(/a/g, () => Math.floor(Math.random() * 36).toString(36));
 }
