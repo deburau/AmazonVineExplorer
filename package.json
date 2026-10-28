@@ -9,7 +9,9 @@
         "format:check": "prettier --check .",
         "lint": "eslint .",
         "lint:strict": "eslint . --max-warnings 0",
-        "check": "npm run format:check && npm run lint"
+        "check": "npm run format:check && npm run lint",
+        "verify": "node scripts/verify/run_all.js",
+        "verify:baseline": "node scripts/verify/set_baseline.js"
     },
     "repository": {
         "type": "git",

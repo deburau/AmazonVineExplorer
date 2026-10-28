@@ -62,10 +62,14 @@ hand and the changelog would be reflowed without any benefit. `*.md` is therefor
 listed in `.prettierignore`.
 
 ### Testing
-**Note:** This project has no automated tests. Testing is done manually by:
+**Note:** This project has no automated browser tests. The behaviour of the
+userscript is tested manually by:
 1. Installing the userscript in Tampermonkey/Greasemonkey
 2. Navigating to Amazon Vine websites
 3. Verifying functionality works as expected
+
+The **refactorings** are checked automatically, because a refactoring must not
+change the behaviour. See the section "Verifying a refactoring".
 
 ## Git Workflow and Release Rules
 
@@ -93,6 +97,45 @@ listed in `.prettierignore`.
 - Keep `AGENTS.md` up to date: if a rule, a convention or the project structure changes,
   update this file in the same commit.
 
+### Verifying a refactoring
+
+A refactoring must not change the behaviour. Because the order of the side
+effects is relevant, the behaviour is not checked by reading the code but by
+comparing the old and the new implementation:
+
+1. **Before** the refactoring, freeze the current state as the baseline:
+   ```bash
+   npm run verify:baseline
+   ```
+   This writes the current git commit into `scripts/verify/baselines.json`.
+
+2. Make the refactoring.
+
+3. Run the verifications:
+   ```bash
+   npm run verify
+   ```
+   Every script compares the baseline with the current working tree and reports
+   the differences of the side effects (local storage accesses, database
+   accesses, created DOM, calls of the other functions).
+
+4. If the refactoring was correct, the result is "all scenarios are identical".
+
+The baseline is only used for the comparison, it is never part of the build.
+
+| Script | Compares |
+|--------|----------|
+| `verify_scan.js` | The local storage accesses of the background scan over seven scenarios |
+| `verify_db_helpers.js` | The database accesses of `cleanUpDatabase()` and the marking of the products |
+| `verify_settings_ui.js` | The created DOM of all nine setting types |
+| `verify_new_products_btn.js` | The notifications, the badge and the page title of the new entries button |
+| `verify_init.js` | The created DOM and the calls of the page initialisation |
+
+**NOTE:** A new verification needs the same structure: a `vm` sandbox with mocked
+browser APIs, a list of the function names of the old and the new version and a
+comparison of the side effects. The shared helpers are in
+`scripts/verify/lib/verify_helpers.js`.
+
 ### Screenshots
 - The maintainer creates screenshots with ShareX and pastes the **file path** into the chat.
   A pasted path is text, not an image. To see the screenshot, read the file with the `read`
@@ -119,6 +162,26 @@ listed in `.prettierignore`.
 - No ES6 modules or CommonJS imports/exports
 - Global scope sharing between required files
 - All code shares the same global namespace
+- The verification scripts under `scripts/verify/` are Node.js programs and use
+  CommonJS, they run outside of the browser
+
+### Adding a new global function
+
+A new top level function in one of the project files has to be declared twice,
+because all files share one global namespace:
+
+1. In the `/* exported ... */` comment at the top of the file (for the linter)
+2. In `eslint.config.mjs` in the list of the file it is declared in (so that the
+   other files know the name)
+
+```javascript
+// VineExplorer.user.js
+/* exported myNewFunction */
+function myNewFunction() { ... }
+
+// eslint.config.mjs
+const mainFile = [ ..., 'myNewFunction' ];
+```
 
 ### Code Organization
 ```javascript
@@ -234,6 +297,8 @@ try {
 - **`.prettierrc`** - Project style (print width 140, 4 spaces, single quotes)
 - **`.prettierignore`** - Keeps the formatter away from the markdown files and the local notes
 - **`eslint.config.mjs`** - Linter config and the list of the globals of every file
+- **`scripts/verify/`** - The verification scripts for the refactorings (Node.js)
+- **`scripts/verify/baselines.json`** - The git commit that every verification compares against
 
 ### Key Patterns to Follow
 

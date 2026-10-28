@@ -260,6 +260,36 @@ export default [
             'no-unused-private-class-members': 'warn'
         }
     },
+    {
+        // The verification scripts are Node.js programs, they run outside of the
+        // browser and have their own module system. The block has to come after
+        // pluginJs.configs.recommended, otherwise the recommended rules would
+        // override the ones below.
+        files: ['scripts/**/*.js'],
+        languageOptions: {
+            ecmaVersion: 'latest',
+            sourceType: 'commonjs',
+            globals: {
+                ...globals.node
+            }
+        },
+        rules: {
+            'no-unused-vars': [
+                'error',
+                {
+                    args: 'none',
+                    varsIgnorePattern: '^(_|extHelper_)',
+                    caughtErrorsIgnorePattern: '^_'
+                }
+            ],
+            'no-empty': ['error', { allowEmptyCatch: true }],
+            complexity: ['warn', 20],
+            'max-depth': ['warn', 5],
+            'max-lines-per-function': ['warn', { max: 150, skipBlankLines: true, skipComments: true }],
+            'max-statements': ['warn', 80],
+            'prefer-const': ['warn', { destructuring: 'all' }]
+        }
+    },
     ...allProjectFiles.map((file) => ({
         files: [file],
         languageOptions: {

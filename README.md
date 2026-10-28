@@ -40,7 +40,32 @@ AVE should work now and can be configured to your needs.
 
 Do not try to install it using copy and paste, as the requirements then could not be fulfilled, because they use relative paths. Please do not ask me to use absolute paths since I will not change it.
 
+## Development
+
+```bash
+npm install       # install the dev dependencies (prettier, eslint)
+npm run check     # prettier --check . and eslint .
+npm run format    # prettier --write .
+```
+
+The refactorings are verified automatically, because a refactoring must not
+change the behaviour. Before a refactoring the current state is frozen as the
+baseline, afterwards the old and the new implementation are compared:
+
+```bash
+npm run verify:baseline   # freeze the current git commit as the baseline
+# ... make the refactoring ...
+npm run verify            # compare the baseline with the current state
+```
+
+The verification scripts are in `scripts/verify/`. See `AGENTS.md` for the
+details.
+
 ## Changelog Deburau
+
+##### [2026-10-26] - Version 0.12.1.48
+
+* Tooling: the verification scripts of the refactorings moved from the local notes folder into `scripts/verify/`, so that they are part of the repository and survive a change of the machine. The new npm scripts `npm run verify` (runs all five verifications) and `npm run verify:baseline` (freezes the current git commit as the baseline) make the workflow of a refactoring reproducible. `AGENTS.md` documents the procedure.
 
 ##### [2026-10-26] - Version 0.12.1.47
 
