@@ -252,14 +252,19 @@ state that has to survive the single iterations of the scan loop is kept in a
 | `prepareFastScan()` | Decides if a fast scan is started |
 | `prepareScanIteration()` | Determines the stage and the sub stage |
 | `scanStageZero()` … `scanStageIdle()` | The five stages of the scan |
-| `backgroundScanFinished()` | Stores the state, stops the fast scan, starts the next iteration |
+| `backgroundScanFinished()` | Stores the state and starts the next iteration |
+| `handleFastScanFinished()` | Handles the end of an iteration during a fast scan |
+| `shouldStopFastScan()` | Decides if the fast scan has to be stopped |
+| `stopFastScan()` | Restores the values of the background scan and stops the fast scan |
+| `notifyAboutProductDrop()` | Sends the notification about a possible product drop |
 | `formatDuration()` | Formats a duration for the screen text |
 
 **NOTE:** The scan must be verified with a comparison, because a change of the
 order of the local storage accesses changes the behaviour of the scan. The
 helper script `.unotes/verify_scan.js` runs the old and the new implementation
 in a sandbox with mocked browser APIs and compares the resulting local storage
-accesses step by step.
+accesses step by step. It covers seven scenarios, among them the start of a fast
+scan and the three reasons why a fast scan is stopped.
 
 ## Development Best Practices
 

@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.45
+
+* Refactoring: the fast scan of the background scan was split up. The five conditions for starting a fast scan in `prepareFastScan()` are now one combined expression, and `backgroundScanFinished()` was split into `handleFastScanFinished()`, `shouldStopFastScan()`, `stopFastScan()` and `notifyAboutProductDrop()`. The behaviour did not change, it was verified with the helper script `.unotes/verify_scan.js`, which compares the local storage accesses of the old and the new implementation over seven scenarios, among them the three reasons why a fast scan is stopped.
+
 ##### [2026-10-26] - Version 0.12.1.44
 
 * Refactoring: `updateNewProductsBtn()` was split up. The notification about the number of unseen products moved into `notifyAboutUnseenItems()`, the notification about the number of new products into `notifyAboutNewProducts()`, the keyword search into `searchKeywordsInProducts()` and the check of a single product into `checkKeywordsForProduct()`. The helper `stringToRegex()` became a function of its own. The behaviour did not change, it was verified with the helper script `.unotes/verify_new_products_btn.js`, which compares the database accesses, the triggered notifications, the badge, the page title and the changed products of the old and the new implementation in nine scenarios.

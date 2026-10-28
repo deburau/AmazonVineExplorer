@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.44
+// @version      0.12.1.45
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -54,7 +54,8 @@
    updateAutoScanScreenText, updateBackgroundScanScreenText, updateFavoritesBtn,
    updateNewProductsBtn, updateTileStyle, stopBackgroundScan, aveFixRelativeVineLinks,
    aveResolveUrl, aveUrlWithPage, notifyAboutUnseenItems, notifyAboutNewProducts,
-   searchKeywordsInProducts, checkKeywordsForProduct, stringToRegex */
+   searchKeywordsInProducts, checkKeywordsForProduct, stringToRegex,
+   notifyAboutProductDrop, shouldStopFastScan, stopFastScan, handleFastScanFinished */
 console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 
 /**
@@ -3029,22 +3030,16 @@ function prepareFastScan() {
     let _fastTimeIntervalSec = ((SETTINGS.BackGroundScanDelayPerPage + SETTINGS.BackGroundScannerRandomness / 2) * 15) / 1000;
     if (_fastTimeIntervalSec < 30) _fastTimeIntervalSec = 30;
 
-    let _startFastScan = true;
-    if (_startFastScan && _fastTimeWaitingSec < _fastTimeIntervalSec) {
-        _startFastScan = false;
-    }
-    if (_startFastScan && _backgroundScanStage <= 0) {
-        _startFastScan = false;
-    }
-    if (_startFastScan && _backgroundScanPageMax <= 0) {
-        _startFastScan = false;
-    }
-    if (_startFastScan && _backgroundScanStage == 1 && _backgroundScanPageCurrent <= 0) {
-        _startFastScan = false;
-    }
-    if (_startFastScan && _backgroundScanStage == 1 && _backgroundScanPageCurrent < _backgroundScanPageMax / 20) {
-        _startFastScan = false;
-    }
+    /* The fast scan is started if the last scan is long enough ago, if the scan
+       is not at the very beginning and if it did not just start with the encore
+       queue. The conditions are combined into one expression, because every
+       single one of them would set the same flag. */
+    const _startFastScan =
+        !(_fastTimeWaitingSec < _fastTimeIntervalSec) &&
+        !(_backgroundScanStage <= 0) &&
+        !(_backgroundScanPageMax <= 0) &&
+        !(_backgroundScanStage == 1 && _backgroundScanPageCurrent <= 0) &&
+        !(_backgroundScanStage == 1 && _backgroundScanPageCurrent < _backgroundScanPageMax / 20);
 
     if (_startFastScan) {
         if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): starting fast scan');
@@ -3219,15 +3214,135 @@ function scanStageIdle(baseUrl, state, iteration) {
 }
 
 /**
- * Finishes the current iteration of the background scan.
+ * Sends the notification about a possible product drop.
  *
- * The state is written to the local storage, a possible fast scan is stopped
- * and the next iteration is started with a delay.
+ * @param {number} _newCount The number of the new products of the fast scan
+ */
+function notifyAboutProductDrop(_newCount) {
+    if (SETTINGS.NewItemsNotificationThreshold <= 0 || _newCount < SETTINGS.NewItemsNotificationThreshold) return;
+
+    const _lastDropMS = Date.now() - (localStorage.getItem('AVE_LAST_DROP') || 0);
+    const _lastDropMinutes = _lastDropMS / 1000 / 60;
+
+    if (_lastDropMinutes <= SETTINGS.NewItemsNotificationRepititionMinutes) return;
+
+    localStorage.setItem('AVE_LAST_DROP', Date.now());
+
+    if (SETTINGS.GotifyUrl) {
+        gotifyNotification(`Possible new product drop starting, Amazon Vine Explorer has ${_newCount} new products`);
+    }
+
+    if (SETTINGS.EnableDesktopNotifikation) {
+        desktopNotifikation(
+            `Amazon Vine Explorer - ${AVE_VERSION}`,
+            `Possible new product drop starting, Amazon Vine Explorer has ${_newCount} new products`
+        );
+    }
+}
+
+/**
+ * Decides if the fast scan has to be stopped.
+ *
+ * The fast scan is stopped if the scan passed the stage that it started with,
+ * if no new product was found or if the scan did not get any further.
+ *
+ * @param {object} _fastScanState The state of the fast scan
+ * @param {number} newCount The number of the new products of the last iteration
+ * @returns {boolean} true if the fast scan has to be stopped
+ */
+function shouldStopFastScan(_fastScanState, newCount) {
+    const _backGroundScanStage = _fastScanState.stage;
+    const _lastBackGroundScanStage = _fastScanState.lastStage;
+    const _scanPageCurrent = _fastScanState.pageCurrent;
+    const _lastScanPageCurrent = _fastScanState.lastPageCurrent;
+
+    // The scan is past the stage that the fast scan started with.
+    if (_backGroundScanStage > 1) return true;
+
+    if (SETTINGS.DebugLevel > 10)
+        console.log(
+            `checking fast scan AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS=${localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS')} _backGroundScanStage=${_backGroundScanStage} newCount=${newCount}`
+        );
+
+    // The scan did not find anything and the previous runs did not find anything either.
+    if (
+        _backGroundScanStage > 0 &&
+        newCount === 0 &&
+        (!localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS').match(/^[-0-9]+(:[-0-9]+){3}/) ||
+            localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS') == '0:0:0:0')
+    ) {
+        return true;
+    }
+
+    // The scan did not get any further than the last run of the fast scan.
+    if (
+        _backGroundScanStage == 1 &&
+        _lastBackGroundScanStage == 1 &&
+        _scanPageCurrent > 0 &&
+        _scanPageCurrent - _lastScanPageCurrent >= 0
+    ) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Restores the values of the background scan and stops the fast scan.
+ *
+ * @param {object} _fastScanState The state of the fast scan
+ */
+function stopFastScan(_fastScanState) {
+    if (SETTINGS.DebugLevel > 10)
+        console.log(
+            `stopping fast scan AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS=${localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS')} _backGroundScanStage=${_fastScanState.stage} newCount=${_fastScanState.newCount}`
+        );
+    localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
+    localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', _fastScanState.lastPageCurrent);
+    localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', _fastScanState.lastStage);
+    localStorage.setItem('AVE_FAST_SCAN_LAST_TIME', Date.now());
+}
+
+/**
+ * Handles the end of an iteration of the scan while a fast scan is running.
+ *
+ * @param {number} newCount The number of the new products of the last iteration
+ */
+function handleFastScanFinished(newCount) {
+    const _fastScanState = {
+        stage: localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') || 0,
+        lastStage: localStorage.getItem('AVE_LAST_BACKGROUND_SCAN_STAGE') || 0,
+        lastPageCurrent: localStorage.getItem('AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT') || 0,
+        pageCurrent: localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT') || 0,
+        newCount: newCount
+    };
+
+    const _newCount = parseInt(newCount || 0, 10) + parseInt(localStorage.getItem('AVE_NEW_COUNT') || 0, 10);
+    localStorage.setItem('AVE_NEW_COUNT', _newCount);
+
+    notifyAboutProductDrop(_newCount);
+
+    const _stopFastScan = shouldStopFastScan(_fastScanState, newCount);
+
+    if (_fastScanState.stage > 0 && newCount >= 0) {
+        localStorage.setItem(
+            'AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS',
+            (localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS') + ':' + newCount).replace(/^[^:]+:/, '')
+        );
+    }
+
+    if (_stopFastScan) {
+        stopFastScan(_fastScanState);
+    }
+}
+
+/**
+ * Handles the end of an iteration of the scan and starts the next one.
  *
  * @param {string} baseUrl The base url of the Vine pages
- * @param {BackgroundScanState} state The state of the scan
- * @param {BackgroundScanIteration} iteration The values of the current iteration
- * @param {number} [newCount] The number of new products of the scanned page
+ * @param {object} state The state of the scan
+ * @param {object} iteration The values of the current iteration
+ * @param {number} newCount The number of the new products of the last iteration
  */
 function backgroundScanFinished(baseUrl, state, iteration, newCount) {
     if (SETTINGS.DebugLevel > 10)
@@ -3239,76 +3354,7 @@ function backgroundScanFinished(baseUrl, state, iteration, newCount) {
     state.loopIsWorking = false;
 
     if (localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true') {
-        let _stopFastScan = false;
-
-        const _backGroundScanStage = localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') || 0;
-        const _lastBackGroundScanStage = localStorage.getItem('AVE_LAST_BACKGROUND_SCAN_STAGE') || 0;
-        const _lastScanPageCurrent = localStorage.getItem('AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT') || 0;
-        const _scanPageCurrent = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT') || 0;
-        const _newCount = parseInt(newCount || 0, 10) + parseInt(localStorage.getItem('AVE_NEW_COUNT') || 0, 10);
-        localStorage.setItem('AVE_NEW_COUNT', _newCount);
-
-        if (SETTINGS.NewItemsNotificationThreshold > 0 && _newCount >= SETTINGS.NewItemsNotificationThreshold) {
-            const _lastDropMS = Date.now() - (localStorage.getItem('AVE_LAST_DROP') || 0);
-            const _lastDropMinutes = _lastDropMS / 1000 / 60;
-
-            if (_lastDropMinutes > SETTINGS.NewItemsNotificationRepititionMinutes) {
-                localStorage.setItem('AVE_LAST_DROP', Date.now());
-
-                if (SETTINGS.GotifyUrl) {
-                    gotifyNotification(`Possible new product drop starting, Amazon Vine Explorer has ${_newCount} new products`);
-                }
-
-                if (SETTINGS.EnableDesktopNotifikation) {
-                    desktopNotifikation(
-                        `Amazon Vine Explorer - ${AVE_VERSION}`,
-                        `Possible new product drop starting, Amazon Vine Explorer has ${_newCount} new products`
-                    );
-                }
-            }
-        }
-
-        if (_backGroundScanStage > 1) {
-            _stopFastScan = true;
-        }
-        if (SETTINGS.DebugLevel > 10)
-            console.log(
-                `checking fast scan AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS=${localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS')} _backGroundScanStage=${_backGroundScanStage} newCount=${newCount}`
-            );
-        if (
-            _backGroundScanStage > 0 &&
-            newCount === 0 &&
-            (!localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS').match(/^[-0-9]+(:[-0-9]+){3}/) ||
-                localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS') == '0:0:0:0')
-        ) {
-            _stopFastScan = true;
-        }
-        if (
-            _backGroundScanStage == 1 &&
-            _lastBackGroundScanStage == 1 &&
-            _scanPageCurrent > 0 &&
-            _scanPageCurrent - _lastScanPageCurrent >= 0
-        ) {
-            _stopFastScan = true;
-        }
-
-        if (_backGroundScanStage > 0 && newCount >= 0) {
-            localStorage.setItem(
-                'AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS',
-                (localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS') + ':' + newCount).replace(/^[^:]+:/, '')
-            );
-        }
-
-        if (_stopFastScan) {
-            if (SETTINGS.DebugLevel > 10)
-                console.log(
-                    `stopping fast scan AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS=${localStorage.getItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS')} _backGroundScanStage=${_backGroundScanStage} newCount=${newCount}`
-                );
-            localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
-            localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', _lastScanPageCurrent);
-            localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', _lastBackGroundScanStage);
-            localStorage.setItem('AVE_FAST_SCAN_LAST_TIME', Date.now());
-        }
+        handleFastScanFinished(newCount);
     }
 
     const _delay = SETTINGS.BackGroundScanDelayPerPage + Math.round(Math.random() * SETTINGS.BackGroundScannerRandomness);
