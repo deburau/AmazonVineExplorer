@@ -10,24 +10,24 @@ const I18N = {
             backToTop: 'Zum Seitenanfang',
             settingsTab: 'AVE Einstellungen',
             favorites: 'Favoriten',
-            newEntries: 'Neue Einträge',
+            newEntries: 'Neue Einträge'
         },
         badges: {
             preRelease: 'Vorabversion',
-            featured: 'Empfohlen',
+            featured: 'Empfohlen'
         },
         notifications: {
             nothingToSee: 'Hier gibt es nix zu sehen.\nZumindest noch nicht :P',
             copySuccess: 'Text wurde in die Zwischenablage kopiert.',
             copyError: 'Fehler beim Kopieren in die Zwischenablage:',
             unseenItemsTitle: (version) => `Amazon Vine Explorer - ${version}`,
-            unseenItemsBody: (count) => `Es wurden ${count} neue Eintraege gefunden`,
+            unseenItemsBody: (count) => `Es wurden ${count} neue Eintraege gefunden`
         },
         share: {
             myFSE: 'Mein FSE',
             availableAll: 'Verfügbar für Alle',
             additional: 'Zusätzliche Artikel',
-            page: 'Seite:',
+            page: 'Seite:'
         },
         settings: {
             header: (title, version) => `Einstellungen ${title} - Version ${version}`,
@@ -110,7 +110,8 @@ const I18N = {
             EnablePaginationTop: 'Zeigt Paginierung oben für ZA-Seite',
             EnableBackgroundScan: 'Aktiviert den Background Scan',
             EnableInfiniteScrollLiveQuerry: 'Wenn aktiv, werden Produkte live von Amazon geladen',
-            EnableInfiniteSpinnerFix: 'Repariert fehlerhafte Variantendaten, die das Laden auf der Amazon Vine-Seite endlos fortsetzen können',
+            EnableInfiniteSpinnerFix:
+                'Repariert fehlerhafte Variantendaten, die das Laden auf der Amazon Vine-Seite endlos fortsetzen können',
             EnableDesktopNotifikation: 'Aktiviert Desktop-Benachrichtigungen für neue Produkte',
             EnableAutoMarkFavorite: 'Markiert neue Produkte automatisch als Favorit, wenn Keywords matchen',
             EnableCleanupFavorites: 'Favoriten werden beim Cleanup ebenfalls entfernt',
@@ -167,24 +168,24 @@ const I18N = {
             backToTop: 'Back to top',
             settingsTab: 'AVE Settings',
             favorites: 'Favorites',
-            newEntries: 'New Entries',
+            newEntries: 'New Entries'
         },
         badges: {
             preRelease: 'Pre-release',
-            featured: 'Featured',
+            featured: 'Featured'
         },
         notifications: {
             nothingToSee: 'Nothing to see here.\nAt least not yet :P',
             copySuccess: 'Text copied to clipboard',
             copyError: 'Error copying to clipboard:',
             unseenItemsTitle: (version) => `Amazon Vine Explorer - ${version}`,
-            unseenItemsBody: (count) => `${count} new entries found`,
+            unseenItemsBody: (count) => `${count} new entries found`
         },
         share: {
             myFSE: 'My FSE',
             availableAll: 'Available for All',
             additional: 'Additional Items',
-            page: 'Page:',
+            page: 'Page:'
         },
         settings: {
             header: (title, version) => `Settings ${title} - Version ${version}`,
