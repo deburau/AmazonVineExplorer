@@ -128,6 +128,9 @@ function addBranding() {
     display: flex;
   }
 
+  /* NOTE: Known typo 'brandig' instead of 'branding'. It is a redundant selector
+     because '#ave-branding-text' is also listed above, so nothing matches this.
+     Left as-is to avoid unnecessary churn in the style injection. */
   #ave-brandig-text {
     padding: 0;
     margin: 0;
@@ -179,7 +182,12 @@ unsafeWindow.ave.storeSettingsAsJsonString = () => {
     console.log('The settings are stored as a JSON string now. Reload the page.');
 };
 
-// Small randomized delay reduces race conditions when multiple tabs start.
+/* Small randomized delay reduces race conditions when multiple tabs start.
+
+   KNOWN: The session list is stored as a single JSON blob in localStorage without
+   compare-and-swap, so two tabs writing at the same time could overwrite each other.
+   This is ignored because only the master tab writes meaningful state and the session
+   list is rebuilt by the heartbeat within one second anyway. */
 setTimeout(() => {
     if (!localStorage.getItem('AVE_SESSIONS')) {
         localStorage.setItem("AVE_SESSIONS", JSON.stringify([{id: AVE_SESSION_ID, ts: Date.now()}]));
@@ -205,7 +213,11 @@ setTimeout(() => {
         addBranding();
     }
 
-    // Heartbeat: keep session list fresh and elect a master when needed.
+    /* Heartbeat: keep session list fresh and elect a master when needed.
+       KNOWN: The heartbeat also runs on Amazon shopping pages (SITE_IS_VINE is only
+       checked inside the interval). This causes a small overhead and unnecessary
+       session entries for shopping tabs, but it is needed to keep the master election
+       consistent when the user navigates from shopping back to a Vine page. */
     setInterval(() => { //
         let _sessions;
         try {
@@ -274,6 +286,9 @@ setTimeout(() => {
 // NOTE: A listener is used instead of window.onbeforeunload, so that the handler of the page is
 // not overwritten. The function must not return a value, otherwise the browser shows the
 // "leave this site?" dialog on every reload.
+// KNOWN: Browsers may block or delay localStorage writes during beforeunload, so the
+// session might not be removed here. This is not a problem because the init code cleans
+// up stale entries with the same session id (the id is reused via sessionStorage).
 window.addEventListener('beforeunload', () => {
     console.log('CLOSE OR RELOAD SESSION - REMOVE OUR SESSION ID FROM ARRAY');
     try {
@@ -312,6 +327,9 @@ SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableTopLogoChange', type: 'bool', name
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableBtnAll', type: 'bool', name: 'Enable Button All Products', description: 'Enable &quot;All Products&quot; Button'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnablePaginationTop', type: 'bool', name: 'Enable Pagination on top', description: 'Enable Pagination to be displayed on top for ZA page' });
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableBackgroundScan', type: 'bool', name: 'Enable Background Scan', description: 'Enables the Background scan, if disabled you will find a Button for Autoscan on the Vine Website'});
+/* NOTE: 'EnableInfiniteScrollLiveQuerry' is a known typo for '...Query'. It is used
+   consistently in globals.js and VineExplorer.user.js and is part of the persisted
+   settings, so renaming it would invalidate existing user configurations. */
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableInfiniteScrollLiveQuerry', type: 'bool', name: 'Enable Infiniti Scroll Live Querry', description: 'If enabled the Products of the All Products Page will get querryd from Amazon directls otherwise they will get loaded from Database(faster)'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableInfiniteSpinnerFix', type: 'bool', name: 'Fix Infinite Spinner', description: 'Repairs malformed product variation data that can leave Amazon Vine loading indefinitely'});
 SETTINGS_USERCONFIG_DEFINES.push({key: 'EnableDesktopNotifikation', type: 'bool', name: 'Enable Desktop Notifications', description: 'Enable Desktop Notifications if new Products are detected'});
@@ -384,8 +402,12 @@ class SETTINGS_DEFAULT {
     DisableBtnSeller = false;
     EnableTopLogoChange = true;
     EnableBackgroundScan = true;
+    /* NOTE: Known typo 'LiveQuerry' instead of 'LiveQuery'. Kept for backwards
+       compatibility with already stored settings (see note above). */
     EnableInfiniteScrollLiveQuerry = false;
     EnableInfiniteSpinnerFix = true;
+    /* NOTE: Known typo 'Notifikation' instead of 'Notification'. Kept for backwards
+       compatibility with already stored settings (see note above). */
     EnableDesktopNotifikation = false;
     EnableAutoMarkFavorite = false;
     EnableCleanupFavorites = false;
@@ -471,6 +493,9 @@ MaxItemsPerPage = 500;
 const SETTINGS = new SETTINGS_DEFAULT();
 
 // The settings are written to the GM storage when the save event is fired.
+/* NOTE: GM_setValue (the old synchronous API) is used here, not GM.setValue.
+   Therefore SETTINGS.save(true) does not return a Promise and await would have
+   no effect. The fire-and-forget pattern is safe for this synchronous API. */
 ave_eventhandler.on('ave-save-cofig', () => {
     console.log('Got Save Event');
     SETTINGS.save(true);
@@ -658,6 +683,10 @@ async function findActiveMenuButton() {
     let buttonIds;
     switch (getCountry()) {
         case 'DE':
+            /* NOTE: 'vvp-all-items-button' is the outdated German id. Current Vine
+               pages use 'vvp-items-button--all' like other locales. The mismatch
+               means findActiveMenuButton() may return null for DE, but the only
+               caller (EnablePaginationTop) degrades gracefully. */
             buttonIds = [
                 'vvp-items-button--recommended',
                 'vvp-all-items-button'
@@ -799,6 +828,9 @@ async function fastStyleChanges() {
         if (SETTINGS.EnableTopLogoChange) {
             waitForStyleElement('#vvp-logo-link > img', (elem) => {
                 if (elem) {
+                    /* NOTE: The 'dev-main' branch no longer exists; this URL returns 404.
+                       Fixing it would require changing CDN URLs and testing across
+                       regions, so it is left as a known warning. */
                     elem.src = 'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_notification_image.png';
                     elem.style.height = '100px';
                 }

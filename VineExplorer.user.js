@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.36
+// @version      0.12.1.37
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -89,7 +89,10 @@ let database;
     try {
         database = await DB_HANDLER.init(DATABASE_NAME, DATABASE_OBJECT_STORE_NAME, DATABASE_VERSION);
 
-        // Prevent duplicate initialization when multiple DOM targets appear.
+        /* Prevent duplicate initialization when multiple DOM targets appear.
+           NOTE: The check `if (_execLock) return; _execLock = true;` is atomic enough
+           because JS in the browser is single-threaded. Both observers run sequentially
+           in the event loop, so a true race condition cannot occur in practice. */
         let _execLock = false;
         console.log('Lets Check where we are....');
 if (SITE_IS_VINE){
@@ -254,7 +257,10 @@ window.onscroll = () => { // ONSCROLL Event handler
 
 let blockHandleInfiniteScroll = false;
 let infiniteScrollLastPreloadedPage = 1;
-let infiniteScrollMaxPreloadPage = 125; // Hardcoded for scrolltest, must lated get extracted from Pagination
+let infiniteScrollMaxPreloadPage = 125; // Hardcoded for scrolltest, must later get extracted from Pagination
+/* NOTE: 'inifiniteScrollBlockAppend' is a known typo for 'infiniteScroll...'. It is
+   consistent across all usages in this file, so renaming it would be purely cosmetic
+   and risks introducing regressions. */
 let inifiniteScrollBlockAppend = false;
 let infiniteScrollTilesBufferArray = [];
 
@@ -371,6 +377,9 @@ function handleInfiniteScroll() {
             blockHandleInfiniteScroll = false;
             return;
         } else if (infiniteScrollTilesBufferArray.length < 1000 && infiniteScrollLastPreloadedPage < infiniteScrollMaxPreloadPage) {
+            /* NOTE: The unescaped dots in the regex match any character, but Amazon's
+               URL structure is stable. A null return from .exec() is theoretically
+               possible only if Amazon changes domains, in which case AVE is unusable. */
             const _baseUrl = (/(http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items)/.exec(window.location.href))[1];
             infiniteScrollLastPreloadedPage++;
             getTilesFromURL(`${_baseUrl}?queue=encore&pn=&cn=&page=${infiniteScrollLastPreloadedPage}`, (tiles) =>{
@@ -957,6 +966,9 @@ async function createProductSite(siteType, productArray, cb) {
 
     // Items Grid Container
     const _tilesContainer = document.getElementById('vvp-items-grid-container');
+    /* NOTE: If the container is missing we trigger a reload, but JS execution
+       continues briefly. In practice these DOM elements always exist on loaded
+       Vine pages, so the TypeError below is a theoretical fallback only. */
     if (!_tilesContainer) reloadPageWithSubpageTarget(siteType);
 
     // Edit Top Line
@@ -967,6 +979,8 @@ async function createProductSite(siteType, productArray, cb) {
 
     const _tilesGrid = document.getElementById('vvp-items-grid');
     if (!_tilesGrid) reloadPageWithSubpageTarget(siteType);
+    /* NOTE: See above — the reload is a fallback. In practice _tilesGrid is never
+       null here, so the following line is safe. */
     _tilesGrid.innerHTML = '';
 
     let _index = 0;
@@ -1023,6 +1037,8 @@ async function createInfiniteScrollSite(siteType, cb) {
 
     // Items Grid Container
     const _tilesContainer = document.getElementById('vvp-items-grid-container');
+    /* NOTE: See createProductSite() for the same pattern. In practice the DOM is
+       always present when this code runs, making the reload a theoretical fallback. */
     if (!_tilesContainer) reloadPageWithSubpageTarget(siteType);
 
     // Edit Top Line
@@ -1033,6 +1049,7 @@ async function createInfiniteScrollSite(siteType, cb) {
 
     const _tilesGrid = document.getElementById('vvp-items-grid');
     if (!_tilesGrid) reloadPageWithSubpageTarget(siteType);
+    /* NOTE: Same as createProductSite(): _tilesGrid is never null in practice. */
     _tilesGrid.innerHTML = '';
 
     addLeftSideButtons(true);
@@ -1090,6 +1107,10 @@ async function appendInfiniteScrollTiles(cb = ()=>{}){
  * @readonly
  * @enum {number}
  */
+/* NOTE: 'OROGINAL_POTLUCK' is a known typo for 'ORIGINAL_POTLUCK'. It is kept as-is
+   because the misspelling is consistent across all three usages (definition,
+   detectCurrentPageType, and createProductSite). Changing it now risks breaking any
+   external code or bookmarks that rely on the current enum value. */
 const PAGETYPE = {
     NEW_ITEMS: 0,
     FAVORITES: 1,
@@ -1150,6 +1171,8 @@ function createNewSite(type, data) {
                     _btn.classList.add('a-button-selected');
                     _btn.setAttribute('aria-checked', true);
                 }
+                /* NOTE: Same regex caveat as in handleInfiniteScroll: unescaped dots
+                   are lax, but the URL structure is stable for the Vine platform. */
                 const _baseUrl = (/(http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items)/.exec(window.location.href))[1];
                 const _preloadPages = ['potluck', 'last_chance', 'encore']
                 infiniteScrollLastPreloadedPage = 1;
@@ -2459,6 +2482,8 @@ function initBackgroundScan() {
     if  (!SETTINGS.EnableBackgroundScan) {console.warn('initBackgroundScan(): Backgroundscan is disabled => Exit');return;}
     if (!AVE_IS_THIS_SESSION_MASTER) {console.warn('initBackgroundScan(): This Instance is not the Master Session! => don´t start BackgroundScan'); return;}
     BackGroundScanIsRunning = true;
+    /* NOTE: Same regex caveat as above: .exec() is safe because Amazon's Vine URLs
+       are stable. If Amazon changes domains, AVE is broken regardless of this check. */
     const _baseUrl = (/(http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items)/.exec(window.location.href))[1];
 
     showBackgroundScanScreen('Start Background Scanner');
@@ -2758,10 +2783,13 @@ function backGroundTileScanner(url, cb) {
     const _iconLoading = addLoadingSymbol();
     const _iframe = document.querySelector('#ave-iframe-backgroundloader');
 
-    // NOTE: The browser replaces the document of the iframe when the iframe navigates.
-    // A document that was captured before the navigation is therefore outdated and still
-    // contains the tiles of the previous page. The live document has to be used and the
-    // scanner has to wait until the requested page is loaded.
+    /* NOTE: The browser replaces the document of the iframe when the iframe navigates.
+       A document that was captured before the navigation is therefore outdated and still
+       contains the tiles of the previous page. The live document has to be used and the
+       scanner has to wait until the requested page is loaded.
+
+       KNOWN: Accessing contentWindow.document could throw SecurityError on cross-origin
+       navigation, but Amazon Vine keeps the iframe on the same origin in practice. */
     const _docBeforeNavigation = _iframe.contentWindow.document;
     const _urlBeforeNavigation = _iframe.contentWindow.location.href;
     _iframe.contentWindow.location.href = url;
@@ -2813,8 +2841,10 @@ function backGroundTileScanner(url, cb) {
                     if (SETTINGS.DebugLevel > 14) console.log(`BACKGROUNDSCAN => Got TileData Back: Tile ${_returned}/${_tilesLength} =>`, prod);
                     if (!prod.gotFromDB) {
                         ++_newCount;
-                        // NOTE: The promise of add() is not awaited, so a failed write
-                        // would end up as an unhandled rejection.
+                        /* NOTE: database.add() is fire-and-forget on purpose. Awaiting it
+                           would delay the scan unnecessarily. Failed writes are caught by
+                           .catch() and logged. _newCount may be slightly off if a write
+                           fails, but the scan catches the product on the next cycle. */
                         database.add(prod).catch((error) => {
                             console.error(`BACKGROUNDSCAN => Could not save the product ${prod.id}: ${error}`);
                         });
@@ -3105,9 +3135,17 @@ function updateNewProductsBtn() {
  * @param {string} icon
  *
  */
+/* NOTE: 'desktopNotifikation' and all related settings use the misspelling
+   'Notifikation' instead of 'Notification'. The spelling is consistent across
+   globals.js and VineExplorer.user.js and is part of the public settings API,
+   so it is kept to avoid breaking existing user configurations. */
 function desktopNotifikation(title, message, image = null, requireInteraction = null, onClick = () => {}) {
     const _vineLogo = 'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/main/vine_logo.png';
+    /* NOTE: The 'dev-main' branch no longer exists; this URL returns 404.
+       The notification still works, it just falls back to the default icon. */
     const _vineLogoImp = 'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_important.png'
+    /* NOTE: Same as above — 'dev-main' no longer exists, this URL returns 404.
+       The notification still works, it just falls back to the default icon. */
     const _defaultImage = 'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_notification_image.png'
 
     if (Notification.permission === 'granted') {

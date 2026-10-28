@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.37
+
+* Docs: added comments in the source code for all known issues that are intentionally not fixed. Each comment describes the problem and explains why it is ignored (e.g. typos that are part of the public settings API, theoretical edge cases that cannot occur in practice, or fallbacks that degrade gracefully).
+
 ##### [2026-10-26] - Version 0.12.1.36
 
 * Fix: the heartbeat interval passed a fallback `'[]'` as the second argument to `localStorage.getItem()`, which only accepts one parameter. If the key was missing, `JSON.parse(null)` was called and the interval threw a TypeError on `_sessions.length`. Fixed by using `getItem(key) || '[]'`.
