@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.41
+// @version      0.12.1.42
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -746,85 +746,66 @@ function addLeftSideButtons(forceClean) {
     _div.appendChild(_backToTopBtn);
 }
 
-function markAllCurrentSiteProductsAsSeen(cb = () => {}) {
+/**
+ * Marks all products of the current page as seen.
+ *
+ * @returns {Promise<void>} Resolves when every tile was processed. A tile that
+ *                          could not be read or written does not stop the others.
+ */
+async function markAllCurrentSiteProductsAsSeen() {
     const _tiles = document.getElementsByClassName('vvp-item-tile');
     const _tilesLength = _tiles.length;
 
-    // If there is nothing to mark, the callback has to be called right away.
-    // Otherwise the caller (e.g. the "Gelesen" button of the pagination) would wait forever.
-    if (_tilesLength == 0) {
-        cb();
-        return;
-    }
-
-    let _returned = 0;
-
-    // Counts a tile as done, no matter if the update worked or not, so that the
-    // callback is guaranteed to be called exactly once.
-    const _done = () => {
-        _returned++;
-        if (_returned == _tilesLength) cb();
-    };
-
+    const _workersProms = [];
     for (let i = 0; i < _tilesLength; i++) {
         const _tile = _tiles[i];
         const _id = _tile.getAttribute('data-recommendation-id');
-        database
-            .getById(_id)
-            .then((prod) => {
-                // The product is not in the database (should not happen normally), so there is
-                // nothing to mark. Without this check the following line would throw an error.
-                if (!prod) {
-                    _done();
-                    return;
+        _workersProms.push(
+            (async () => {
+                try {
+                    const _prod = await database.getById(_id);
+                    // The product is not in the database (should not happen normally), so there is
+                    // nothing to mark. Without this check the following line would throw an error.
+                    if (!_prod) return;
+                    _prod.isNew = 0;
+                    await database.update(_prod);
+                    updateTileStyle(_prod);
+                } catch (error) {
+                    console.error(`markAllCurrentSiteProductsAsSeen(): could not process the product ${_id}: ${error}`);
                 }
-                prod.isNew = 0;
-                database
-                    .update(prod)
-                    .then(() => {
-                        updateTileStyle(prod);
-                        _done();
-                    })
-                    .catch((error) => {
-                        console.error(`markAllCurrentSiteProductsAsSeen(): could not update the product ${_id}: ${error}`);
-                        _done();
-                    });
-            })
-            .catch((error) => {
-                console.error(`markAllCurrentSiteProductsAsSeen(): could not get the product ${_id}: ${error}`);
-                _done();
-            });
+            })()
+        );
     }
+    await Promise.allSettled(_workersProms);
 }
 
-function markAllCurrentDatabaseProductsAsSeen(cb = () => {}) {
+/**
+ * Marks all products of the database as seen.
+ *
+ * @returns {Promise<void>} Resolves when every product was processed.
+ */
+async function markAllCurrentDatabaseProductsAsSeen() {
     if (SETTINGS.DebugLevel > 10) console.log('Called markAllCurrentDatabaseProductsAsSeen()');
-    database.getNewEntries().then((prods) => {
-        const _prodsLength = prods.length;
-        let _returned = 0;
-        if (SETTINGS.DebugLevel > 10) console.log(`markAllCurrentDatabaseProductsAsSeen() - Got ${_prodsLength} Products with Tag isNew`);
-        if (_prodsLength == 0) {
-            cb(true);
-            return;
-        }
-        for (let i = 0; i < _prodsLength; i++) {
-            const _currProd = prods[i];
-            _currProd.isNew = 0;
-            // NOTE: update() returns a promise, it does not take a callback
+    const _prods = await database.getNewEntries();
+    const _prodsLength = _prods.length;
+    if (SETTINGS.DebugLevel > 10) console.log(`markAllCurrentDatabaseProductsAsSeen() - Got ${_prodsLength} Products with Tag isNew`);
+
+    const _workersProms = [];
+    for (let i = 0; i < _prodsLength; i++) {
+        const _currProd = _prods[i];
+        _currProd.isNew = 0;
+        _workersProms.push(
             database
                 .update(_currProd)
                 .then(() => {
                     if (SETTINGS.DebugLevel > 10) console.log(`markAllCurrentDatabaseProductsAsSeen() - Updated ${_currProd.id}`);
-                    _returned++;
-                    if (_returned == _prodsLength) cb(true);
                 })
                 .catch((error) => {
                     console.error(`markAllCurrentDatabaseProductsAsSeen(): could not update the product ${_currProd.id}: ${error}`);
-                    _returned++;
-                    if (_returned == _prodsLength) cb(true);
-                });
-        }
-    });
+                })
+        );
+    }
+    await Promise.allSettled(_workersProms);
 }
 
 function createButton(text, id, style, clickHandler) {
@@ -2511,130 +2492,129 @@ function getPageinationData(localDocument = document) {
     return _ret;
 }
 
-// CleanUp and Fix Database Entrys
-async function cleanUpDatabase(cb = () => {}) {
+/**
+ * Cleans up and fixes a single entry of the database.
+ *
+ * @param {Product} _currEntry The entry to check
+ * @param {object} _limits The cleanup limits of the current run
+ * @returns {Promise<string>} Resolves with "deleted" or "updated", or with an
+ *                           empty string if nothing was written.
+ */
+async function cleanUpDatabaseEntry(_currEntry, _limits) {
+    const { vendorCleanupDate, normalCleanupDate, secondsBeforeCleanup, currentTimeStamp } = _limits;
+    let _needUpdate = false;
+    if (SETTINGS.DebugLevel > 10) console.log(`cleanUpDatabase() - Checking Entry ${_currEntry.id} `);
+
+    // Checking Product Vars
+    if (!_currEntry.ts_firstSeen) {
+        _currEntry.ts_firstSeen = unixTimeStamp() - Math.round(Math.random() * (SECONDS_PER_WEEK / 2));
+        _needUpdate = true;
+        if (SETTINGS.DebugLevel > 14)
+            console.log(`cleanUpDatabase() - Entry ${_currEntry.id} had no valid firstseen timestamp. fixed`);
+    }
+
+    if (!_currEntry.ts_lastSeen) {
+        _currEntry.ts_lastSeen = _currEntry.ts_firstSeen + SECONDS_PER_DAY;
+        _needUpdate = true;
+        if (SETTINGS.DebugLevel > 14)
+            console.log(`cleanUpDatabase() - Entry ${_currEntry.id} had no valid lastseen timestamp. fixed`);
+    }
+
+    let _notSeenCounter = _currEntry.notSeenCounter;
+    if (_currEntry.data_recommendation_type == 'VENDOR_TARGETED' && _currEntry.ts_lastSeen < vendorCleanupDate) {
+        // If PotLuck start revoving after 1 day
+        _notSeenCounter++;
+        if (SETTINGS.DebugLevel > 14)
+            console.log(`cleanUpDatabase() - Entry ${_currEntry.id} increased notSeenCounter to ${_notSeenCounter}`);
+    } else if (_currEntry.ts_lastSeen < normalCleanupDate) {
+        // Normal Product Start Removing after 1 week
+        _notSeenCounter++;
+        if (SETTINGS.DebugLevel > 14)
+            console.log(`cleanUpDatabase() - Entry ${_currEntry.id} increased notSeenCounter to ${_notSeenCounter}`);
+    }
+
+    if (_currEntry.notSeenCounter != _notSeenCounter) {
+        if (SETTINGS.DebugLevel > 14)
+            console.log(`cleanUpDatabase() - Entry ${_currEntry.id} update notSeenCounter from ${_currEntry.notSeenCounter} to ${_notSeenCounter}`);
+        _currEntry.notSeenCounter = _notSeenCounter;
+        _needUpdate = true;
+    }
+
+    const _hasToBeRemoved =
+        ((_currEntry.notSeenCounter > 0 && currentTimeStamp - _currEntry.ts_lastSeen >= secondsBeforeCleanup) || _currEntry.forceRemove) &&
+        (!_currEntry.isFav || SETTINGS.EnableCleanupFavorites);
+
+    if (_hasToBeRemoved) {
+        if (SETTINGS.DebugLevel > 10) console.log(`cleanUpDatabase() - Removing Entry ${_currEntry.id}`);
+        await database.removeID(_currEntry.id);
+        return 'deleted';
+    }
+    if (_needUpdate) {
+        await database.update(_currEntry);
+        return 'updated';
+    }
+    return '';
+}
+
+/**
+ * Cleans up and fixes the entries of the database.
+ *
+ * @returns {Promise<boolean>} Resolves with true if the cleanup was successful
+ *                              and with false if the database could not be read.
+ */
+async function cleanUpDatabase() {
     if (SETTINGS.DebugLevel > 10) console.log('Called cleanUpDatabase()');
     const _dbCleanIcon = addDBCleaningSymbol();
 
-    database
-        .getAll()
-        .then((prodArr) => {
-            const _prodArrLength = prodArr.length;
-            const _workersProms = [];
-            if (SETTINGS.DebugLevel > 10) console.log(`cleanUpDatabase() - Checking ${_prodArrLength} Entrys`);
+    try {
+        const _prodArr = await database.getAll();
+        const _prodArrLength = _prodArr.length;
+        if (SETTINGS.DebugLevel > 10) console.log(`cleanUpDatabase() - Checking ${_prodArrLength} Entrys`);
 
-            let _updated = 0;
-            let _deleted = 0;
-            let _vendorCleanupDate = toUnixTimestamp(localStorage.getItem('AVE_CLEANUP_LAST_TIME') || 0);
-            let _normalCleanupDate = _vendorCleanupDate;
-            if (_vendorCleanupDate < unixTimeStamp() - SECONDS_PER_DAY) {
-                // potluck removal starts at last cleanup time or after a day, whichever comes later
-                _vendorCleanupDate = unixTimeStamp() - SECONDS_PER_DAY;
-            }
-            if (_normalCleanupDate < unixTimeStamp() - SECONDS_PER_WEEK) {
-                // normal removal starts at last cleanup time or after 7 days, whichever comes later
-                _normalCleanupDate = unixTimeStamp() - SECONDS_PER_WEEK;
-            }
+        let _vendorCleanupDate = toUnixTimestamp(localStorage.getItem('AVE_CLEANUP_LAST_TIME') || 0);
+        let _normalCleanupDate = _vendorCleanupDate;
+        if (_vendorCleanupDate < unixTimeStamp() - SECONDS_PER_DAY) {
+            // potluck removal starts at last cleanup time or after a day, whichever comes later
+            _vendorCleanupDate = unixTimeStamp() - SECONDS_PER_DAY;
+        }
+        if (_normalCleanupDate < unixTimeStamp() - SECONDS_PER_WEEK) {
+            // normal removal starts at last cleanup time or after 7 days, whichever comes later
+            _normalCleanupDate = unixTimeStamp() - SECONDS_PER_WEEK;
+        }
 
-            const secondsBeforeCleanup = SETTINGS.HoursBeforeCleanup * 3600;
-            const currentTimeStamp = unixTimeStamp();
+        const _limits = {
+            vendorCleanupDate: _vendorCleanupDate,
+            normalCleanupDate: _normalCleanupDate,
+            secondsBeforeCleanup: SETTINGS.HoursBeforeCleanup * 3600,
+            currentTimeStamp: unixTimeStamp(),
+        };
 
-            for (const _currEntry of prodArr) {
-                _workersProms.push(
-                    new Promise((resolve, reject) => {
-                        let _needUpdate = false;
-                        if (SETTINGS.DebugLevel > 10) console.log(`cleanUpDatabase() - Checking Entry ${_currEntry.id} `);
+        const _results = await Promise.allSettled(
+            _prodArr.map((_currEntry) =>
+                cleanUpDatabaseEntry(_currEntry, _limits).catch((error) => {
+                    // NOTE: A failed write must not stop the cleanup of the other entries.
+                    console.error(`cleanUpDatabase(): could not process the entry ${_currEntry.id}: ${error}`);
+                    return '';
+                })
+            )
+        );
 
-                        // Checking Product Vars
-                        if (!_currEntry.ts_firstSeen) {
-                            _currEntry.ts_firstSeen = unixTimeStamp() - Math.round(Math.random() * (SECONDS_PER_WEEK / 2));
-                            _needUpdate = true;
-                            if (SETTINGS.DebugLevel > 14)
-                                console.log(`cleanUpDatabase() - Entry ${_currEntry.id} had no valid firstseen timestamp. fixed`);
-                        }
+        const _updated = _results.filter((_r) => _r.value === 'updated').length;
+        const _deleted = _results.filter((_r) => _r.value === 'deleted').length;
 
-                        if (!_currEntry.ts_lastSeen) {
-                            _currEntry.ts_lastSeen = _currEntry.ts_firstSeen + SECONDS_PER_DAY;
-                            _needUpdate = true;
-                            if (SETTINGS.DebugLevel > 14)
-                                console.log(`cleanUpDatabase() - Entry ${_currEntry.id} had no valid lastseen timestamp. fixed`);
-                        }
-
-                        let _notSeenCounter = _currEntry.notSeenCounter;
-                        if (_currEntry.data_recommendation_type == 'VENDOR_TARGETED' && _currEntry.ts_lastSeen < _vendorCleanupDate) {
-                            // If PotLuck start revoving after 1 day
-                            _notSeenCounter++;
-                            if (SETTINGS.DebugLevel > 14)
-                                console.log(`cleanUpDatabase() - Entry ${_currEntry.id} increased notSeenCounter to ${_notSeenCounter}`);
-                        } else if (_currEntry.ts_lastSeen < _normalCleanupDate) {
-                            // Normal Product Start Removing after 1 week
-                            _notSeenCounter++;
-                            if (SETTINGS.DebugLevel > 14)
-                                console.log(`cleanUpDatabase() - Entry ${_currEntry.id} increased notSeenCounter to ${_notSeenCounter}`);
-                        }
-
-                        if (_currEntry.notSeenCounter != _notSeenCounter) {
-                            if (SETTINGS.DebugLevel > 14)
-                                console.log(
-                                    `cleanUpDatabase() - Entry ${_currEntry.id} update notSeenCounter from ${_currEntry.notSeenCounter} to ${_notSeenCounter}`
-                                );
-                            _currEntry.notSeenCounter = _notSeenCounter;
-                            _needUpdate = true;
-                        }
-
-                        if (
-                            ((_currEntry.notSeenCounter > 0 && currentTimeStamp - _currEntry.ts_lastSeen >= secondsBeforeCleanup) ||
-                                _currEntry.forceRemove) &&
-                            (!_currEntry.isFav || SETTINGS.EnableCleanupFavorites)
-                        ) {
-                            if (SETTINGS.DebugLevel > 10) console.log(`cleanUpDatabase() - Removing Entry ${_currEntry.id}`);
-
-                            database
-                                .removeID(_currEntry.id)
-                                .then((ret) => {
-                                    _deleted++;
-                                    resolve();
-                                })
-                                .catch((error) => {
-                                    // NOTE: The promise has to be resolved in every case. Otherwise the
-                                    // cleanup would wait forever and the symbol would stay on the screen.
-                                    console.error(`cleanUpDatabase(): could not remove the entry ${_currEntry.id}: ${error}`);
-                                    resolve();
-                                });
-                        } else if (!_needUpdate) {
-                            resolve();
-                        } else {
-                            database
-                                .update(_currEntry)
-                                .then((ret) => {
-                                    _updated++;
-                                    resolve();
-                                })
-                                .catch((error) => {
-                                    console.error(`cleanUpDatabase(): could not update the entry ${_currEntry.id}: ${error}`);
-                                    resolve();
-                                });
-                        }
-                    })
-                );
-            }
-
-            Promise.allSettled(_workersProms).then(() => {
-                if (SETTINGS.DebugLevel > 0)
-                    console.log(`Databasecleanup Finished: Entrys:${_prodArrLength} Updated:${_updated} Deleted:${_deleted}`);
-                _dbCleanIcon.remove();
-                // store current date
-                localStorage.setItem('AVE_CLEANUP_LAST_TIME', Date.now());
-                cb(true);
-            });
-        })
-        .catch((error) => {
-            // The database could not be read. The symbol has to be removed anyway, otherwise
-            // it would stay on the screen forever.
-            console.error(`cleanUpDatabase(): could not read the database: ${error}`);
-            _dbCleanIcon.remove();
-            cb(false);
-        });
+        if (SETTINGS.DebugLevel > 0)
+            console.log(`Databasecleanup Finished: Entrys:${_prodArrLength} Updated:${_updated} Deleted:${_deleted}`);
+        _dbCleanIcon.remove();
+        // store current date
+        localStorage.setItem('AVE_CLEANUP_LAST_TIME', Date.now());
+        return true;
+    } catch (error) {
+        // The database could not be read. The symbol has to be removed anyway, otherwise
+        // it would stay on the screen forever.
+        console.error(`cleanUpDatabase(): could not read the database: ${error}`);
+        _dbCleanIcon.remove();
+        return false;
+    }
 }
 
 unsafeWindow.ave.dbCleanup = cleanUpDatabase;
@@ -3419,28 +3399,27 @@ function updateBackgroundScanScreenText(text = '') {
     _elem.textContent = text;
 }
 
-function startAutoScan() {
+async function startAutoScan() {
     if (SETTINGS.DebugLevel > 10) console.log('Called startAutoScan()');
     showAutoScanScreen('Init Autoscan, please wait...');
-    markAllCurrentDatabaseProductsAsSeen(() => {
-        if (SETTINGS.DebugLevel > 10) console.log('startAutoScan() - Got Callback from markAllCurrentDatabaseProductsAsSeen()');
-        const _pageiDat = getPageinationData();
-        localStorage.setItem('AVE_INIT_AUTO_SCAN', false);
-        localStorage.setItem('AVE_AUTO_SCAN_IS_RUNNING', true);
-        localStorage.setItem('AVE_AUTO_SCAN_PAGE_MAX', _pageiDat.maxPage);
-        localStorage.setItem('AVE_AUTO_SCAN_PAGE_CURRENT', 1);
-        setTimeout(() => {
-            // NOTE: The pagination href of Amazon is relative ("vine-items?...page=").
-            // It has to be resolved to an absolute URL, otherwise a trailing slash
-            // in the current URL would produce a doubled path (see aveResolveUrl()).
-            const _url = aveResolveUrl(`${_pageiDat.href}1`);
-            if (SETTINGS.DebugLevel > 10) console.log(`Loding new Page ${_url}`);
-            window.location.href = _url;
-        }, 5000);
-    });
+    await markAllCurrentDatabaseProductsAsSeen();
+    if (SETTINGS.DebugLevel > 10) console.log('startAutoScan() - markAllCurrentDatabaseProductsAsSeen() is done');
+    const _pageiDat = getPageinationData();
+    localStorage.setItem('AVE_INIT_AUTO_SCAN', false);
+    localStorage.setItem('AVE_AUTO_SCAN_IS_RUNNING', true);
+    localStorage.setItem('AVE_AUTO_SCAN_PAGE_MAX', _pageiDat.maxPage);
+    localStorage.setItem('AVE_AUTO_SCAN_PAGE_CURRENT', 1);
+    setTimeout(() => {
+        // NOTE: The pagination href of Amazon is relative ("vine-items?...page=").
+        // It has to be resolved to an absolute URL, otherwise a trailing slash
+        // in the current URL would produce a doubled path (see aveResolveUrl()).
+        const _url = aveResolveUrl(`${_pageiDat.href}1`);
+        if (SETTINGS.DebugLevel > 10) console.log(`Loding new Page ${_url}`);
+        window.location.href = _url;
+    }, 5000);
 }
 
-function handleAutoScan() {
+async function handleAutoScan() {
     const _delay = Math.max(SETTINGS.PageLoadMinDelay - (Date.now() - PAGE_LOAD_TIMESTAMP), 0) + 500;
     if (SETTINGS.DebugLevel > 10) console.log(`handleAutoScan() - _delay: ${_delay}`);
     if (AUTO_SCAN_PAGE_CURRENT < AUTO_SCAN_PAGE_MAX) {
@@ -3454,17 +3433,16 @@ function handleAutoScan() {
     } else {
         // We are done ;)
         updateAutoScanScreenText('Success, cleaning up Database...');
-        cleanUpDatabase(() => {
-            localStorage.setItem('AVE_AUTO_SCAN_IS_RUNNING', false);
-            localStorage.setItem('AVE_AUTO_SCAN_PAGE_MAX', -1);
-            localStorage.setItem('AVE_AUTO_SCAN_PAGE_CURRENT', -1);
+        await cleanUpDatabase();
+        localStorage.setItem('AVE_AUTO_SCAN_IS_RUNNING', false);
+        localStorage.setItem('AVE_AUTO_SCAN_PAGE_MAX', -1);
+        localStorage.setItem('AVE_AUTO_SCAN_PAGE_CURRENT', -1);
+        setTimeout(() => {
+            updateAutoScanScreenText('Finished Database\nupdate and cleanup\n\nPage reloading incoming... please wait');
             setTimeout(() => {
-                updateAutoScanScreenText('Finished Database\nupdate and cleanup\n\nPage reloading incoming... please wait');
-                setTimeout(() => {
-                    window.location.href = aveUrlWithPage(1);
-                }, 10000);
-            }, _delay + 2000);
-        });
+                window.location.href = aveUrlWithPage(1);
+            }, 10000);
+        }, _delay + 2000);
     }
 }
 
@@ -4153,12 +4131,11 @@ function init(hasTiles) {
         _btn.style.borderRadius = '8px';
         _btn.style.cursor = 'pointer';
 
-        _btn.addEventListener('click', () => {
-            markAllCurrentSiteProductsAsSeen(() => {
-                if (!_nextBtn.classList.contains('a-disabled')) {
-                    window.location.href = _nextBtnLink;
-                }
-            });
+        _btn.addEventListener('click', async () => {
+            await markAllCurrentSiteProductsAsSeen();
+            if (!_nextBtn.classList.contains('a-disabled')) {
+                window.location.href = _nextBtnLink;
+            }
         });
 
         _paginationContainer.appendChild(_btn);

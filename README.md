@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.42
+
+* Refactoring: the database helpers `markAllCurrentSiteProductsAsSeen()`, `markAllCurrentDatabaseProductsAsSeen()` and `cleanUpDatabase()` now use promises and `async`/`await` instead of callbacks. `cleanUpDatabase()` was split into `cleanUpDatabase()` and `cleanUpDatabaseEntry()`, so that the checks for a single entry live in their own function. The behaviour did not change, it was verified with a comparison of the database and local storage accesses of the old and the new implementation (normal case, failing write and failing read).
+
 ##### [2026-10-26] - Version 0.12.1.41
 
 * Refactoring: the background scan was split into small functions, one per responsibility (`initBackgroundScan`, `initBackgroundScanStorage`, `getBackgroundScanStageZeroSites`, `backgroundScanLoop`, `prepareFastScan`, `prepareScanIteration`, `scanStageZero` … `scanStageIdle`, `backgroundScanFinished` and `formatDuration`). The state that has to survive the iterations of the scan loop is kept in a `BackgroundScanState` object. The behaviour did not change, it was verified with a comparison of the local storage accesses of the old and the new implementation over all stages of the scan.
