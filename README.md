@@ -42,6 +42,10 @@ Do not try to install it using copy and paste, as the requirements then could no
 
 ## Changelog Deburau
 
+##### [2026-10-26] - Version 0.12.1.43
+
+* Refactoring: the settings UI was split up. The CSS of the settings menu moved from the template literal inside `addAVESettingsMenu()` into the constant `AVE_SETTINGS_CSS`, and `createSettingsMenuElement()` was split into one function per setting type (`createSettingsBoolElement()`, `createSettingsPasswordElement()`, `createSettingsUrlElement()`, `createSettingsNumberElement()`, `createSettingsButtonElement()`, `createSettingsColorElement()`, `createSettingsSelectElement()`, `createSettingsTitleElement()` and `createSettingsKeywordsElement()`), which are called by a switch statement. The behaviour did not change, it was verified with the helper script `.unotes/verify_settings_ui.js`, which compares the created DOM of all nine setting types and the generated CSS of the old and the new implementation.
+
 ##### [2026-10-26] - Version 0.12.1.42
 
 * Refactoring: the database helpers `markAllCurrentSiteProductsAsSeen()`, `markAllCurrentDatabaseProductsAsSeen()` and `cleanUpDatabase()` now use promises and `async`/`await` instead of callbacks. `cleanUpDatabase()` was split into `cleanUpDatabase()` and `cleanUpDatabaseEntry()`, so that the checks for a single entry live in their own function. The behaviour did not change, it was verified with a comparison of the database and local storage accesses of the old and the new implementation (normal case, failing write and failing read).

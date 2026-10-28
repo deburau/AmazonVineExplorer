@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.12.1.42
+// @version      0.12.1.43
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1697,37 +1697,15 @@ function addAveSettingsTab() {
 /**
  * Build the settings panel container and insert it into the tab set.
  */
-function addAVESettingsMenu() {
-    waitForHtmlElement('.a-tab-container.vvp-tab-set-container', (_tabContainer) => {
-        if (!_tabContainer) return;
-
-        //const _tabContainer = document.body.querySelector('.a-tab-container.vvp-tab-set-container');
-
-        const _boxContainer = document.createElement('div');
-        _boxContainer.setAttribute('data-a-name', 'ave-settings');
-        _boxContainer.classList = 'a-box a-box-tab a-tab-content a-hidden';
-        _boxContainer.role = 'tabpanel';
-        _boxContainer.tabindex = '0';
-
-        const _contentContainer = document.createElement('div');
-        _contentContainer.classList = 'a-box-inner';
-
-        _boxContainer.appendChild(_contentContainer);
-        _tabContainer.appendChild(_boxContainer);
-
-        // After a language change reload, restore the settings tab view.
-        if (localStorage.getItem('AVE_OPEN_SETTINGS_TAB') === '1') {
-            localStorage.removeItem('AVE_OPEN_SETTINGS_TAB');
-            waitForHtmlElement('#vvp-ave-settings-tab', (_settingsTab) => {
-                if (_settingsTab) {
-                    _settingsTab.click();
-                }
-            });
-        }
-
-        _contentContainer.innerHTML = `
-    <style>
-    :root {
+/**
+ * The CSS of the settings menu.
+ *
+ * NOTE: The CSS was a template literal inside addAVESettingsMenu(). It was moved
+ * into its own constant, because the function was mostly CSS and the linter
+ * counted the whole block as function lines.
+ */
+const AVE_SETTINGS_CSS = `
+:root {
   --toggleSliderSize: 1;
   --numberBorder: 1px;
   --numberPadding: 2px;
@@ -1964,6 +1942,39 @@ font-weight: bold;
 ::-moz-focus-inner{
   padding: 0;
 }
+`;
+
+function addAVESettingsMenu() {
+    waitForHtmlElement('.a-tab-container.vvp-tab-set-container', (_tabContainer) => {
+        if (!_tabContainer) return;
+
+        //const _tabContainer = document.body.querySelector('.a-tab-container.vvp-tab-set-container');
+
+        const _boxContainer = document.createElement('div');
+        _boxContainer.setAttribute('data-a-name', 'ave-settings');
+        _boxContainer.classList = 'a-box a-box-tab a-tab-content a-hidden';
+        _boxContainer.role = 'tabpanel';
+        _boxContainer.tabindex = '0';
+
+        const _contentContainer = document.createElement('div');
+        _contentContainer.classList = 'a-box-inner';
+
+        _boxContainer.appendChild(_contentContainer);
+        _tabContainer.appendChild(_boxContainer);
+
+        // After a language change reload, restore the settings tab view.
+        if (localStorage.getItem('AVE_OPEN_SETTINGS_TAB') === '1') {
+            localStorage.removeItem('AVE_OPEN_SETTINGS_TAB');
+            waitForHtmlElement('#vvp-ave-settings-tab', (_settingsTab) => {
+                if (_settingsTab) {
+                    _settingsTab.click();
+                }
+            });
+        }
+
+        _contentContainer.innerHTML = `
+    <style>
+${AVE_SETTINGS_CSS}
     </style>
 
     <div id="ave-settings-header" style="margin-bottom: 10px"><h3>${translate('settings', 'header', `Einstellungen ${AVE_TITLE} - Version ${AVE_VERSION}`, AVE_TITLE, AVE_VERSION)}</h3></div>
@@ -1983,6 +1994,376 @@ font-weight: bold;
         );
     });
 }
+/**
+ * Creates the left part of a settings item (the input control).
+ * @param {string} className The CSS class of the created div
+ * @returns {Element} The created div
+ */
+function createSettingsItemLeft(className = 'ave-item-left') {
+    const _elem = document.createElement('div');
+    _elem.classList.add(className);
+    return _elem;
+}
+
+/**
+ * Creates the right part of a settings item (the label with the tooltip).
+ * @param {string} labelName The name of the setting
+ * @param {string} labelDescription The description of the setting
+ * @returns {Element} The created div
+ */
+function createSettingsItemRight(labelName, labelDescription) {
+    const _elem = document.createElement('div');
+    _elem.classList.add('ave-item-right');
+    _elem.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${labelDescription}">${labelName}</label>`;
+    return _elem;
+}
+
+/**
+ * Creates a settings item with a switch.
+ * @param {object} dat The definition of the setting
+ * @param {Element} _elem The element of the setting
+ * @param {string} _labelName The name of the setting
+ * @param {string} _labelDescription The description of the setting
+ */
+function createSettingsBoolElement(dat, _elem, _labelName, _labelDescription) {
+    const _elem_item_left = createSettingsItemLeft();
+    const _elem_item_left_label = document.createElement('label');
+    _elem_item_left_label.classList.add('ave-settings-label-switch');
+    const _elem_item_left_label_input = document.createElement('input');
+    _elem_item_left_label_input.type = 'checkbox';
+    _elem_item_left_label_input.className = 'ave-input-binary';
+    _elem_item_left_label_input.setAttribute('ave-data-key', dat.key);
+    _elem_item_left_label_input.checked = SETTINGS[dat.key];
+    _elem_item_left_label_input.addEventListener('click', (event) => {
+        console.log('This is a Boolean Value Input', event);
+        SETTINGS[dat.key] = event.target.checked;
+        SETTINGS.save();
+    });
+
+    const _elem_item_left_label_span = document.createElement('span');
+    _elem_item_left_label_span.classList.add('ave-settings-switch-toggle-slider');
+
+    _elem_item_left_label.appendChild(_elem_item_left_label_input);
+    _elem_item_left_label.appendChild(_elem_item_left_label_span);
+    _elem_item_left.appendChild(_elem_item_left_label);
+    _elem.appendChild(_elem_item_left);
+
+    _elem.appendChild(createSettingsItemRight(_labelName, _labelDescription));
+}
+
+/**
+ * Creates a settings item with a password input.
+ * @param {object} dat The definition of the setting
+ * @param {Element} _elem The element of the setting
+ * @param {string} _labelName The name of the setting
+ * @param {string} _labelDescription The description of the setting
+ */
+function createSettingsPasswordElement(dat, _elem, _labelName, _labelDescription) {
+    const _elem_item_left = createSettingsItemLeft();
+    const _elem_item_left_input = document.createElement('input');
+    _elem_item_left_input.type = 'password';
+    _elem_item_left_input.className = 'ave-input-number';
+    _elem_item_left_input.style.width = '300px';
+    _elem_item_left_input.setAttribute('ave-data-key', dat.key);
+    _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
+    _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
+    _elem_item_left_input.addEventListener('change', (event) => {
+        console.log('This is a Password Value Input', event);
+
+        SETTINGS[dat.key] = event.target.value;
+        SETTINGS.save();
+    });
+    _elem_item_left.appendChild(_elem_item_left_input);
+    _elem.appendChild(_elem_item_left);
+
+    _elem.appendChild(createSettingsItemRight(_labelName, _labelDescription));
+}
+
+/**
+ * Creates a settings item with an URL input.
+ * @param {object} dat The definition of the setting
+ * @param {Element} _elem The element of the setting
+ * @param {string} _labelName The name of the setting
+ * @param {string} _labelDescription The description of the setting
+ */
+function createSettingsUrlElement(dat, _elem, _labelName, _labelDescription) {
+    const _elem_item_left = createSettingsItemLeft();
+    const _elem_item_left_input = document.createElement('input');
+    _elem_item_left_input.type = 'url';
+    _elem_item_left_input.className = 'ave-input-number';
+    _elem_item_left_input.style.width = '300px';
+    _elem_item_left_input.setAttribute('ave-data-key', dat.key);
+    _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
+    _elem_item_left_input.addEventListener('change', (event) => {
+        console.log('This is a URL Value Input', event);
+
+        let _url = event.target.value;
+        if (_url.length > 0) {
+            if (!_url.endsWith('/')) _url = _url + '/';
+            if (!(_url.startsWith('http://') || _url.startsWith('https://'))) _url = 'https://' + _url;
+        }
+        event.target.value = _url;
+        SETTINGS[dat.key] = event.target.value;
+        SETTINGS.save();
+    });
+    _elem_item_left.appendChild(_elem_item_left_input);
+    _elem.appendChild(_elem_item_left);
+
+    _elem.appendChild(createSettingsItemRight(_labelName, _labelDescription));
+}
+
+/**
+ * Creates a settings item with a number input.
+ * @param {object} dat The definition of the setting
+ * @param {Element} _elem The element of the setting
+ * @param {string} _labelName The name of the setting
+ * @param {string} _labelDescription The description of the setting
+ */
+function createSettingsNumberElement(dat, _elem, _labelName, _labelDescription) {
+    const _elem_item_left = createSettingsItemLeft();
+    const _elem_item_left_input = document.createElement('input');
+    _elem_item_left_input.type = 'number';
+    _elem_item_left_input.className = 'ave-input-number';
+    _elem_item_left_input.setAttribute('ave-data-key', dat.key);
+    _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
+    if (!isNaN(dat.min)) _elem_item_left_input.setAttribute('min', dat.min);
+    if (!isNaN(dat.max)) _elem_item_left_input.setAttribute('max', dat.max);
+    _elem_item_left_input.addEventListener('change', (event) => {
+        const _value = event.target.value;
+        const _min = parseFloat(event.target.min);
+        const _max = parseFloat(event.target.max);
+        console.log('This is a Number Value Input', event);
+
+        if (_value <= _max && _value >= _min) {
+            console.log('Eingabe Valid');
+            SETTINGS[dat.key] = parseInt(event.target.value);
+            SETTINGS.save();
+        } else {
+            console.log('Eingabe Fehlerhaft');
+        }
+    });
+    _elem_item_left_input.addEventListener('input', (event) => {
+        const _value = event.target.value;
+        const _min = parseFloat(event.target.min);
+        const _max = parseFloat(event.target.max);
+
+        if (_value <= _max && _value >= _min) {
+            event.target.style.borderColor = 'inherit';
+            event.target.style.color = 'inherit';
+        } else {
+            event.target.style.borderColor = 'red';
+            event.target.style.color = 'red';
+        }
+    });
+    _elem_item_left.appendChild(_elem_item_left_input);
+    _elem.appendChild(_elem_item_left);
+
+    _elem.appendChild(createSettingsItemRight(_labelName, _labelDescription));
+}
+
+/**
+ * Creates a settings item with a button.
+ * @param {object} dat The definition of the setting
+ * @param {Element} _elem The element of the setting
+ * @param {string} _labelName The name of the setting
+ * @param {string} _labelDescription The description of the setting
+ */
+function createSettingsButtonElement(dat, _elem, _labelName, _labelDescription) {
+    const _elem_item_left = createSettingsItemLeft();
+
+    const _elem_item_left_input_label = document.createElement('label');
+    _elem_item_left_input_label.setAttribute('data-ave-tooltip', _labelDescription);
+    _elem_item_left_input_label.setAttribute('class', 'a-button');
+    _elem_item_left_input_label.style.width = '250px';
+    if (dat.bgColor) _elem_item_left_input_label.style.backgroundColor = dat.bgColor;
+    const _elem_item_left_input = document.createElement('button');
+    _elem_item_left_input.type = 'button';
+    _elem_item_left_input.className = 'ave-input-button';
+
+    _elem_item_left_input.innerText = _labelName;
+    _elem_item_left_input.addEventListener('click', (event) => {
+        console.log('This is a button Input', event);
+        if (dat.btnClick) dat.btnClick();
+    });
+
+    _elem_item_left_input_label.appendChild(_elem_item_left_input);
+    _elem_item_left.appendChild(_elem_item_left_input_label);
+    _elem.appendChild(_elem_item_left);
+}
+
+/**
+ * Creates a settings item with a color input.
+ * @param {object} dat The definition of the setting
+ * @param {Element} _elem The element of the setting
+ */
+function createSettingsColorElement(dat, _elem) {
+    const _elem_item_left = createSettingsItemLeft();
+    const _elem_item_left_input = document.createElement('input');
+    _elem_item_left_input.type = 'color';
+    _elem_item_left_input.className = 'ave-input-color';
+    _elem_item_left_input.setAttribute('ave-data-key', dat.key);
+    _elem_item_left_input.setAttribute('value', colorToHex(SETTINGS[dat.key]));
+    _elem_item_left_input.addEventListener('change', (event) => {
+        console.log('This is a Color Value Input', event);
+        SETTINGS[dat.key] = event.target.value;
+        SETTINGS.save();
+    });
+    _elem_item_left.appendChild(_elem_item_left_input);
+    _elem.appendChild(_elem_item_left);
+
+    const _elem_item_right = document.createElement('div');
+    _elem_item_right.classList.add('ave-item-right');
+    _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${dat.description && dat.description != '' ? dat.description : dat.name}">${dat.name}</label>`;
+
+    _elem.appendChild(_elem_item_right);
+}
+
+/**
+ * Creates a settings item with a select dropdown.
+ * @param {object} dat The definition of the setting
+ * @param {Element} _elem The element of the setting
+ */
+function createSettingsSelectElement(dat, _elem) {
+    const _elem_item_left = createSettingsItemLeft();
+    const _elem_item_left_input = document.createElement('select');
+    _elem_item_left_input.className = 'ave-input-number';
+    _elem_item_left_input.style.width = '300px';
+    _elem_item_left_input.style.height = '21px';
+    _elem_item_left_input.setAttribute('ave-data-key', dat.key);
+
+    if (dat.options && Array.isArray(dat.options)) {
+        dat.options.forEach((opt) => {
+            const _option = document.createElement('option');
+            _option.value = opt;
+            _option.textContent = opt;
+            _option.selected = opt === SETTINGS[dat.key];
+            _elem_item_left_input.appendChild(_option);
+        });
+    }
+
+    _elem_item_left_input.addEventListener('change', (event) => {
+        console.log('This is a Select Input', event);
+        SETTINGS[dat.key] = event.target.value;
+        SETTINGS.save();
+        if (dat.key === 'UI_LANGUAGE') {
+            localStorage.setItem('AVE_OPEN_SETTINGS_TAB', '1');
+            window.location.reload();
+        }
+    });
+    _elem_item_left.appendChild(_elem_item_left_input);
+    _elem.appendChild(_elem_item_left);
+
+    const _elem_item_right = document.createElement('div');
+    _elem_item_right.classList.add('ave-item-right');
+    const _labelName = dat.key === 'UI_LANGUAGE' ? translate('settings', 'languageLabel', 'Sprache') : dat.name;
+    const _labelDescription = dat.description && dat.description != '' ? dat.description : _labelName;
+    _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${_labelDescription}">${_labelName}</label>`;
+
+    _elem.appendChild(_elem_item_right);
+}
+
+/**
+ * Creates a settings item that is only a title (a separator between the sections).
+ * @param {object} dat The definition of the setting
+ * @param {Element} _elem The element of the setting
+ * @param {string} _labelName The name of the setting
+ */
+function createSettingsTitleElement(dat, _elem, _labelName) {
+    const _elem_spacer_horizontal = document.createElement('hr');
+    _elem_spacer_horizontal.style.width = '100%';
+
+    const _elem_spacer_title = document.createElement('h4');
+    _elem_spacer_title.textContent = _labelName;
+
+    _elem.style.height = 'fit-content';
+    _elem.style.display = 'flex';
+    _elem.style.flexWrap = 'wrap';
+    _elem.appendChild(_elem_spacer_horizontal);
+    _elem.appendChild(_elem_spacer_title);
+}
+
+/**
+ * Creates the list of the keywords of a setting.
+ * @param {object} dat The definition of the setting
+ * @returns {Element} The created list
+ */
+function createSettingsKeywordsList(dat) {
+    const _elem_keyword_list = document.createElement('div');
+    _elem_keyword_list.classList.add('ave-keyword-list-wrapper');
+    const _elem_keyword_list_table = document.createElement('table');
+    const _elem_keyword_list_table_tbody = document.createElement('tbody');
+    _elem_keyword_list_table_tbody.setAttribute('id', dat.key);
+    for (let i = 0; i < SETTINGS[dat.key].length; i++) {
+        _elem_keyword_list_table_tbody.appendChild(createSettingsKeywordsTableElement(dat, i, SETTINGS[dat.key][i]));
+    }
+    _elem_keyword_list_table.appendChild(_elem_keyword_list_table_tbody);
+    _elem_keyword_list.appendChild(_elem_keyword_list_table);
+    return _elem_keyword_list;
+}
+
+/**
+ * Writes the keywords of a setting back into the settings and rebuilds the list.
+ * @param {object} dat The definition of the setting
+ */
+function updateSettingsKeywordsList(dat) {
+    const _table = document.getElementById(dat.key);
+    _table.innerHTML = '';
+    for (let i = 0; i < SETTINGS[dat.key].length; i++) {
+        _table.appendChild(createSettingsKeywordsTableElement(dat, i, SETTINGS[dat.key][i]));
+    }
+}
+
+/**
+ * Creates a settings item with a textarea for the keywords.
+ * @param {object} dat The definition of the setting
+ * @param {Element} _elem The element of the setting
+ * @param {string} _labelName The name of the setting
+ * @param {string} _labelDescription The description of the setting
+ * @param {string} _inputPlaceholder The placeholder of the textarea
+ */
+function createSettingsKeywordsElement(dat, _elem, _labelName, _labelDescription, _inputPlaceholder) {
+    if (SETTINGS[dat.key].length > 0) {
+        SETTINGS[dat.key].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+    }
+
+    _elem.classList.remove('ave-settings-item');
+    _elem.classList.add('ave-keyword-wrapper');
+    _elem.innerHTML = `<h4>${_labelName}</h4>`;
+    const _elem_keyword_input = document.createElement('div');
+    _elem_keyword_input.innerHTML = '<span></span>';
+    _elem_keyword_input.classList.add('ave-keyword-input');
+
+    const _elem_keyword_input_label = document.createElement('label');
+    _elem_keyword_input_label.setAttribute('data-ave-tooltip', _labelDescription);
+
+    const _elem_keyword_input_input = document.createElement('textarea');
+    _elem_keyword_input_input.setAttribute('cols', 70);
+    _elem_keyword_input_input.setAttribute('rows', 1);
+    _elem_keyword_input_input.setAttribute('placeholder', _inputPlaceholder || dat.inputPlaceholder);
+    _elem_keyword_input_input.addEventListener('change', (elm, ev) => {
+        if (SETTINGS.DebugLevel > 1) console.log('EVENTHANDLER CHANGE:', elm, 'event:', ev);
+        const _value = elm.target.value.trim();
+        if (_value && _value.length > 0) {
+            for (let _key of _value.split('\n')) {
+                _key = _key.trim();
+                if (_key.length === 0) {
+                    continue;
+                }
+                if (!SETTINGS[dat.key].includes(_key)) {
+                    SETTINGS[dat.key].push(_key);
+                }
+            }
+        }
+        SETTINGS.save();
+        elm.target.value = '';
+        updateSettingsKeywordsList(dat);
+    });
+    _elem_keyword_input_label.appendChild(_elem_keyword_input_input);
+    _elem_keyword_input.appendChild(_elem_keyword_input_label);
+    _elem.appendChild(_elem_keyword_input);
+
+    _elem.appendChild(createSettingsKeywordsList(dat));
+}
 
 /**
  * Create a settings UI element based on its definition.
@@ -1999,294 +2380,34 @@ function createSettingsMenuElement(dat) {
     if (dat.key) _elem.setAttribute('ave-config-key', dat.key);
     _elem.classList.add('ave-settings-item');
 
-    if (dat.type == 'bool') {
-        // Boolean Value
-
-        const _elem_item_left = document.createElement('div');
-        _elem_item_left.classList.add('ave-item-left');
-        const _elem_item_left_label = document.createElement('label');
-        _elem_item_left_label.classList.add('ave-settings-label-switch');
-        const _elem_item_left_label_input = document.createElement('input');
-        _elem_item_left_label_input.type = 'checkbox';
-        _elem_item_left_label_input.className = 'ave-input-binary';
-        _elem_item_left_label_input.setAttribute('ave-data-key', dat.key);
-        _elem_item_left_label_input.checked = SETTINGS[dat.key];
-        _elem_item_left_label_input.addEventListener('click', (event) => {
-            console.log('This is a Boolean Value Input', event);
-            SETTINGS[dat.key] = event.target.checked;
-            SETTINGS.save();
-        });
-
-        const _elem_item_left_label_span = document.createElement('span');
-        _elem_item_left_label_span.classList.add('ave-settings-switch-toggle-slider');
-
-        _elem_item_left_label.appendChild(_elem_item_left_label_input);
-        _elem_item_left_label.appendChild(_elem_item_left_label_span);
-        _elem_item_left.appendChild(_elem_item_left_label);
-        _elem.appendChild(_elem_item_left);
-
-        const _elem_item_right = document.createElement('div');
-        _elem_item_right.classList.add('ave-item-right');
-        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${_labelDescription}">${_labelName}</label>`;
-
-        _elem.appendChild(_elem_item_right);
-    } else if (dat.type == 'password') {
-        // Number Value
-
-        const _elem_item_left = document.createElement('div');
-        _elem_item_left.classList.add('ave-item-left');
-        const _elem_item_left_input = document.createElement('input');
-        _elem_item_left_input.type = 'password';
-        _elem_item_left_input.className = 'ave-input-number';
-        _elem_item_left_input.style.width = '300px';
-        _elem_item_left_input.setAttribute('ave-data-key', dat.key);
-        _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
-        _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
-        _elem_item_left_input.addEventListener('change', (event) => {
-            console.log('This is a Password Value Input', event);
-
-            SETTINGS[dat.key] = event.target.value;
-            SETTINGS.save();
-        });
-        _elem_item_left.appendChild(_elem_item_left_input);
-        _elem.appendChild(_elem_item_left);
-
-        const _elem_item_right = document.createElement('div');
-        _elem_item_right.classList.add('ave-item-right');
-        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${_labelDescription}">${_labelName}</label>`;
-
-        _elem.appendChild(_elem_item_right);
-    } else if (dat.type == 'url') {
-        // Number Value
-
-        const _elem_item_left = document.createElement('div');
-        _elem_item_left.classList.add('ave-item-left');
-        const _elem_item_left_input = document.createElement('input');
-        _elem_item_left_input.type = 'url';
-        _elem_item_left_input.className = 'ave-input-number';
-        _elem_item_left_input.style.width = '300px';
-        _elem_item_left_input.setAttribute('ave-data-key', dat.key);
-        _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
-        _elem_item_left_input.addEventListener('change', (event) => {
-            console.log('This is a URL Value Input', event);
-
-            let _url = event.target.value;
-            if (_url.length > 0) {
-                if (!_url.endsWith('/')) _url = _url + '/';
-                if (!(_url.startsWith('http://') || _url.startsWith('https://'))) _url = 'https://' + _url;
-            }
-            event.target.value = _url;
-            SETTINGS[dat.key] = event.target.value;
-            SETTINGS.save();
-        });
-        _elem_item_left.appendChild(_elem_item_left_input);
-        _elem.appendChild(_elem_item_left);
-
-        const _elem_item_right = document.createElement('div');
-        _elem_item_right.classList.add('ave-item-right');
-        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${_labelDescription}">${_labelName}</label>`;
-
-        _elem.appendChild(_elem_item_right);
-    } else if (dat.type == 'number') {
-        // Number Value
-
-        const _elem_item_left = document.createElement('div');
-        _elem_item_left.classList.add('ave-item-left');
-        const _elem_item_left_input = document.createElement('input');
-        _elem_item_left_input.type = 'number';
-        _elem_item_left_input.className = 'ave-input-number';
-        _elem_item_left_input.setAttribute('ave-data-key', dat.key);
-        _elem_item_left_input.setAttribute('value', SETTINGS[dat.key]);
-        if (!isNaN(dat.min)) _elem_item_left_input.setAttribute('min', dat.min);
-        if (!isNaN(dat.max)) _elem_item_left_input.setAttribute('max', dat.max);
-        _elem_item_left_input.addEventListener('change', (event) => {
-            const _value = event.target.value;
-            const _min = parseFloat(event.target.min);
-            const _max = parseFloat(event.target.max);
-            console.log('This is a Number Value Input', event);
-
-            if (_value <= _max && _value >= _min) {
-                console.log('Eingabe Valid');
-                SETTINGS[dat.key] = parseInt(event.target.value);
-                SETTINGS.save();
-            } else {
-                console.log('Eingabe Fehlerhaft');
-            }
-        });
-        _elem_item_left_input.addEventListener('input', (event) => {
-            const _value = event.target.value;
-            const _min = parseFloat(event.target.min);
-            const _max = parseFloat(event.target.max);
-
-            if (_value <= _max && _value >= _min) {
-                event.target.style.borderColor = 'inherit';
-                event.target.style.color = 'inherit';
-            } else {
-                event.target.style.borderColor = 'red';
-                event.target.style.color = 'red';
-            }
-        });
-        _elem_item_left.appendChild(_elem_item_left_input);
-        _elem.appendChild(_elem_item_left);
-
-        const _elem_item_right = document.createElement('div');
-        _elem_item_right.classList.add('ave-item-right');
-        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${_labelDescription}">${_labelName}</label>`;
-
-        _elem.appendChild(_elem_item_right);
-    } else if (dat.type == 'button') {
-        // Number Value
-
-        const _elem_item_left = document.createElement('div');
-
-        _elem_item_left.classList.add('ave-item-left');
-
-        const _elem_item_left_input_label = document.createElement('label');
-        _elem_item_left_input_label.setAttribute('data-ave-tooltip', _labelDescription);
-        _elem_item_left_input_label.setAttribute('class', 'a-button');
-        _elem_item_left_input_label.style.width = '250px';
-        if (dat.bgColor) _elem_item_left_input_label.style.backgroundColor = dat.bgColor;
-        const _elem_item_left_input = document.createElement('button');
-        _elem_item_left_input.type = 'button';
-        _elem_item_left_input.className = 'ave-input-button';
-
-        _elem_item_left_input.innerText = _labelName;
-        _elem_item_left_input.addEventListener('click', (event) => {
-            console.log('This is a button Input', event);
-            if (dat.btnClick) dat.btnClick();
-        });
-
-        _elem_item_left_input_label.appendChild(_elem_item_left_input);
-        _elem_item_left.appendChild(_elem_item_left_input_label);
-        _elem.appendChild(_elem_item_left);
-    } else if (dat.type == 'color') {
-        const _elem_item_left = document.createElement('div');
-        _elem_item_left.classList.add('ave-item-left');
-        const _elem_item_left_input = document.createElement('input');
-        _elem_item_left_input.type = 'color';
-        _elem_item_left_input.className = 'ave-input-color';
-        _elem_item_left_input.setAttribute('ave-data-key', dat.key);
-        _elem_item_left_input.setAttribute('value', colorToHex(SETTINGS[dat.key]));
-        _elem_item_left_input.addEventListener('change', (event) => {
-            console.log('This is a Color Value Input', event);
-            SETTINGS[dat.key] = event.target.value;
-            SETTINGS.save();
-        });
-        _elem_item_left.appendChild(_elem_item_left_input);
-        _elem.appendChild(_elem_item_left);
-
-        const _elem_item_right = document.createElement('div');
-        _elem_item_right.classList.add('ave-item-right');
-        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${dat.description && dat.description != '' ? dat.description : dat.name}">${dat.name}</label>`;
-
-        _elem.appendChild(_elem_item_right);
-    } else if (dat.type == 'select') {
-        // Select dropdown for multiple options
-        const _elem_item_left = document.createElement('div');
-        _elem_item_left.classList.add('ave-item-left');
-        const _elem_item_left_input = document.createElement('select');
-        _elem_item_left_input.className = 'ave-input-number';
-        _elem_item_left_input.style.width = '300px';
-        _elem_item_left_input.style.height = '21px';
-        _elem_item_left_input.setAttribute('ave-data-key', dat.key);
-
-        if (dat.options && Array.isArray(dat.options)) {
-            dat.options.forEach((opt) => {
-                const _option = document.createElement('option');
-                _option.value = opt;
-                _option.textContent = opt;
-                _option.selected = opt === SETTINGS[dat.key];
-                _elem_item_left_input.appendChild(_option);
-            });
-        }
-
-        _elem_item_left_input.addEventListener('change', (event) => {
-            console.log('This is a Select Input', event);
-            SETTINGS[dat.key] = event.target.value;
-            SETTINGS.save();
-            if (dat.key === 'UI_LANGUAGE') {
-                localStorage.setItem('AVE_OPEN_SETTINGS_TAB', '1');
-                window.location.reload();
-            }
-        });
-        _elem_item_left.appendChild(_elem_item_left_input);
-        _elem.appendChild(_elem_item_left);
-
-        const _elem_item_right = document.createElement('div');
-        _elem_item_right.classList.add('ave-item-right');
-        const _labelName = dat.key === 'UI_LANGUAGE' ? translate('settings', 'languageLabel', 'Sprache') : dat.name;
-        const _labelDescription = dat.description && dat.description != '' ? dat.description : _labelName;
-        _elem_item_right.innerHTML = `<label class="ave-settings-label-setting" data-ave-tooltip="${_labelDescription}">${_labelName}</label>`;
-
-        _elem.appendChild(_elem_item_right);
-    } else if (dat.type == 'title') {
-        const _elem_spacer_horizontal = document.createElement('hr');
-        _elem_spacer_horizontal.style.width = '100%';
-
-        const _elem_spacer_title = document.createElement('h4');
-        _elem_spacer_title.textContent = _labelName;
-
-        _elem.style.height = 'fit-content';
-        _elem.style.display = 'flex';
-        _elem.style.flexWrap = 'wrap';
-        _elem.appendChild(_elem_spacer_horizontal);
-        _elem.appendChild(_elem_spacer_title);
-    } else if (dat.type == 'keywords') {
-        if (SETTINGS[dat.key].length > 0) {
-            SETTINGS[dat.key].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-        }
-
-        _elem.classList.remove('ave-settings-item');
-        _elem.classList.add('ave-keyword-wrapper');
-        _elem.innerHTML = `<h4>${_labelName}</h4>`;
-        const _elem_keyword_input = document.createElement('div');
-        _elem_keyword_input.innerHTML = '<span></span>';
-        _elem_keyword_input.classList.add('ave-keyword-input');
-
-        const _elem_keyword_input_label = document.createElement('label');
-        _elem_keyword_input_label.setAttribute('data-ave-tooltip', _labelDescription);
-
-        const _elem_keyword_input_input = document.createElement('textarea');
-        _elem_keyword_input_input.setAttribute('cols', 70);
-        _elem_keyword_input_input.setAttribute('rows', 1);
-        _elem_keyword_input_input.setAttribute('placeholder', _inputPlaceholder || dat.inputPlaceholder);
-        _elem_keyword_input_input.addEventListener('change', (elm, ev) => {
-            if (SETTINGS.DebugLevel > 1) console.log('EVENTHANDLER CHANGE:', elm, 'event:', ev);
-            const _value = elm.target.value.trim();
-            if (_value && _value.length > 0) {
-                for (let _key of _value.split('\n')) {
-                    _key = _key.trim();
-                    if (_key.length === 0) {
-                        continue;
-                    }
-                    if (!SETTINGS[dat.key].includes(_key)) {
-                        SETTINGS[dat.key].push(_key);
-                    }
-                }
-            }
-            SETTINGS.save();
-            elm.target.value = '';
-            const _table = document.getElementById(dat.key);
-            _table.innerHTML = '';
-            for (let i = 0; i < SETTINGS[dat.key].length; i++) {
-                _table.appendChild(createSettingsKeywordsTableElement(dat, i, SETTINGS[dat.key][i]));
-            }
-        });
-        _elem_keyword_input_label.appendChild(_elem_keyword_input_input);
-        _elem_keyword_input.appendChild(_elem_keyword_input_label);
-        _elem.appendChild(_elem_keyword_input);
-
-        const _elem_keyword_list = document.createElement('div');
-        _elem_keyword_list.classList.add('ave-keyword-list-wrapper');
-        const _elem_keyword_list_table = document.createElement('table');
-        const _elem_keyword_list_table_tbody = document.createElement('tbody');
-        _elem_keyword_list_table_tbody.setAttribute('id', dat.key);
-        for (let i = 0; i < SETTINGS[dat.key].length; i++) {
-            _elem_keyword_list_table_tbody.appendChild(createSettingsKeywordsTableElement(dat, i, SETTINGS[dat.key][i]));
-        }
-        _elem_keyword_list_table.appendChild(_elem_keyword_list_table_tbody);
-        _elem_keyword_list.appendChild(_elem_keyword_list_table);
-        _elem.appendChild(_elem_keyword_list);
+    switch (dat.type) {
+        case 'bool':
+            createSettingsBoolElement(dat, _elem, _labelName, _labelDescription);
+            break;
+        case 'password':
+            createSettingsPasswordElement(dat, _elem, _labelName, _labelDescription);
+            break;
+        case 'url':
+            createSettingsUrlElement(dat, _elem, _labelName, _labelDescription);
+            break;
+        case 'number':
+            createSettingsNumberElement(dat, _elem, _labelName, _labelDescription);
+            break;
+        case 'button':
+            createSettingsButtonElement(dat, _elem, _labelName, _labelDescription);
+            break;
+        case 'color':
+            createSettingsColorElement(dat, _elem);
+            break;
+        case 'select':
+            createSettingsSelectElement(dat, _elem);
+            break;
+        case 'title':
+            createSettingsTitleElement(dat, _elem, _labelName);
+            break;
+        case 'keywords':
+            createSettingsKeywordsElement(dat, _elem, _labelName, _labelDescription, _inputPlaceholder);
+            break;
     }
 
     return _elem;
@@ -2509,15 +2630,13 @@ async function cleanUpDatabaseEntry(_currEntry, _limits) {
     if (!_currEntry.ts_firstSeen) {
         _currEntry.ts_firstSeen = unixTimeStamp() - Math.round(Math.random() * (SECONDS_PER_WEEK / 2));
         _needUpdate = true;
-        if (SETTINGS.DebugLevel > 14)
-            console.log(`cleanUpDatabase() - Entry ${_currEntry.id} had no valid firstseen timestamp. fixed`);
+        if (SETTINGS.DebugLevel > 14) console.log(`cleanUpDatabase() - Entry ${_currEntry.id} had no valid firstseen timestamp. fixed`);
     }
 
     if (!_currEntry.ts_lastSeen) {
         _currEntry.ts_lastSeen = _currEntry.ts_firstSeen + SECONDS_PER_DAY;
         _needUpdate = true;
-        if (SETTINGS.DebugLevel > 14)
-            console.log(`cleanUpDatabase() - Entry ${_currEntry.id} had no valid lastseen timestamp. fixed`);
+        if (SETTINGS.DebugLevel > 14) console.log(`cleanUpDatabase() - Entry ${_currEntry.id} had no valid lastseen timestamp. fixed`);
     }
 
     let _notSeenCounter = _currEntry.notSeenCounter;
@@ -2535,7 +2654,9 @@ async function cleanUpDatabaseEntry(_currEntry, _limits) {
 
     if (_currEntry.notSeenCounter != _notSeenCounter) {
         if (SETTINGS.DebugLevel > 14)
-            console.log(`cleanUpDatabase() - Entry ${_currEntry.id} update notSeenCounter from ${_currEntry.notSeenCounter} to ${_notSeenCounter}`);
+            console.log(
+                `cleanUpDatabase() - Entry ${_currEntry.id} update notSeenCounter from ${_currEntry.notSeenCounter} to ${_notSeenCounter}`
+            );
         _currEntry.notSeenCounter = _notSeenCounter;
         _needUpdate = true;
     }
@@ -2586,7 +2707,7 @@ async function cleanUpDatabase() {
             vendorCleanupDate: _vendorCleanupDate,
             normalCleanupDate: _normalCleanupDate,
             secondsBeforeCleanup: SETTINGS.HoursBeforeCleanup * 3600,
-            currentTimeStamp: unixTimeStamp(),
+            currentTimeStamp: unixTimeStamp()
         };
 
         const _results = await Promise.allSettled(
