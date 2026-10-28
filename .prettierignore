@@ -1,0 +1,10 @@
+# Build artefacts and dependencies
+node_modules/
+package-lock.json
+
+# Local notes, scripts and measurements (not part of the repository)
+.unotes/
+
+# The markdown documentation is written by hand. A formatter would reflow the
+# tables and the changelog without adding any value.
+*.md

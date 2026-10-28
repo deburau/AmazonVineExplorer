@@ -5,15 +5,5 @@
     "semi": true,
     "arrowParens": "always",
     "trailingComma": "none",
-    "endOfLine": "lf",
-    "overrides": [
-        {
-            "files": ["*.md"],
-            "options": {
-                "tabWidth": 2,
-                "printWidth": 100,
-                "proseWrap": "preserve"
-            }
-        }
-    ]
+    "endOfLine": "lf"
 }

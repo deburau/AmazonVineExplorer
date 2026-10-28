@@ -13,17 +13,47 @@ Amazon Vine Explorer is a Tampermonkey/Greasemonkey userscript that enhances the
 - Storage: IndexedDB + Tampermonkey storage APIs
 - Testing: None (manual testing only)
 - Linting: ESLint 9.x with flat config
+- Formatting: Prettier 3.x (configuration in `.prettierrc`)
 
 ## Development Commands
 
-### Linting
+### Formatting and linting
 ```bash
-# Run ESLint on all JavaScript files
-npx eslint .
+# Format all sources with Prettier (the project style)
+npm run format
 
-# Fix auto-fixable issues
-npx eslint . --fix
+# Check the formatting without changing anything
+npm run format:check
+
+# Run ESLint on all JavaScript files
+npm run lint
+
+# Fix the auto-fixable ESLint issues
+npm run lint -- --fix
+
+# Both checks at once (this is what CI should run)
+npm run check
 ```
+
+### Code quality gates
+`eslint.config.mjs` defines warnings that keep the code from growing further. The
+limits are set just above the current maximum of the existing code, so they do not
+report anything today:
+
+| Rule | Limit | Purpose |
+|------|-------|---------|
+| `complexity` | 20 | Branches per function |
+| `max-lines-per-function` | 150 | Length of a function (comments and blank lines are ignored) |
+| `max-statements` | 80 | Statements per function |
+| `max-depth` | 5 | Nesting level of blocks |
+| `prefer-const` | - | `let` that is never reassigned |
+
+The rules are warnings, so `npm run lint` stays green. `npm run lint:strict` fails
+on warnings and is meant for a later cleanup, not for the daily workflow.
+
+**Never run a formatter on the markdown files** - the documentation is written by
+hand and the changelog would be reflowed without any benefit. `*.md` is therefore
+listed in `.prettierignore`.
 
 ### Testing
 **Note:** This project has no automated tests. Testing is done manually by:
@@ -187,11 +217,17 @@ try {
 ## File Structure and Responsibilities
 
 ### Core Files
-- **`VineExplorer.user.js`** (3,267 lines) - Main entry point, orchestrates all functionality
-- **`globals.js`** (690 lines) - Global constants, settings definitions, utility functions
-- **`class_db_handler.js`** (494 lines) - IndexedDB database management class
-- **`class_product.js`** (37 lines) - Product data model
-- **`vine_fetch.js`** (141 lines) - Enhanced fetch wrapper for API calls
+- **`VineExplorer.user.js`** (~4,000 lines) - Main entry point, orchestrates all functionality
+- **`globals.js`** (~1,150 lines) - Global constants, settings definitions, utility functions
+- **`class_db_handler.js`** (~520 lines) - IndexedDB database management class
+- **`class_product.js`** (~37 lines) - Product data model
+- **`vine_fetch.js`** (~245 lines) - Enhanced fetch wrapper for API calls
+- **`i18n.js`** (~350 lines) - Translations
+
+### Tooling Files
+- **`.prettierrc`** - Project style (print width 140, 4 spaces, single quotes)
+- **`.prettierignore`** - Keeps the formatter away from the markdown files and the local notes
+- **`eslint.config.mjs`** - Linter config and the list of the globals of every file
 
 ### Key Patterns to Follow
 
