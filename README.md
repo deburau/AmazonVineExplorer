@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-29] - Version 0.13.0.9
+
+* The tooltips of the settings were rewritten in German and English. They now describe the effect of the setting, name the unit of the number fields and explain what the value 0 does. The texts are kept short, because the tooltip is only 160 pixels wide.
+
 ##### [2026-10-29] - Version 0.13.0.8
 
 * Fix: the fallback of the translation function was ignored. If a translation does not exist, the key was shown instead of the text of the caller. All the settings have a translation in both languages, so nothing was visible so far, but a new setting without a translation would have shown its key.
