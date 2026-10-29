@@ -63,6 +63,11 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-29] - Version 0.13.0.7
+
+* Fix: the tooltips of the settings were not shown anymore. The comments of the CSS of the settings menu used the JavaScript syntax "//" instead of the CSS syntax "/* */". The browser discards the whole rule of such a line without any error message, so all the rules of the tooltips were lost.
+* The script `scripts/check_css_syntax.js` checks the CSS of the project for comments with the wrong syntax. It is part of `npm run check`.
+
 ##### [2026-10-29] - Version 0.13.0.6
 
 * Fix: the recommendation id of a product contains a # as a separator. It was not encoded in the URL of the request for the details of a product with a parent ASIN, so that only the part before the # reached the server and the request failed with "No recommendation found for recommendation id". The id is now encoded like it already was for the other requests.

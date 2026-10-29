@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.13.0.6
+// @version      0.13.0.7
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1953,14 +1953,14 @@ const AVE_SETTINGS_CSS = `
   color: red;
 }
 
-// Add this attribute to the element that needs a tooltip
+/* Add this attribute to the element that needs a tooltip */
 [data-ave-tooltip] {
   position: relative;
   z-index: 2;
   cursor: pointer;
 }
 
-// Hide the tooltip content by default
+/* Hide the tooltip content by default */
 [data-ave-tooltip]:before,
 [data-ave-tooltip]:after {
   visibility: hidden;
@@ -1968,7 +1968,7 @@ const AVE_SETTINGS_CSS = `
   pointer-events: none;
 }
 
-// Position tooltip above the element
+/* Position tooltip above the element */
 [data-ave-tooltip]:before {
   position: absolute;
   bottom: -50%;
@@ -1988,7 +1988,7 @@ const AVE_SETTINGS_CSS = `
   line-height: 1.2;
 }
 
-// Triangle hack to make tooltip look like a speech bubble
+/* Triangle hack to make tooltip look like a speech bubble */
 [data-ave-tooltip]:after {
   position: absolute;
   bottom: 25%;
@@ -2003,7 +2003,7 @@ const AVE_SETTINGS_CSS = `
   line-height: 0;
 }
 
-// Show tooltip content on hover
+/* Show tooltip content on hover */
 [data-ave-tooltip]:hover:before,
 [data-ave-tooltip]:hover:after,
 [data-ave-tooltip]:focus-within:before,

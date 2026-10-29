@@ -214,6 +214,11 @@ interface. The rules for the different kinds of comments:
 | A normal explanation | `// ...` | `// The badge shows the number of new products.` |
 | A CSS rule in a template literal | `/* ... */` | `/* Hide the tooltip content by default */` |
 
+**NOTE:** In CSS `//` is **not** a comment. A line that starts with `//` makes the
+browser discard the whole rule of the block, without any error message. The
+comments of a CSS block therefore have to use the CSS syntax `/* ... */`. The
+script `scripts/check_css_syntax.js` checks that and is part of `npm run check`.
+
 A function whose purpose is not obvious **must** have a JSDoc block that
 explains what it does, what the parameters are and what it returns. A
 comment that explains *why* something is done in that way is more valuable
