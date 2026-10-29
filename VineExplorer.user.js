@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.13.0.2
+// @version      0.13.0.3
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1171,6 +1171,20 @@ ${newUrl}`;
 }
 
 /**
+ * Formats the tax prize of a product for the display.
+ *
+ * @param {Product} prod The product of the tile
+ * @returns {string} The formatted prize, or "--.--" if it is not known
+ */
+function formatTaxPrize(prod) {
+    const _prize = prod ? prod.data_estimated_tax_prize : undefined;
+    if (typeof _prize != 'number') return '--.--';
+    let _currencySymbol = '';
+    if (prod.data_tax_currency && prod.data_tax_currency == 'EUR') _currencySymbol = '€';
+    return `${Intl.NumberFormat(undefined, { minimumFractionDigits: 2 }).format(_prize)} ${_currencySymbol}`;
+}
+
+/**
  * Creates the element that shows the tax prize of the product.
  *
  * @param {Product} prod The product of the tile
@@ -1178,9 +1192,6 @@ ${newUrl}`;
  * @returns {Element} The created element
  */
 function createTaxInfoElement(prod, index = Math.round(Math.random() * 10000)) {
-    let _currencySymbol = '';
-    if (prod.data_tax_currency && prod.data_tax_currency == 'EUR') _currencySymbol = '€';
-
     const _taxElement = document.createElement('span');
     _taxElement.setAttribute('id', `ave-taxinfo-${index}`);
     _taxElement.style.cssText = 'position: relative; transform: translate(0px, -30px); width: fit-content; right: 0px;';
@@ -1188,9 +1199,9 @@ function createTaxInfoElement(prod, index = Math.round(Math.random() * 10000)) {
     const _taxElement_span = document.createElement('span');
     _taxElement_span.setAttribute('id', `ave-taxinfo-${index}-text`);
     _taxElement_span.classList.add('ave-taxinfo-text');
-    const _prize = prod.data_estimated_tax_prize;
+    const _prize = prod ? prod.data_estimated_tax_prize : undefined;
     if (SETTINGS.DebugLevel > 10) console.log('createTaxInfoElement(): We have a Taxprize of: ', _prize);
-    _taxElement_span.innerText = `Tax Price: ${typeof _prize == 'number' ? Intl.NumberFormat(undefined, { minimumFractionDigits: 2 }).format(_prize) : '--.--'} ${_currencySymbol}`;
+    _taxElement_span.innerText = `Tax Price: ${formatTaxPrize(prod)}`;
     if (SETTINGS.DebugLevel > 10) console.log('createTaxInfoElement(): After innerText');
 
     _taxElement.appendChild(_taxElement_span);
@@ -1640,10 +1651,13 @@ function favStarEventhandlerClick(event, data) {
                 database
                     .update(prod)
                     .then(() => {
-                        updateTileStyle(prod);
                         // The details are only loaded when the product became a
                         // favorite, not when the mark was removed again.
+                        // NOTE: The loading is started before the tile is updated,
+                        // because an error in the update would otherwise stop the
+                        // loading of the details.
                         if (prod.isFav) loadProductDetailsIfEnabled(prod);
+                        updateTileStyle(prod);
                     })
                     .catch((error) => {
                         console.error(`favStarEventhandlerClick(): could not update the product: ${error}`);
@@ -1677,12 +1691,11 @@ function updateTileStyle(prod) {
             const _favStar = _tile.querySelector('.ave-favorite-star');
             if (_favStar) _favStar.style.color = prod.isFav ? SETTINGS.FavStarColorChecked : 'white'; // SETTINGS.FavStarColorChecked = Gelb;
 
-            const _taxValue = prod.data_estimated_tax_prize;
-            if (typeof _taxValue == 'number') {
-                const _taxValueElem = _tile.querySelector('.ave-taxinfo-text');
-                if (_taxValueElem) {
-                    _taxValueElem.innerText = _taxValueElem.innerText.replace('--.--', _taxValue);
-                }
+            // The prize is written as a whole, because the element is created
+            // before the details were loaded and still shows the placeholder.
+            const _taxValueElem = _tile.querySelector('.ave-taxinfo-text');
+            if (_taxValueElem) {
+                _taxValueElem.innerText = `Tax Price: ${formatTaxPrize(prod)}`;
             }
             return;
         }
@@ -4511,6 +4524,9 @@ async function processProductDetailsQueue() {
 /**
  * Checks if the details of a product were already loaded.
  *
+ * NOTE: A product with a parent ASIN has no price of its own, the API returns
+ * the variations for it. For those products the variations are the details.
+ *
  * @param {Product} prod The product to check
  * @returns {boolean} true if the details are already in the product
  */
@@ -4528,11 +4544,19 @@ function hasProductDetails(prod) {
  * @returns {Promise<void>} Resolves when the details were loaded and stored
  */
 async function loadProductDetailsIfEnabled(prod) {
-    if (!SETTINGS.EnableDetailsOnFavorite) return;
+    if (!SETTINGS.EnableDetailsOnFavorite) {
+        console.info(`AVE: The details of ${prod.id} were not loaded, the setting is off.`);
+        return;
+    }
     // A product that is marked as favorite and unmarked again would be loaded
     // a second time otherwise.
-    if (hasProductDetails(prod)) return;
+    if (hasProductDetails(prod)) {
+        console.info(`AVE: The details of ${prod.id} are already loaded.`);
+        return;
+    }
+    console.info(`AVE: Loading the details of ${prod.id} ...`);
     await requestProductDetailsQueued(prod);
+    console.info(`AVE: The details of ${prod.id} were loaded.`);
 }
 
 async function requestProductDetails(prod) {
@@ -4552,6 +4576,21 @@ async function requestProductDetails(prod) {
         const _data = res.result;
         if (SETTINGS.DebugLevel > 1) console.log('DATA:', _data);
         prod.data_childs = _data.variations || [];
+
+        /* A product with a parent ASIN has no price of its own, the API returns
+           the variations for it. The price of the first variation is used, so that
+           the tile shows a price. Every variation would need its own request,
+           which would block the account of the user. */
+        if (prod.data_childs.length > 0 && prod.data_childs[0].asin) {
+            const _child = prod.data_childs[0];
+            const _childRes = await vineFetch(
+                `${window.location.origin}/vine/api/recommendations/${prod.id}/item/${_child.asin}`.replace(/#/g, '%23')
+            ).then((r) => r.json());
+            if (!_childRes.error) {
+                prod.data_tax_currency = _childRes.result.taxCurrency;
+                prod.data_estimated_tax_prize = _childRes.result.taxValue;
+            }
+        }
         return prod;
     } else {
         const ret = await vineFetch(

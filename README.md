@@ -63,6 +63,12 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-29] - Version 0.13.0.3
+
+* Fix: the price of a product is now written as a whole into the tile, so that the currency and the number of decimal places are correct after the details were loaded. Before, only the placeholder was replaced by the raw number.
+* Fix: a product with a parent ASIN has no price of its own, the API returns the variations for it. The price of the first variation is now loaded as well, so that the tile shows a price. Every variation would need its own request, which would block the account of the user.
+* Fix: the loading of the details is not stopped anymore if the update of the tile fails.
+
 ##### [2026-10-29] - Version 0.13.0.2
 
 * New: the price details of a product are now loaded from the Vine API when the product is marked as favorite, both when the star is clicked and when a product is marked as favorite automatically because of a keyword match. The new setting "Load the price details when a product is marked as favorite" turns the behaviour on and off, it is on by default.

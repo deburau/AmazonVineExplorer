@@ -81,19 +81,22 @@ function run(code, opts, requestDetailsCode) {
     // mit einer json()-Methode.
     const _apiCall = (url) => {
         log.push(`api ${url}`);
+        // Die Empfehlung eines Elternprodukts liefert die Varianten, die
+        // Empfehlung eines Kindes liefert den Preis.
+        const _isParent = url.includes('/recommendations/p1') && !url.includes('/item/');
+        const _result = _isParent
+            ? { variations: [{ asin: 'CHILD1' }] }
+            : {
+                  variations: [],
+                  featureBullets: ['bullet'],
+                  byLineContributors: ['contributor'],
+                  catalogSize: '42',
+                  taxCurrency: 'EUR',
+                  taxValue: 12.5,
+                  limitedQuantity: 3
+              };
         return Promise.resolve({
-            json: () =>
-                Promise.resolve({
-                    result: {
-                        variations: [],
-                        featureBullets: ['bullet'],
-                        byLineContributors: ['contributor'],
-                        catalogSize: '42',
-                        taxCurrency: 'EUR',
-                        taxValue: 12.5,
-                        limitedQuantity: 3
-                    }
-                })
+            json: () => Promise.resolve({ result: _result })
         });
     };
 
@@ -130,7 +133,19 @@ function run(code, opts, requestDetailsCode) {
         vineFetch: _apiCall,
         requestProductDetails: async (prod) => {
             log.push(`requestProductDetails (mock) ${prod.id}`);
-            const _res = await _apiCall(`/vine/api/recommendations/${prod.id}`);
+            if (prod.data_asin_is_parent) {
+                const _res = await _apiCall(`/vine/api/recommendations/${prod.id}`);
+                const _data = await _res.json();
+                prod.data_childs = _data.result.variations || [];
+                if (prod.data_childs.length > 0 && prod.data_childs[0].asin) {
+                    const _childRes = await _apiCall(`/vine/api/recommendations/${prod.id}/item/${prod.data_childs[0].asin}`);
+                    const _childData = await _childRes.json();
+                    prod.data_tax_currency = _childData.result.taxCurrency;
+                    prod.data_estimated_tax_prize = _childData.result.taxValue;
+                }
+                return prod;
+            }
+            const _res = await _apiCall(`/vine/api/recommendations/${prod.id}/item/${prod.data_asin}`);
             const _data = await _res.json();
             prod.data_estimated_tax_prize = _data.result.taxValue;
             prod.data_tax_currency = _data.result.taxCurrency;
@@ -283,6 +298,33 @@ const SCENARIOS = [
                 isFav: 0,
                 isNotified: 0,
                 data_asin: 'ASIN1'
+            }
+        }
+    },
+    {
+        name: 'Stern-Klick: Produkt mit Eltern-ASIN, der Preis kommt von der Variante',
+        expectDetails: true,
+        opts: {
+            mode: 'star',
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'Produkt A',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'PARENT1',
+                    data_asin_is_parent: true
+                }
+            ],
+            product: {
+                id: 'p1',
+                description_full: 'Produkt A',
+                isNew: 1,
+                isFav: 0,
+                isNotified: 0,
+                data_asin: 'PARENT1',
+                data_asin_is_parent: true
             }
         }
     }
