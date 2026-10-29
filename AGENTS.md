@@ -219,6 +219,11 @@ browser discard the whole rule of the block, without any error message. The
 comments of a CSS block therefore have to use the CSS syntax `/* ... */`. The
 script `scripts/check_css_syntax.js` checks that and is part of `npm run check`.
 
+**NOTE:** Every setting of `SETTINGS_USERCONFIG_DEFINES` needs a label and a
+description in every language of the `I18N`. The key of the setting has to be
+spelled the same way in all three places. The script
+`scripts/check_settings_keys.js` checks that and is part of `npm run check`.
+
 A function whose purpose is not obvious **must** have a JSDoc block that
 explains what it does, what the parameters are and what it returns. A
 comment that explains *why* something is done in that way is more valuable

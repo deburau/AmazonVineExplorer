@@ -63,6 +63,11 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-29] - Version 0.13.0.12
+
+* Fix: the key of the description of the setting for the waiting time between the notifications was spelled wrong, so that the tooltip of the setting showed the name of the setting instead of its description.
+* The script `scripts/check_settings_keys.js` checks that every setting has a label and a description in every language and that the keys are spelled the same way everywhere. It is part of `npm run check`.
+
 ##### [2026-10-29] - Version 0.13.0.11
 
 * The setting for the color of the "Update Database" button was removed. The button belonged to the auto scan, which was never used. The setting had no effect.
