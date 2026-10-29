@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.13.0.4
+// @version      0.13.0.5
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2219,7 +2219,9 @@ function createSettingsBoolElement(dat, _elem, _labelName, _labelDescription) {
     _elem_item_left_label_input.type = 'checkbox';
     _elem_item_left_label_input.className = 'ave-input-binary';
     _elem_item_left_label_input.setAttribute('ave-data-key', dat.key);
-    _elem_item_left_label_input.checked = SETTINGS[dat.key];
+    // NOTE: Every value that is not false means that the setting is switched on,
+    // so that a broken value in the stored settings cannot switch it off silently.
+    _elem_item_left_label_input.checked = SETTINGS[dat.key] !== false;
     _elem_item_left_label_input.addEventListener('click', (event) => {
         console.log('This is a Boolean Value Input', event);
         SETTINGS[dat.key] = event.target.checked;
@@ -4599,7 +4601,9 @@ function hasProductDetails(prod) {
  * @returns {Promise<void>} Resolves when the details were loaded and stored
  */
 async function loadProductDetailsIfEnabled(prod) {
-    if (!SETTINGS.EnableDetailsOnFavorite) {
+    // NOTE: Every value that is not false means that the setting is switched on,
+    // so that a broken value in the stored settings cannot switch it off silently.
+    if (SETTINGS.EnableDetailsOnFavorite === false) {
         console.info(`AVE: The details of ${prod.id} were not loaded, the setting is off.`);
         return;
     }

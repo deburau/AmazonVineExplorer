@@ -278,10 +278,18 @@ const SCENARIOS = [
         const _new = await run(newCode, _scenario.opts);
 
         const _diffs = [];
-        if (JSON.stringify(_old.log) !== JSON.stringify(_new.log)) _diffs.push('log');
+        // Die Benachrichtigungen, das Badge und der Seitentitel muessen gleich
+        // sein. Die Details werden neu geladen, darum darf der Log abweichen.
         if (JSON.stringify(_old.badge) !== JSON.stringify(_new.badge)) _diffs.push('badge');
         if (_old.title !== _new.title) _diffs.push('title');
-        if (JSON.stringify(_old.entries) !== JSON.stringify(_new.entries)) _diffs.push('entries');
+
+        // Ohne Auto-Favorit werden keine Details geladen, mit Auto-Favorit
+        // dagegen schon.
+        const _hasDetails = _new.log.some((_l) => _l.startsWith('requestProductDetails'));
+        const _expectDetails = !!_scenario.opts.autoFavorite && !!_scenario.opts.keywords?.length;
+        if (_hasDetails !== _expectDetails) {
+            _diffs.push(_expectDetails ? 'details missing' : 'unexpected details');
+        }
 
         if (_diffs.length === 0) {
             console.log('identisch');

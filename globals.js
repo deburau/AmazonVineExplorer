@@ -818,6 +818,17 @@ function clearAVEState() {
 }
 
 /**
+ * The settings that are only used when they are switched on. Every value that
+ * is not false means that the setting is switched on.
+ *
+ * NOTE: The setting is not part of the stored settings of an older version, so
+ * it has to fall back to the default. A value that is not a boolean comes from
+ * a manual change of the stored settings and must not switch the setting off
+ * silently.
+ */
+const SETTINGS_ON_BY_DEFAULT = ['EnableDetailsOnFavorite'];
+
+/**
  * Load Settings from GM Storage
  */
 function loadSettings() {
@@ -844,6 +855,18 @@ function loadSettings() {
             const _currKey = _keys[i];
             console.log(`Restore Setting: ${_currKey} with Value: ${_settingsStore[_currKey]}`);
             SETTINGS[_currKey] = _settingsStore[_currKey];
+        }
+    }
+
+    // The settings that are on by default are switched on, unless the stored
+    // value is exactly false. A setting that is not stored at all keeps its
+    // default from SETTINGS_DEFAULT.
+    for (const _key of SETTINGS_ON_BY_DEFAULT) {
+        if (SETTINGS[_key] !== false) {
+            if (SETTINGS[_key] !== true) {
+                console.log(`loadSettings(): The setting ${_key} is not switched off, so it is switched on.`);
+            }
+            SETTINGS[_key] = true;
         }
     }
 }
