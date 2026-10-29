@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-29] - Version 0.13.0.10
+
+* The auto scan was removed. It could never be executed, because the flag that started it was never set to true. The background scan does the same job and has its own cleanup of the database.
+
 ##### [2026-10-29] - Version 0.13.0.9
 
 * The tooltips of the settings were rewritten in German and English. They now describe the effect of the setting, name the unit of the number fields and explain what the value 0 does. The texts are kept short, because the tooltip is only 160 pixels wide.

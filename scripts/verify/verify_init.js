@@ -17,7 +17,10 @@
 const vm = require('vm');
 const { prepare, finish } = require('./lib/verify_helpers');
 
-const OLD_NAMES = ['init'];
+// NOTE: The baseline is the state before the auto scan was removed. The
+// functions of the page initialisation are already split there, so both
+// versions use the same list.
+const OLD_NAMES = ['init', 'initTileParsing', 'initNavigationButtons', 'initSearchBar', 'initPagination'];
 const NEW_NAMES = ['init', 'initTileParsing', 'initNavigationButtons', 'initSearchBar', 'initPagination'];
 
 const { old: oldCode, new: newCode } = prepare('verify_init.js', OLD_NAMES, NEW_NAMES);
@@ -209,6 +212,8 @@ function run(code, opts) {
             }
         },
         getUrlParameter: (name) => (name === 'ave-subpage' ? opts.subpage || null : null),
+        // NOTE: The auto scan was removed, but the baseline still calls the
+        // functions. They are mocked, so that the baseline can be executed.
         showAutoScanScreen: (t) => log.push(`showAutoScanScreen ${t}`),
         startAutoScan: () => log.push('startAutoScan'),
         handleAutoScan: () => log.push('handleAutoScan'),
@@ -233,7 +238,10 @@ function run(code, opts) {
         aveResolveUrl: (href) => 'https://www.amazon.de/vine/vine-items?page=2',
         translate: (cat, key, fallback) => fallback,
         PAGETYPE: { NEW_ITEMS: 0, FAVORITES: 1, ALL: 2, SEARCH_RESULT: 9 },
-        AUTO_SCAN_IS_RUNNING: opts.autoScanRunning || false,
+        // NOTE: The auto scan was removed, but the baseline still uses the
+        // variables. They are always false, because the auto scan could never
+        // be started.
+        AUTO_SCAN_IS_RUNNING: false,
         AUTO_SCAN_PAGE_CURRENT: 1,
         AUTO_SCAN_PAGE_MAX: 5,
         INIT_AUTO_SCAN: false,
@@ -270,7 +278,6 @@ function run(code, opts) {
 const SCENARIOS = [
     { name: 'Normale Seite mit Produkten', opts: { hasTiles: true } },
     { name: 'Leere Seite ohne Produkte', opts: { hasTiles: false } },
-    { name: 'Auto-Scan laeuft', opts: { hasTiles: true, autoScanRunning: true } },
     { name: 'Subpage-Parameter vorhanden', opts: { hasTiles: true, subpage: '2' } }
 ];
 

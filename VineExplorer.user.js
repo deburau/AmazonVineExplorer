@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.13.0.9
+// @version      0.13.0.10
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -38,7 +38,7 @@
 
 /* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
-   appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveResolveUrl, aveUrlWithPage,
+   appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveResolveUrl,
    backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct, cleanUpDatabase,
    colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
@@ -46,16 +46,16 @@
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, getContrastColor, getPageinationData,
-   getTilesFromURL, getUrlParameter, gotifyNotification, handleAutoScan, handleInfiniteScroll,
+   getTilesFromURL, getUrlParameter, gotifyNotification, handleInfiniteScroll,
    handleFastScanFinished, importDatabase, init, initBackgroundScan, initNavigationButtons,
    initPagination, initSearchBar, initTileEventHandlers, initTileParsing, injectDarkMode,
    markAllCurrentDatabaseProductsAsSeen, markAllCurrentSiteProductsAsSeen,
    notifyAboutNewProducts, notifyAboutProductDrop, notifyAboutUnseenItems, parseTileData,
    populateSettingsContainer, readFile, reloadPageWithSubpageTarget, requestProductDetails,
    rgbToHex, rgbaToHex, searchKeywordsInProducts, shareEventHandlerClick,
-   shouldStopFastScan, showAutoScanScreen, showBackgroundScanScreen, sort_by_key,
-   startAutoScan, stickElementToTopScrollEVhandler, stopBackgroundScan, stopFastScan,
-   stringToRegex, timeAgo, translate, updateAutoScanScreenText, updateBackgroundScanScreenText,
+   shouldStopFastScan, showBackgroundScanScreen, sort_by_key,
+   stickElementToTopScrollEVhandler, stopBackgroundScan, stopFastScan,
+   stringToRegex, timeAgo, translate, updateBackgroundScanScreenText,
    updateFavoritesBtn, updateNewProductsBtn, updateTileStyle */
 console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 
@@ -479,24 +479,6 @@ function aveResolveUrl(href) {
         console.error(`aveResolveUrl(): could not resolve the URL "${href}":`, error);
         return href;
     }
-}
-
-/**
- * Returns the URL of the current page with the given page number.
- *
- * The pagination parameter of the Vine pages is "page". The previous generic
- * replacement (/=[0-9]+/) could also hit other parameters, e.g. "ave-subpage".
- *
- * @param {number} page The page number to set
- * @returns {string} The URL with the new page number
- */
-function aveUrlWithPage(page) {
-    const _url = window.location.href;
-    if (/([?&]page=)\d+/.test(_url)) {
-        return _url.replace(/([?&]page=)\d+/, `$1${page}`);
-    }
-    // Fallback for the case that the pagination parameter is not named "page".
-    return _url.replace(/=[0-9]+/, `=${page}`);
 }
 
 /**
@@ -1792,50 +1774,6 @@ function addTileEventhandlers(_currTile) {
  */
 function completeDelayedInit() {
     initTileEventHandlers();
-}
-
-/**
- * Shows the overlay of the auto scan, which covers the whole page.
- * @param {string} text The text that is shown in the overlay
- */
-function showAutoScanScreen(text) {
-    const _overlay = document.createElement('div');
-    _overlay.style.position = 'fixed';
-    _overlay.style.top = '0';
-    _overlay.style.left = '0';
-    _overlay.style.width = '100%';
-    _overlay.style.height = '100%';
-    _overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'; // Semi transparent dark background
-    _overlay.style.zIndex = '1000'; // The overlay has to be above the other elements
-
-    const _text = document.createElement('div');
-    _text.style.position = 'absolute';
-    _text.style.top = '50%';
-    _text.style.left = '50%';
-    _text.style.transform = 'translate(-50%, -50%)';
-    _text.style.color = 'orange'; // Text colour
-    _text.style.textAlign = 'center';
-    _text.style.fontSize = '50px'; // Font size of the text
-    _text.style.lineHeight = '1';
-    _text.style.zIndex = '1001';
-    const _autoScanText = document.getElementById('ave-autoscan-text');
-    if (!_autoScanText) {
-        _text.innerHTML = `<p id="ave-autoscan-text">${text}</p>`;
-    } else {
-        _autoScanText.textContent = text;
-    }
-
-    document.body.appendChild(_overlay);
-    document.body.appendChild(_text);
-}
-
-/**
- * Updates the text of the overlay of the auto scan.
- * @param {string} text The new text
- */
-function updateAutoScanScreenText(text = '') {
-    const _elem = document.getElementById('ave-autoscan-text');
-    _elem.textContent = text;
 }
 
 // Populate settings only once per render to avoid duplicates on re-open.
@@ -3848,60 +3786,6 @@ function updateBackgroundScanScreenText(text = '') {
 }
 
 /**
- * Starts the auto scan, which walks through all pages of the Vine site.
- */
-async function startAutoScan() {
-    if (SETTINGS.DebugLevel > 10) console.log('Called startAutoScan()');
-    showAutoScanScreen('Init Autoscan, please wait...');
-    await markAllCurrentDatabaseProductsAsSeen();
-    if (SETTINGS.DebugLevel > 10) console.log('startAutoScan() - markAllCurrentDatabaseProductsAsSeen() is done');
-    const _pageiDat = getPageinationData();
-    localStorage.setItem('AVE_INIT_AUTO_SCAN', false);
-    localStorage.setItem('AVE_AUTO_SCAN_IS_RUNNING', true);
-    localStorage.setItem('AVE_AUTO_SCAN_PAGE_MAX', _pageiDat.maxPage);
-    localStorage.setItem('AVE_AUTO_SCAN_PAGE_CURRENT', 1);
-    setTimeout(() => {
-        // NOTE: The pagination href of Amazon is relative ("vine-items?...page=").
-        // It has to be resolved to an absolute URL, otherwise a trailing slash
-        // in the current URL would produce a doubled path (see aveResolveUrl()).
-        const _url = aveResolveUrl(`${_pageiDat.href}1`);
-        if (SETTINGS.DebugLevel > 10) console.log(`Loding new Page ${_url}`);
-        window.location.href = _url;
-    }, 5000);
-}
-
-/**
- * Advances the auto scan by one page, or finishes it if the last page was
- * reached.
- */
-async function handleAutoScan() {
-    const _delay = Math.max(SETTINGS.PageLoadMinDelay - (Date.now() - PAGE_LOAD_TIMESTAMP), 0) + 500;
-    if (SETTINGS.DebugLevel > 10) console.log(`handleAutoScan() - _delay: ${_delay}`);
-    if (AUTO_SCAN_PAGE_CURRENT < AUTO_SCAN_PAGE_MAX) {
-        const _nextPage = AUTO_SCAN_PAGE_CURRENT + 1;
-        localStorage.setItem('AVE_AUTO_SCAN_PAGE_CURRENT', _nextPage);
-        setTimeout(() => {
-            // NOTE: Only the pagination parameter is replaced, so that other
-            // parameters with a number (e.g. "ave-subpage") stay untouched.
-            window.location.href = aveUrlWithPage(_nextPage);
-        }, _delay);
-    } else {
-        // We are done ;)
-        updateAutoScanScreenText('Success, cleaning up Database...');
-        await cleanUpDatabase();
-        localStorage.setItem('AVE_AUTO_SCAN_IS_RUNNING', false);
-        localStorage.setItem('AVE_AUTO_SCAN_PAGE_MAX', -1);
-        localStorage.setItem('AVE_AUTO_SCAN_PAGE_CURRENT', -1);
-        setTimeout(() => {
-            updateAutoScanScreenText('Finished Database\nupdate and cleanup\n\nPage reloading incoming... please wait');
-            setTimeout(() => {
-                window.location.href = aveUrlWithPage(1);
-            }, 10000);
-        }, _delay + 2000);
-    }
-}
-
-/**
  * Keeps an element at a fixed position, while the page is scrolled.
  *
  * The element is only moved, if the user scrolled past the position where it
@@ -4158,7 +4042,6 @@ function notifyAboutNewProducts(_prodArrLength, _notifyed) {
  * Update the "new entries" badge and trigger threshold notifications.
  */
 function updateNewProductsBtn() {
-    if (AUTO_SCAN_IS_RUNNING) return;
     if (SETTINGS.DebugLevel > 1) console.log('Called updateNewProductsBtn()');
 
     // The search for the keywords is expensive, because every new product is
@@ -4731,13 +4614,7 @@ function initTileParsing(hasTiles) {
                 }
             }
         }
-        if (INIT_AUTO_SCAN) {
-            startAutoScan();
-        } else if (AUTO_SCAN_IS_RUNNING) {
-            handleAutoScan();
-        } else {
-            completeDelayedInit();
-        }
+        completeDelayedInit();
     });
 }
 
@@ -4883,16 +4760,12 @@ function initPagination() {
 function init(hasTiles) {
     // Get all Products on this page ;)
 
-    if (AUTO_SCAN_IS_RUNNING) showAutoScanScreen(`Autoscan is running...Page (${AUTO_SCAN_PAGE_CURRENT}/${AUTO_SCAN_PAGE_MAX})`);
-
     const _aveSubpageRequest = getUrlParameter('ave-subpage');
     if (SETTINGS.DebugLevel > 10) console.log(`Got Subpage Parameter`, _aveSubpageRequest);
 
     if (_aveSubpageRequest) createNewSite(parseInt(_aveSubpageRequest));
 
     initTileParsing(hasTiles);
-
-    if (AUTO_SCAN_IS_RUNNING) return;
 
     initNavigationButtons();
 

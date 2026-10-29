@@ -1,8 +1,7 @@
 'use strict';
 
 /* exported AVE_EVENTHANDLER, AVE_IS_THIS_SESSION_MASTER, AVE_SESSION_ID, AVE_TITLE, AVE_VERSION,
-   AUTO_SCAN_IS_RUNNING, AUTO_SCAN_PAGE_CURRENT, AUTO_SCAN_PAGE_MAX, DATABASE_NAME,
-   DATABASE_OBJECT_STORE_NAME, DATABASE_VERSION, INIT_AUTO_SCAN, PAGE_LOAD_TIMESTAMP,
+   DATABASE_NAME, DATABASE_OBJECT_STORE_NAME, DATABASE_VERSION,
    SECONDS_PER_DAY, SECONDS_PER_WEEK, SETTINGS, SETTINGS_DEFAULT, SETTINGS_USERCONFIG_DEFINES,
    SITE_IS_SHOPPING, SITE_IS_VINE, addBranding, ave_eventhandler, delay, fastStyleChanges,
    findActiveMenuButton, generateSessionID, getCountry, loadSettings, saveSettings,
@@ -32,13 +31,6 @@ sessionStorage.setItem('AVE_SESSION_ID', AVE_SESSION_ID);
  * Is this Browser Tab / Window the Master Instance ??
  */
 let AVE_IS_THIS_SESSION_MASTER = false;
-
-// Persisted scan state from previous runs (used by auto-scan logic).
-const INIT_AUTO_SCAN = localStorage.getItem('AVE_INIT_AUTO_SCAN') == 'true' ? true : false;
-const AUTO_SCAN_IS_RUNNING = localStorage.getItem('AVE_AUTO_SCAN_IS_RUNNING') == 'true' ? true : false;
-const AUTO_SCAN_PAGE_CURRENT = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_CURRENT')) || -1;
-const AUTO_SCAN_PAGE_MAX = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_MAX')) || -1;
-const PAGE_LOAD_TIMESTAMP = Date.now();
 
 // NOTE: The database is still stored in IndexedDB of the browser and not in the
 // storage of the userscript manager, so these constants are needed.
@@ -780,10 +772,6 @@ ave_eventhandler.on('ave-save-cofig', () => {
 
 // All keys of the local storage that AVE uses for its state information
 const AVE_LOCAL_STORAGE_KEYS = [
-    'AVE_INIT_AUTO_SCAN',
-    'AVE_AUTO_SCAN_IS_RUNNING',
-    'AVE_AUTO_SCAN_PAGE_CURRENT',
-    'AVE_AUTO_SCAN_PAGE_MAX',
     'AVE_BACKGROUND_SCAN_IS_RUNNING',
     'AVE_BACKGROUND_SCAN_LAST_TIME',
     'AVE_BACKGROUND_SCAN_PAGE_CURRENT',
