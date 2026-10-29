@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.13.0.5
+// @version      0.13.0.6
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -4563,7 +4563,10 @@ async function processProductDetailsQueue() {
             await database.update(_newProd || _entry.prod);
             updateTileStyle(_newProd || _entry.prod);
         } catch (error) {
-            console.error(`Could not load the details of the product ${_entry.prod.id}: ${error}`);
+            // NOTE: The error can be a string, an error object or null, so the
+            // message is built for every case.
+            const _reason = error?.message || error || 'unknown error';
+            console.error(`Could not load the details of the product ${_entry.prod.id}: ${_reason}`);
         }
         _entry.resolve();
         if (productDetailsQueue.length > 0) await delay(PRODUCT_DETAILS_REQUEST_DELAY);
@@ -4620,7 +4623,10 @@ async function loadProductDetailsIfEnabled(prod) {
 
 async function requestProductDetails(prod) {
     if (prod.data_asin_is_parent) {
-        const res = await vineFetch(`${window.location.origin}/vine/api/recommendations/${prod.id}`.replace(/#/g, '#')).then((r) =>
+        /* NOTE: The recommendation id contains a # as a separator. It has to be
+           encoded, otherwise everything after the first # is treated as a
+           fragment of the URL and never reaches the server. */
+        const res = await vineFetch(`${window.location.origin}/vine/api/recommendations/${prod.id}`.replace(/#/g, '%23')).then((r) =>
             r.json()
         );
         if (res.error) {
@@ -4628,8 +4634,11 @@ async function requestProductDetails(prod) {
                 prod.forceRemove = true;
                 return prod;
             } else {
-                console.error('requestProductDetails():ERROR:', res.error);
-                throw res.error.exceptionType;
+                // The exception type is not set for every error, so the message
+                // of the error is used as a fallback.
+                const _reason = res.error.exceptionType || res.error.message || 'unknown error';
+                console.error(`requestProductDetails(): The product ${prod.id} could not be loaded: ${_reason}`);
+                throw new Error(_reason);
             }
         }
         const _data = res.result;
@@ -4649,7 +4658,11 @@ async function requestProductDetails(prod) {
         ).then((r) => r.json());
         if (SETTINGS.DebugLevel > 1) console.log('RETURN:', ret);
         if (ret.error) {
-            throw ret.error.exceptionType;
+            // The exception type is not set for every error, so the message of
+            // the error is used as a fallback.
+            const _reason = ret.error.exceptionType || ret.error.message || 'unknown error';
+            console.error(`requestProductDetails(): The product ${prod.id} could not be loaded: ${_reason}`);
+            throw new Error(_reason);
         }
         const data = ret.result;
         prod.data_feature_bullets = data.featureBullets;

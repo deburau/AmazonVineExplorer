@@ -63,6 +63,11 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-29] - Version 0.13.0.6
+
+* Fix: the recommendation id of a product contains a # as a separator. It was not encoded in the URL of the request for the details of a product with a parent ASIN, so that only the part before the # reached the server and the request failed with "No recommendation found for recommendation id". The id is now encoded like it already was for the other requests.
+* Fix: the error of a failed request is now reported with its message, if it has no exception type. Before the console only showed "null".
+
 ##### [2026-10-29] - Version 0.13.0.5
 
 * Fix: the new setting "Load the price details when a product is marked as favorite" is now switched on for every value that is not false. A setting that is not part of the stored settings of an older version, or that was changed to a value that is not a boolean, therefore does not switch the feature off silently.
