@@ -63,6 +63,11 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-29] - Version 0.13.0.2
+
+* New: the price details of a product are now loaded from the Vine API when the product is marked as favorite, both when the star is clicked and when a product is marked as favorite automatically because of a keyword match. The new setting "Load the price details when a product is marked as favorite" turns the behaviour on and off, it is on by default.
+* The details are not loaded during the scan, because Amazon blocks the account temporarily if too many requests are made in a short time. The requests of the details are therefore queued and made one after the other with a delay of 1.5 seconds.
+
 ##### [2026-10-28] - Version 0.13.0.1
 
 * The development continues on the branch `dev-0.14.0`, the version was raised to prepare the next release.

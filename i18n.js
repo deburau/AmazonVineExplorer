@@ -52,6 +52,7 @@ const I18N = {
             EnableInfiniteSpinnerFix: 'Endloses Laden bei Varianten beheben',
             EnableDesktopNotifikation: 'Desktop-Benachrichtigungen aktivieren',
             EnableAutoMarkFavorite: 'Auto-Favorit markieren aktivieren',
+            EnableDetailsOnFavorite: 'Preisdetails beim Favorisieren laden',
             EnableCleanupFavorites: 'Favoriten bei Cleanup löschen',
             EnableBtnMarkAllAsSeen: 'Button Alles als gesehen markieren',
             ShowFirstSeen: 'Erst gesehen statt zuletzt gesehen',
@@ -114,6 +115,8 @@ const I18N = {
                 'Repariert fehlerhafte Variantendaten, die das Laden auf der Amazon Vine-Seite endlos fortsetzen können',
             EnableDesktopNotifikation: 'Aktiviert Desktop-Benachrichtigungen für neue Produkte',
             EnableAutoMarkFavorite: 'Markiert neue Produkte automatisch als Favorit, wenn Keywords matchen',
+            EnableDetailsOnFavorite:
+                'Lädt die Preisdetails von der Vine API, wenn ein Produkt als Favorit markiert wird. Beim Scan werden sie nicht geladen, weil Amazon den Account bei zu vielen Abrufen in kurzer Zeit temporär sperrt.',
             EnableCleanupFavorites: 'Favoriten werden beim Cleanup ebenfalls entfernt',
             EnableBtnMarkAllAsSeen: 'Aktiviert den Button "Alles als gesehen markieren"',
             ShowFirstSeen: 'Zeigt "erst gesehen" statt "zuletzt gesehen"',
@@ -210,6 +213,7 @@ const I18N = {
             EnableInfiniteSpinnerFix: 'Enable Infinite Spinner Fix',
             EnableDesktopNotifikation: 'Enable Desktop Notifications',
             EnableAutoMarkFavorite: 'Enable auto marking product as favorite',
+            EnableDetailsOnFavorite: 'Load the price details when a product is marked as favorite',
             EnableCleanupFavorites: 'Also remove favorites when cleaning up products',
             EnableBtnMarkAllAsSeen: 'Enable Button Mark all as seen',
             ShowFirstSeen: 'Show first seen instead of last seen',
@@ -271,6 +275,8 @@ const I18N = {
             EnableInfiniteSpinnerFix: 'Repairs malformed variation data that can leave Amazon Vine loading indefinitely',
             EnableDesktopNotifikation: 'Enable Desktop Notifications if new Products are detected',
             EnableAutoMarkFavorite: 'Automatically mark new products as favorite when keywords match',
+            EnableDetailsOnFavorite:
+                'Loads the price details from the Vine API when a product is marked as favorite. They are not loaded during the scan, because Amazon blocks the account if too many requests are made in a short time.',
             EnableCleanupFavorites: 'Also remove favorites during cleanup based on criteria',
             EnableBtnMarkAllAsSeen: 'Enable the Button Mark all as seen',
             ShowFirstSeen: 'Show the time an item was first seen',

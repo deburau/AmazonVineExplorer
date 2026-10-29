@@ -441,6 +441,13 @@ SETTINGS_USERCONFIG_DEFINES.push({
     description: 'If a new product matches a highlight keyword it is automatically marked as favorite'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableDetailsOnFavorite',
+    type: 'bool',
+    name: 'Load the price details when a product is marked as favorite',
+    description:
+        'If a product is marked as favorite, the price details are loaded from the Vine API. They are not loaded during the scan, because Amazon blocks the account if too many requests are made in a short time.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
     key: 'EnableCleanupFavorites',
     type: 'bool',
     name: 'Also remove favorites when cleaning up products',
@@ -679,6 +686,7 @@ class SETTINGS_DEFAULT {
     //   compatibility with already stored settings (see note above).
     EnableDesktopNotifikation = false;
     EnableAutoMarkFavorite = false;
+    EnableDetailsOnFavorite = true;
     EnableCleanupFavorites = false;
     EnableBtnAll = true;
     EnablePaginationTop = true;

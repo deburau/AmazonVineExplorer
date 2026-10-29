@@ -15,7 +15,7 @@
  */
 
 const vm = require('vm');
-const { prepare, finish } = require('./lib/verify_helpers');
+const { prepareWithConstants, finish } = require('./lib/verify_helpers');
 
 const OLD_NAMES = ['updateNewProductsBtn'];
 const NEW_NAMES = [
@@ -24,10 +24,17 @@ const NEW_NAMES = [
     'searchKeywordsInProducts',
     'checkKeywordsForProduct',
     'notifyAboutNewProducts',
-    'stringToRegex'
+    'stringToRegex',
+    // Die Funktionen, die das Nachladen der Details beim Favorisieren ermoeglichen.
+    'loadProductDetailsIfEnabled',
+    'requestProductDetailsQueued',
+    'processProductDetailsQueue',
+    'hasProductDetails'
 ];
 
-const { old: oldCode, new: newCode } = prepare('verify_new_products_btn.js', OLD_NAMES, NEW_NAMES);
+const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
+
+const { old: oldCode, new: newCode } = prepareWithConstants('verify_new_products_btn.js', OLD_NAMES, NEW_NAMES, CONSTANT_NAMES);
 
 /**
  * Baut eine Sandbox und fuehrt updateNewProductsBtn() aus.
@@ -99,6 +106,12 @@ function run(code, opts) {
         gotifyNotification: (msg, prod) => log.push(`gotify: ${String(msg).substring(0, 60)}${prod ? ' [withProd]' : ''}`),
         desktopNotifikation: (title, msg) => log.push(`desktop: ${title} | ${String(msg).substring(0, 60)}`),
         fixProductImageUrl: (u) => u,
+        requestProductDetails: async (prod) => {
+            log.push(`requestProductDetails ${prod.id}`);
+            prod.data_estimated_tax_prize = 12.5;
+            return prod;
+        },
+        delay: (ms) => new Promise((r) => setTimeout(r, 0)),
         unixTimeStamp: () => 1800000000,
         translate: (cat, key, fallback) => fallback,
         Promise,

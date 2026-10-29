@@ -133,6 +133,7 @@ The baseline is only used for the comparison, it is never part of the build.
 | `verify_settings_ui.js` | The created DOM of all nine setting types |
 | `verify_new_products_btn.js` | The notifications, the badge and the page title of the new entries button |
 | `verify_init.js` | The created DOM and the calls of the page initialisation |
+| `verify_details_on_favorite.js` | The requests of the price details when a product is marked as favorite |
 
 **NOTE:** A new verification needs the same structure: a `vm` sandbox with mocked
 browser APIs, a list of the function names of the old and the new version and a

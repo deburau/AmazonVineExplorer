@@ -118,24 +118,55 @@ function extractBody(src, name) {
  *
  * @param {string[]} oldNames Die Namen in der alten Version
  * @param {string[]} newNames Die Namen in der neuen Version
+ * @param {string} [extraFile] Eine weitere Datei, aus der die Namen im neuen
+ *                           Quellcode gezogen werden (z. B. "globals.js")
  * @returns {{old: string, new: string}} Die beiden Quelltexte
  */
-function buildCode(oldNames, newNames) {
+function buildCode(oldNames, newNames, extraFile) {
     const _old = oldNames.map((_n) => extractBody(baselineSource_cached.old, _n)).join('\n\n');
     const _new = newNames
         .map((_n) => {
-            try {
-                return extractBody(baselineSource_cached.new, _n);
-            } catch (_error) {
-                return `/* ${_n} not present */`;
+            // Die Funktion kann in der Main-Datei oder in der zusaetzlichen
+            // Datei stehen, weil alle Dateien einen globalen Namensraum teilen.
+            for (const _src of [baselineSource_cached.new, baselineSource_cached.extra]) {
+                if (!_src) continue;
+                try {
+                    return extractBody(_src, _n);
+                } catch (_error) {
+                    // Im naechsten Versuch probieren
+                }
             }
+            return `/* ${_n} not present */`;
         })
         .join('\n\n');
     return { old: _old, new: _new };
 }
 
+/**
+ * Extrahiert auch die Konstanten (const, let, var), die zu den uebergebenen
+ * Namen gehoeren. Sie sind sonst nicht Teil des Codes, weil sie ausserhalb
+ * einer Funktion stehen.
+ *
+ * @param {string} src Der Quellcode
+ * @param {string[]} names Die Namen der Konstanten
+ * @returns {string} Die Deklarationen der Konstanten
+ */
+function extractConstants(src, names) {
+    return names
+        .map((_n) => {
+            const _m = src.match(new RegExp('(?:const|let|var)\\s+' + _n + '\\s*='));
+            if (!_m) return `/* ${_n} not present */`;
+            const _start = _m.index;
+            // Bis zum Semikolon oder Zeilenende
+            const _end = src.indexOf(';', _start);
+            const _stop = _end > 0 && src.slice(_start, _end).indexOf('\n') === -1 ? _end + 1 : src.indexOf('\n', _start);
+            return src.slice(_start, _stop).trim();
+        })
+        .join('\n');
+}
+
 // Die Quelltexte werden einmal geladen und dann wiederverwendet.
-const baselineSource_cached = { old: '', new: '' };
+const baselineSource_cached = { old: '', new: '', extra: '' };
 
 /**
  * Laedt die Quelltexte und baut die beiden Code-Fragmente.
@@ -143,12 +174,38 @@ const baselineSource_cached = { old: '', new: '' };
  * @param {string} scriptName Der Name des Skripts (fuer die Baseline)
  * @param {string[]} oldNames Die Namen in der alten Version
  * @param {string[]} newNames Die Namen in der neuen Version
+ * @param {string} [extraFile] Eine weitere Datei, aus der die Namen im neuen
+ *                           Quellcode gezogen werden (z. B. "globals.js")
  * @returns {{old: string, new: string}} Die beiden Quelltexte
  */
-function prepare(scriptName, oldNames, newNames) {
+function prepare(scriptName, oldNames, newNames, extraFile) {
     baselineSource_cached.old = baselineSource(scriptName);
     baselineSource_cached.new = currentSource();
-    return buildCode(oldNames, newNames);
+    baselineSource_cached.extra = extraFile ? fs.readFileSync(path.join(REPO_ROOT, extraFile), 'utf8') : '';
+    return buildCode(oldNames, newNames, extraFile);
+}
+
+/**
+ * Laedt die Quelltexte und baut die beiden Code-Fragmente, inklusive der
+ * Konstanten, die ausserhalb der Funktionen stehen.
+ *
+ * @param {string} scriptName Der Name des Skripts (fuer die Baseline)
+ * @param {string[]} oldNames Die Namen in der alten Version
+ * @param {string[]} newNames Die Namen in der neuen Version
+ * @param {string[]} [constantNames] Die Namen der Konstanten
+ * @param {string} [extraFile] Eine weitere Datei, aus der die Namen im neuen
+ *                           Quellcode gezogen werden (z. B. "globals.js")
+ * @returns {{old: string, new: string}} Die beiden Quelltexte
+ */
+function prepareWithConstants(scriptName, oldNames, newNames, constantNames, extraFile) {
+    const _code = prepare(scriptName, oldNames, newNames, extraFile);
+    if (!constantNames || constantNames.length === 0) return _code;
+    const _oldConstants = extractConstants(baselineSource_cached.old, constantNames);
+    const _newConstants = extractConstants(baselineSource_cached.new, constantNames);
+    return {
+        old: `${_oldConstants}\n\n${_code.old}`,
+        new: `${_newConstants}\n\n${_code.new}`
+    };
 }
 
 /**
@@ -196,7 +253,9 @@ module.exports = {
     baselineSource,
     currentSource,
     extractBody,
+    extractConstants,
     prepare,
+    prepareWithConstants,
     compare,
     finish
 };

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.13.0.1
+// @version      0.13.0.2
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1622,6 +1622,11 @@ function btnEventhandlerClick(event, data) {
  * Handles a click on the star of a tile. It marks the product as favorite and
  * removes the mark again on the next click.
  *
+ * If the product is marked as favorite, the price details are loaded from the
+ * Vine API (if the setting is enabled). They are not loaded during the scan,
+ * because Amazon blocks the account temporarily if too many requests are made
+ * in a short time.
+ *
  * @param {Event} event The click event
  * @param {Product} data The product of the tile
  */
@@ -1636,6 +1641,9 @@ function favStarEventhandlerClick(event, data) {
                     .update(prod)
                     .then(() => {
                         updateTileStyle(prod);
+                        // The details are only loaded when the product became a
+                        // favorite, not when the mark was removed again.
+                        if (prod.isFav) loadProductDetailsIfEnabled(prod);
                     })
                     .catch((error) => {
                         console.error(`favStarEventhandlerClick(): could not update the product: ${error}`);
@@ -4055,12 +4063,18 @@ function checkKeywordsForProduct(_prod, _configKeyWords) {
             }
         }
         _prod.isNotified = true;
-        if (SETTINGS.EnableAutoMarkFavorite) {
+        const _markedAsFavorite = SETTINGS.EnableAutoMarkFavorite;
+        if (_markedAsFavorite) {
             _prod.isFav = 1;
         }
         database.update(_prod).catch((error) => {
             console.error(`Could not save the notified product ${_prod.id}: ${error}`);
         });
+        // The details of a product that became a favorite are loaded, so that
+        // the price information is available. The requests are queued, because
+        // Amazon blocks the account temporarily if too many requests are made
+        // in a short time.
+        if (_markedAsFavorite) loadProductDetailsIfEnabled(_prod);
         return true;
     }
     return false;
@@ -4438,12 +4452,89 @@ function addStyleToTile(_currTile, _product) {
 }
 
 /**
- * Loads the details of a product from the Vine API and adds them to the
- * product.
+ * The minimum delay between two requests of the product details in
+ * milliseconds.
+ *
+ * NOTE: Amazon blocks the account temporarily if too many requests are made
+ * in a short time. The requests are therefore not made in parallel and not
+ * faster than this delay.
+ */
+const PRODUCT_DETAILS_REQUEST_DELAY = 1500;
+
+/**
+ * The products whose details still have to be loaded. Every entry holds the
+ * product and the resolve function of the promise that waits for it.
+ * @type {object[]}
+ */
+const productDetailsQueue = [];
+
+/**
+ * Loads the details of a product and stores them in the database.
+ *
+ * The requests are queued and made one after the other, because Amazon blocks
+ * the account temporarily if too many requests are made in a short time.
  *
  * @param {Product} prod The product to load the details for
- * @returns {Promise<Product>} The product with the details
+ * @returns {Promise<void>} Resolves when the details were loaded and stored
  */
+async function requestProductDetailsQueued(prod) {
+    return new Promise((resolve) => {
+        productDetailsQueue.push({ prod: prod, resolve: resolve });
+        processProductDetailsQueue();
+    });
+}
+
+/**
+ * Works off the queue of the product details, one product at a time.
+ */
+async function processProductDetailsQueue() {
+    if (productDetailsQueue.length === 0) return;
+    if (processProductDetailsQueue._isRunning) return;
+    processProductDetailsQueue._isRunning = true;
+
+    while (productDetailsQueue.length > 0) {
+        const _entry = productDetailsQueue.shift();
+        try {
+            const _newProd = await requestProductDetails(_entry.prod);
+            await database.update(_newProd || _entry.prod);
+            updateTileStyle(_newProd || _entry.prod);
+        } catch (error) {
+            console.error(`Could not load the details of the product ${_entry.prod.id}: ${error}`);
+        }
+        _entry.resolve();
+        if (productDetailsQueue.length > 0) await delay(PRODUCT_DETAILS_REQUEST_DELAY);
+    }
+
+    processProductDetailsQueue._isRunning = false;
+}
+
+/**
+ * Checks if the details of a product were already loaded.
+ *
+ * @param {Product} prod The product to check
+ * @returns {boolean} true if the details are already in the product
+ */
+function hasProductDetails(prod) {
+    if (!prod) return false;
+    if (prod.data_asin_is_parent) return prod.data_childs !== undefined;
+    return prod.data_estimated_tax_prize !== undefined;
+}
+
+/**
+ * Loads the details of a product, if the setting is enabled and the details
+ * were not loaded yet.
+ *
+ * @param {Product} prod The product to load the details for
+ * @returns {Promise<void>} Resolves when the details were loaded and stored
+ */
+async function loadProductDetailsIfEnabled(prod) {
+    if (!SETTINGS.EnableDetailsOnFavorite) return;
+    // A product that is marked as favorite and unmarked again would be loaded
+    // a second time otherwise.
+    if (hasProductDetails(prod)) return;
+    await requestProductDetailsQueued(prod);
+}
+
 async function requestProductDetails(prod) {
     if (prod.data_asin_is_parent) {
         const res = await vineFetch(`${window.location.origin}/vine/api/recommendations/${prod.id}`.replace(/#/g, '#')).then((r) =>
