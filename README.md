@@ -63,65 +63,25 @@ details.
 
 ## Changelog Deburau
 
-##### [2026-10-29] - Version 0.13.0.13
+##### [2026-10-29] - Version 0.14.0
 
-* The tooltips of the settings are now 320 pixels wide instead of 160 pixels, so that the text is mostly on one line. A long word, e.g. a URL, is broken up, so that it is not cut off.
-
-##### [2026-10-29] - Version 0.13.0.12
-
-* Fix: the key of the description of the setting for the waiting time between the notifications was spelled wrong, so that the tooltip of the setting showed the name of the setting instead of its description.
-* The script `scripts/check_settings_keys.js` checks that every setting has a label and a description in every language and that the keys are spelled the same way everywhere. It is part of `npm run check`.
-
-##### [2026-10-29] - Version 0.13.0.11
-
-* The setting for the color of the "Update Database" button was removed. The button belonged to the auto scan, which was never used. The setting had no effect.
-
-##### [2026-10-29] - Version 0.13.0.10
-
-* The auto scan was removed. It could never be executed, because the flag that started it was never set to true. The background scan does the same job and has its own cleanup of the database.
-
-##### [2026-10-29] - Version 0.13.0.9
-
-* The tooltips of the settings were rewritten in German and English. They now describe the effect of the setting, name the unit of the number fields and explain what the value 0 does. The texts are kept short, because the tooltip is only 160 pixels wide.
-
-##### [2026-10-29] - Version 0.13.0.8
-
-* Fix: the fallback of the translation function was ignored. If a translation does not exist, the key was shown instead of the text of the caller. All the settings have a translation in both languages, so nothing was visible so far, but a new setting without a translation would have shown its key.
-
-##### [2026-10-29] - Version 0.13.0.7
-
-* Fix: the tooltips of the settings were not shown anymore. The comments of the CSS of the settings menu used the JavaScript syntax "//" instead of the CSS syntax "/* */". The browser discards the whole rule of such a line without any error message, so all the rules of the tooltips were lost.
-* The script `scripts/check_css_syntax.js` checks the CSS of the project for comments with the wrong syntax. It is part of `npm run check`.
-
-##### [2026-10-29] - Version 0.13.0.6
-
+* New: the price details of a product are now loaded from the Vine API when the product is marked as favorite, both when the star is clicked and when a product is marked as favorite automatically because of a keyword match. The new setting "Load the price details when a product is marked as favorite" turns the behaviour on and off, it is on by default. The details are not loaded during the scan, because Amazon blocks the account temporarily if too many requests are made in a short time. The requests are queued and made one after the other with a delay of 1.5 seconds.
+* New: the requests for the details of the button "more details" now run through the same queue, so that all the requests are made one after the other.
 * Fix: the recommendation id of a product contains a # as a separator. It was not encoded in the URL of the request for the details of a product with a parent ASIN, so that only the part before the # reached the server and the request failed with "No recommendation found for recommendation id". The id is now encoded like it already was for the other requests.
-* Fix: the error of a failed request is now reported with its message, if it has no exception type. Before the console only showed "null".
-
-##### [2026-10-29] - Version 0.13.0.5
-
-* Fix: the new setting "Load the price details when a product is marked as favorite" is now switched on for every value that is not false. A setting that is not part of the stored settings of an older version, or that was changed to a value that is not a boolean, therefore does not switch the feature off silently.
-
-##### [2026-10-29] - Version 0.13.0.4
-
-* Fix: the details of a product are now also loaded through the queue when the button "more details" is clicked, so that all the requests are made one after the other. Before, the requests of the button and of the favorites could run in parallel, which can block the account of the user temporarily.
 * Fix: a product with a parent ASIN has no price of its own, the Vine API returns the variations for it. The details of every variation are now loaded (one request after the other), so that the price of the product is known. The price of the product is the highest price of its variations.
-* Fix: all the tiles of a product are updated when the details arrive, not only the first one. A product can be shown in more than one list, e.g. in the list of the new entries and in the list of all products.
-
-##### [2026-10-29] - Version 0.13.0.3
-
 * Fix: the price of a product is now written as a whole into the tile, so that the currency and the number of decimal places are correct after the details were loaded. Before, only the placeholder was replaced by the raw number.
-* Fix: a product with a parent ASIN has no price of its own, the API returns the variations for it. The price of the first variation is now loaded as well, so that the tile shows a price. Every variation would need its own request, which would block the account of the user.
-* Fix: the loading of the details is not stopped anymore if the update of the tile fails.
-
-##### [2026-10-29] - Version 0.13.0.2
-
-* New: the price details of a product are now loaded from the Vine API when the product is marked as favorite, both when the star is clicked and when a product is marked as favorite automatically because of a keyword match. The new setting "Load the price details when a product is marked as favorite" turns the behaviour on and off, it is on by default.
-* The details are not loaded during the scan, because Amazon blocks the account temporarily if too many requests are made in a short time. The requests of the details are therefore queued and made one after the other with a delay of 1.5 seconds.
-
-##### [2026-10-28] - Version 0.13.0.1
-
-* The development continues on the branch `dev-0.14.0`, the version was raised to prepare the next release.
+* Fix: all the tiles of a product are updated when the details arrive, not only the first one. A product can be shown in more than one list, e.g. in the list of the new entries and in the list of all products.
+* Fix: the loading of the details is not stopped anymore if the update of a tile fails.
+* Fix: the error of a failed request is now reported with its message, if it has no exception type. Before the console only showed "null".
+* Fix: the tooltips of the settings were not shown anymore. The comments of the CSS of the settings menu used the JavaScript syntax "//" instead of the CSS syntax "/* */". The browser discards the whole rule of such a line without any error message, so all the rules of the tooltips were lost.
+* Fix: the fallback of the translation function was ignored. If a translation does not exist, the key was shown instead of the text of the caller.
+* Fix: the setting for the price details is switched on for every value that is not false. A setting that is not part of the stored settings of an older version, or that was changed to a value that is not a boolean, therefore does not switch the feature off silently.
+* Fix: the key of the description of the setting for the waiting time between the notifications was spelled wrong, so that the tooltip of the setting showed the name of the setting instead of its description.
+* The tooltips of the settings were rewritten in German and English. They now describe the effect of the setting, name the unit of the number fields and explain what the value 0 does. They are 320 pixels wide, so that the text is mostly on one line and a long word, e.g. a URL, is not cut off.
+* The auto scan was removed. It could never be executed, because the flag that started it was never set to true. The background scan does the same job and has its own cleanup of the database.
+* The setting for the color of the "Update Database" button was removed. The button belonged to the auto scan, which was never used. The setting had no effect.
+* The script `scripts/check_css_syntax.js` checks the CSS of the project for comments with the wrong syntax. It is part of `npm run check`.
+* The script `scripts/check_settings_keys.js` checks that every setting has a label and a description in every language and that the keys are spelled the same way everywhere. It is part of `npm run check`.
 
 ##### [2026-10-28] - Version 0.13.0
 
