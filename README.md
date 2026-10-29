@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-29] - Version 0.13.0.11
+
+* The setting for the color of the "Update Database" button was removed. The button belonged to the auto scan, which was never used. The setting had no effect.
+
 ##### [2026-10-29] - Version 0.13.0.10
 
 * The auto scan was removed. It could never be executed, because the flag that started it was never set to true. The background scan does the same job and has its own cleanup of the database.

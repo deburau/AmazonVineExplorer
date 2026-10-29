@@ -583,7 +583,6 @@ SETTINGS_USERCONFIG_DEFINES.push({
 });
 SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorMarkAllAsSeen', type: 'color', name: 'Button Color Mark All As Seen', description: '' });
 SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorBackToTop', type: 'color', name: 'Button Color Back To Top', description: '' });
-SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorUpdateDB', type: 'color', name: 'Button Color Update Database', description: '' });
 SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorAllProducts', type: 'color', name: 'Button Color All Products', description: '' });
 SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorFavorites', type: 'color', name: 'Button Color Favorites', description: '' });
 SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorFavoritesBadge', type: 'color', name: 'Button Color Favorites Badge', description: '' });
@@ -693,7 +692,6 @@ class SETTINGS_DEFAULT {
     BtnColorMarkCurrSiteAsSeen = '#00FF00';
     BtnColorMarkAllAsSeen = '#FFA28E';
     BtnColorBackToTop = '#FFFFFF';
-    BtnColorUpdateDB = '#00FF00';
     BtnColorAllProducts = '#FFFFFF';
 
     FavStarColorDefault = 'white';
