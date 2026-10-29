@@ -375,6 +375,13 @@ in a sandbox with mocked browser APIs and compares the resulting local storage
 accesses step by step. It covers seven scenarios, among them the start of a fast
 scan and the three reasons why a fast scan is stopped.
 
+### Project State
+
+The current state of the project is documented in `docs/STAND.md`. It holds the
+branch, the version, the open points and the procedure of the verifications. It
+is the place to look first, because the conversation can be compacted and the
+details of the chat would be lost.
+
 ## Development Best Practices
 
 ### When Adding New Features
