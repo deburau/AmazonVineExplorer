@@ -63,6 +63,12 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-29] - Version 0.13.0.4
+
+* Fix: the details of a product are now also loaded through the queue when the button "more details" is clicked, so that all the requests are made one after the other. Before, the requests of the button and of the favorites could run in parallel, which can block the account of the user temporarily.
+* Fix: a product with a parent ASIN has no price of its own, the Vine API returns the variations for it. The details of every variation are now loaded (one request after the other), so that the price of the product is known. The price of the product is the highest price of its variations.
+* Fix: all the tiles of a product are updated when the details arrive, not only the first one. A product can be shown in more than one list, e.g. in the list of the new entries and in the list of all products.
+
 ##### [2026-10-29] - Version 0.13.0.3
 
 * Fix: the price of a product is now written as a whole into the tile, so that the currency and the number of decimal places are correct after the details were loaded. Before, only the placeholder was replaced by the raw number.

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.13.0.3
+// @version      0.13.0.4
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1598,6 +1598,10 @@ let lastBtnEventhandlerClickTimeStamp = 0;
  * Handles a click on the "more details" button of a tile. It loads the details
  * of the product from the Vine API and stores them in the database.
  *
+ * NOTE: The details are loaded through the queue, so that the requests are made
+ * one after the other. Otherwise the account of the user can be blocked
+ * temporarily by Amazon.
+ *
  * @param {Event} event The click event
  * @param {Product} data The product of the tile
  */
@@ -1606,26 +1610,17 @@ function btnEventhandlerClick(event, data) {
     lastBtnEventhandlerClickTimeStamp = Date.now();
     if (SETTINGS.DebugLevel > 10) console.log(`called btnEventhandlerClick(${JSON.stringify(event)}, ${JSON.stringify(data)})`);
     if (data.recommendation_id) {
-        database.getById(data.recommendation_id).then(async (prod) => {
-            if (SETTINGS.DebugLevel > 10) console.log(`btnEventhandlerClick() got respose from DB:`, prod);
-            if (prod) {
+        database
+            .getById(data.recommendation_id)
+            .then(async (prod) => {
+                if (SETTINGS.DebugLevel > 10) console.log(`btnEventhandlerClick() got respose from DB:`, prod);
+                if (!prod) return;
                 prod.isNew = 0;
-                requestProductDetails(prod)
-                    .then((_newProd) => {
-                        database
-                            .update(_newProd || prod)
-                            .then(() => {
-                                updateTileStyle(_newProd || prod);
-                            })
-                            .catch((error) => {
-                                console.error(`btnEventhandlerClick(): could not update the product: ${error}`);
-                            });
-                    })
-                    .catch((error) => {
-                        console.error(`btnEventhandlerClick(): could not get the product details: ${error}`);
-                    });
-            }
-        });
+                await requestProductDetailsQueued(prod);
+            })
+            .catch((error) => {
+                console.error(`btnEventhandlerClick(): could not get the product details: ${error}`);
+            });
     }
 }
 
@@ -1668,12 +1663,17 @@ function favStarEventhandlerClick(event, data) {
 }
 
 /**
- * Updates Style and Text of a Product Tile
- * @param {Product} prod
- * @returns
+ * Updates Style and Text of all the Product Tiles of a product.
+ *
+ * NOTE: A product can be shown in more than one tile, e.g. in the list of the
+ * new entries and in the list of all products. All of them are updated, because
+ * the details can arrive asynchronously, long after the tile was created.
+ *
+ * @param {Product} prod The product of the tiles
  */
 function updateTileStyle(prod) {
     if (SETTINGS.DebugLevel > 10) console.log(`Called updateTileStyle(${JSON.stringify(prod, null, 4)})`);
+    if (!prod) return;
     const _tiles = document.getElementsByClassName('vvp-item-tile');
     const _tilesLength = _tiles.length;
 
@@ -1697,7 +1697,6 @@ function updateTileStyle(prod) {
             if (_taxValueElem) {
                 _taxValueElem.innerText = `Tax Price: ${formatTaxPrize(prod)}`;
             }
-            return;
         }
     }
 }
@@ -4482,6 +4481,56 @@ const PRODUCT_DETAILS_REQUEST_DELAY = 1500;
 const productDetailsQueue = [];
 
 /**
+ * Loads the details of all variations of a product with a parent ASIN.
+ *
+ * A product with a parent ASIN has no price of its own, the Vine API returns
+ * the variations for it. The price of the product is the highest price of its
+ * variations.
+ *
+ * NOTE: The requests are made one after the other and not in parallel, because
+ * Amazon blocks the account temporarily if too many requests are made in a short
+ * time.
+ *
+ * @param {Product} prod The product with the variations
+ * @returns {Promise<void>} Resolves when the details of the variations are loaded
+ */
+async function loadProductDetailsOfVariations(prod) {
+    const _variations = prod.data_childs || [];
+    if (_variations.length === 0) return;
+
+    for (let i = 0; i < _variations.length; i++) {
+        const _child = _variations[i];
+        if (!_child || !_child.asin) continue;
+
+        // The delay is also made between the variations of a product, because
+        // they are requests to the same API.
+        if (i > 0) await delay(PRODUCT_DETAILS_REQUEST_DELAY);
+
+        try {
+            const _childRes = await vineFetch(
+                `${window.location.origin}/vine/api/recommendations/${prod.id}/item/${_child.asin}`.replace(/#/g, '%23')
+            ).then((r) => r.json());
+            if (_childRes.error) {
+                console.error(`Could not load the details of the variation ${_child.asin}: ${_childRes.error.exceptionType}`);
+                continue;
+            }
+            // Copy over all the returned data points of the variation, so that
+            // they are not lost when the product is stored.
+            for (const _dataPoint of Object.keys(_childRes.result)) {
+                _child[_dataPoint] = _childRes.result[_dataPoint];
+            }
+            // The price of the product is the highest price of its variations.
+            if (typeof _child.taxValue == 'number' && (prod.data_estimated_tax_prize ?? 0) < _child.taxValue) {
+                prod.data_estimated_tax_prize = _child.taxValue;
+                prod.data_tax_currency = _child.taxCurrency;
+            }
+        } catch (error) {
+            console.error(`Could not load the details of the variation ${_child.asin}: ${error}`);
+        }
+    }
+}
+
+/**
  * Loads the details of a product and stores them in the database.
  *
  * The requests are queued and made one after the other, because Amazon blocks
@@ -4525,14 +4574,20 @@ async function processProductDetailsQueue() {
  * Checks if the details of a product were already loaded.
  *
  * NOTE: A product with a parent ASIN has no price of its own, the API returns
- * the variations for it. For those products the variations are the details.
+ * the variations for it. The details are only complete when all variations were
+ * loaded.
  *
  * @param {Product} prod The product to check
  * @returns {boolean} true if the details are already in the product
  */
 function hasProductDetails(prod) {
     if (!prod) return false;
-    if (prod.data_asin_is_parent) return prod.data_childs !== undefined;
+    if (prod.data_asin_is_parent) {
+        if (!prod.data_childs) return false;
+        // A variation is loaded when it has the data of the API. The asin is
+        // always there, because it comes with the list of the variations.
+        return prod.data_childs.every((_child) => !_child || !_child.asin || _child.taxValue !== undefined);
+    }
     return prod.data_estimated_tax_prize !== undefined;
 }
 
@@ -4578,19 +4633,11 @@ async function requestProductDetails(prod) {
         prod.data_childs = _data.variations || [];
 
         /* A product with a parent ASIN has no price of its own, the API returns
-           the variations for it. The price of the first variation is used, so that
-           the tile shows a price. Every variation would need its own request,
-           which would block the account of the user. */
-        if (prod.data_childs.length > 0 && prod.data_childs[0].asin) {
-            const _child = prod.data_childs[0];
-            const _childRes = await vineFetch(
-                `${window.location.origin}/vine/api/recommendations/${prod.id}/item/${_child.asin}`.replace(/#/g, '%23')
-            ).then((r) => r.json());
-            if (!_childRes.error) {
-                prod.data_tax_currency = _childRes.result.taxCurrency;
-                prod.data_estimated_tax_prize = _childRes.result.taxValue;
-            }
-        }
+           the variations for it. The details of every variation are loaded, so
+           that the price of the product is known. The requests are made one
+           after the other, because Amazon blocks the account temporarily if too
+           many requests are made in a short time. */
+        await loadProductDetailsOfVariations(prod);
         return prod;
     } else {
         const ret = await vineFetch(

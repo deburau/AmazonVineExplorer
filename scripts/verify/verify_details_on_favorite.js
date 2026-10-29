@@ -23,7 +23,9 @@ const NEW_NAMES = [
     'loadProductDetailsIfEnabled',
     'requestProductDetailsQueued',
     'processProductDetailsQueue',
-    'hasProductDetails'
+    'hasProductDetails',
+    // Die Funktion, die die Details aller Varianten eines Elternprodukts laedt.
+    'loadProductDetailsOfVariations'
 ];
 
 const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
@@ -31,6 +33,11 @@ const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
 // Die echte requestProductDetails() wird mit extrahiert, damit der Test den
 // echten Code prueft und nicht einen Nachbau.
 const REQUEST_DETAILS_NAMES = ['requestProductDetails'];
+
+// Die Funktion requestProductDetails() ruft loadProductDetailsOfVariations()
+// auf. Die Funktion gibt es erst in der neuen Version, darum wird sie nur dort
+// extrahiert und im alten Code durch einen Platzhalter ersetzt.
+const VARIATION_NAMES = ['loadProductDetailsOfVariations'];
 
 const { old: oldCode, new: newCode } = prepareWithConstants(
     'verify_details_on_favorite.js',
@@ -41,11 +48,18 @@ const { old: oldCode, new: newCode } = prepareWithConstants(
 );
 
 // Ohne die Konstanten, die werden schon im Hauptcode deklariert.
-const { old: oldRequestDetails, new: newRequestDetails } = prepare(
+const { old: oldRequestDetailsBase, new: newRequestDetailsBase } = prepare(
     'verify_details_on_favorite.js',
     REQUEST_DETAILS_NAMES,
     REQUEST_DETAILS_NAMES
 );
+
+// Die Funktion fuer die Varianten gibt es nur in der neuen Version. Im alten
+// Code wird sie durch eine leere Funktion ersetzt, damit der Vergleich laeuft.
+const oldRequestDetails = oldRequestDetailsBase;
+// Ohne die Konstanten, die sind schon im Hauptcode deklariert.
+const { new: newVariations } = prepare('verify_details_on_favorite.js', VARIATION_NAMES, VARIATION_NAMES);
+const newRequestDetails = `${newRequestDetailsBase}\n${newVariations}`;
 
 /**
  * Baut eine Sandbox mit einer gemockten Datenbank und der Vine API.
@@ -85,7 +99,9 @@ function run(code, opts, requestDetailsCode) {
         // Empfehlung eines Kindes liefert den Preis.
         const _isParent = url.includes('/recommendations/p1') && !url.includes('/item/');
         const _result = _isParent
-            ? { variations: [{ asin: 'CHILD1' }] }
+            ? {
+                  variations: [{ asin: 'CHILD1' }, { asin: 'CHILD2' }]
+              }
             : {
                   variations: [],
                   featureBullets: ['bullet'],
@@ -95,8 +111,12 @@ function run(code, opts, requestDetailsCode) {
                   taxValue: 12.5,
                   limitedQuantity: 3
               };
+        // Die zweite Variante ist teurer, der Preis des Produkts muss der
+        // hoechste der Varianten sein.
+        const _isChild2 = url.includes('/item/CHILD2');
+        const _result2 = _isChild2 ? { ..._result, taxValue: 25.0 } : _result;
         return Promise.resolve({
-            json: () => Promise.resolve({ result: _result })
+            json: () => Promise.resolve({ result: _result2 })
         });
     };
 
@@ -304,6 +324,9 @@ const SCENARIOS = [
     {
         name: 'Stern-Klick: Produkt mit Eltern-ASIN, der Preis kommt von der Variante',
         expectDetails: true,
+        // Der Preis des Produkts ist der hoechste der Varianten.
+        expectPrice: 25.0,
+        expectChildRequests: 2,
         opts: {
             mode: 'star',
             entries: [
@@ -346,7 +369,11 @@ const SCENARIOS = [
         // Im Keyword-Modus liegt das Produkt nicht in der Datenbank, darum
         // wird der Log geprueft: Nach dem Laden der Details wird das Produkt
         // mit dem Preis gespeichert.
-        const _hasTax = _new.log.some((_l) => _l.startsWith('db.update') && _l.includes('tax=12.5'));
+        // Bei einem Elternprodukt ist der Preis der hoechste der Varianten.
+        const _expectedPrice = _scenario.expectPrice !== undefined ? _scenario.expectPrice : 12.5;
+        // Die Zahl wird ohne Nachkommastellen im Log geschrieben (25 statt 25.0).
+        const _expectedTax = String(_expectedPrice).replace(/\.0$/, '');
+        const _hasTax = _new.log.some((_l) => _l.startsWith('db.update') && _l.includes(`tax=${_expectedTax}`));
 
         if (_expected && (!_hasApiCall || !_hasTax)) {
             _allOk = false;

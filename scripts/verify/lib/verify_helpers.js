@@ -123,7 +123,18 @@ function extractBody(src, name) {
  * @returns {{old: string, new: string}} Die beiden Quelltexte
  */
 function buildCode(oldNames, newNames, extraFile) {
-    const _old = oldNames.map((_n) => extractBody(baselineSource_cached.old, _n)).join('\n\n');
+    const _old = oldNames
+        .map((_n) => {
+            try {
+                return extractBody(baselineSource_cached.old, _n);
+            } catch (_error) {
+                // Die Funktion gibt es nur in der neuen Version. Im alten Code
+                // wird sie durch eine leere Funktion ersetzt, damit der
+                // Vergleich laeuft.
+                return `function ${_n}() {}`;
+            }
+        })
+        .join('\n\n');
     const _new = newNames
         .map((_n) => {
             // Die Funktion kann in der Main-Datei oder in der zusaetzlichen
