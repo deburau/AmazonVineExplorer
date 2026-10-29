@@ -133,6 +133,7 @@ The baseline is only used for the comparison, it is never part of the build.
 | `verify_settings_ui.js` | The created DOM of all nine setting types |
 | `verify_new_products_btn.js` | The notifications, the badge and the page title of the new entries button |
 | `verify_init.js` | The created DOM and the calls of the page initialisation |
+| `verify_details_on_favorite.js` | The requests of the price details when a product is marked as favorite |
 
 **NOTE:** A new verification needs the same structure: a `vm` sandbox with mocked
 browser APIs, a list of the function names of the old and the new version and a
@@ -212,6 +213,16 @@ interface. The rules for the different kinds of comments:
 | A known problem that is not fixed | `// KNOWN: ...` | `// KNOWN: The document body is not always available.` |
 | A normal explanation | `// ...` | `// The badge shows the number of new products.` |
 | A CSS rule in a template literal | `/* ... */` | `/* Hide the tooltip content by default */` |
+
+**NOTE:** In CSS `//` is **not** a comment. A line that starts with `//` makes the
+browser discard the whole rule of the block, without any error message. The
+comments of a CSS block therefore have to use the CSS syntax `/* ... */`. The
+script `scripts/check_css_syntax.js` checks that and is part of `npm run check`.
+
+**NOTE:** Every setting of `SETTINGS_USERCONFIG_DEFINES` needs a label and a
+description in every language of the `I18N`. The key of the setting has to be
+spelled the same way in all three places. The script
+`scripts/check_settings_keys.js` checks that and is part of `npm run check`.
 
 A function whose purpose is not obvious **must** have a JSDoc block that
 explains what it does, what the parameters are and what it returns. A
@@ -373,6 +384,13 @@ helper script `.unotes/verify_scan.js` runs the old and the new implementation
 in a sandbox with mocked browser APIs and compares the resulting local storage
 accesses step by step. It covers seven scenarios, among them the start of a fast
 scan and the three reasons why a fast scan is stopped.
+
+### Project State
+
+The current state of the project is documented in `docs/STAND.md`. It holds the
+branch, the version, the open points and the procedure of the verifications. It
+is the place to look first, because the conversation can be compacted and the
+details of the chat would be lost.
 
 ## Development Best Practices
 

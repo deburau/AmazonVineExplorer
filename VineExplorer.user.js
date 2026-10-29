@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.13.0
+// @version      0.14.0
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -38,7 +38,7 @@
 
 /* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
-   appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveResolveUrl, aveUrlWithPage,
+   appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveResolveUrl,
    backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct, cleanUpDatabase,
    colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
@@ -46,16 +46,16 @@
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, getContrastColor, getPageinationData,
-   getTilesFromURL, getUrlParameter, gotifyNotification, handleAutoScan, handleInfiniteScroll,
+   getTilesFromURL, getUrlParameter, gotifyNotification, handleInfiniteScroll,
    handleFastScanFinished, importDatabase, init, initBackgroundScan, initNavigationButtons,
    initPagination, initSearchBar, initTileEventHandlers, initTileParsing, injectDarkMode,
    markAllCurrentDatabaseProductsAsSeen, markAllCurrentSiteProductsAsSeen,
    notifyAboutNewProducts, notifyAboutProductDrop, notifyAboutUnseenItems, parseTileData,
    populateSettingsContainer, readFile, reloadPageWithSubpageTarget, requestProductDetails,
    rgbToHex, rgbaToHex, searchKeywordsInProducts, shareEventHandlerClick,
-   shouldStopFastScan, showAutoScanScreen, showBackgroundScanScreen, sort_by_key,
-   startAutoScan, stickElementToTopScrollEVhandler, stopBackgroundScan, stopFastScan,
-   stringToRegex, timeAgo, translate, updateAutoScanScreenText, updateBackgroundScanScreenText,
+   shouldStopFastScan, showBackgroundScanScreen, sort_by_key,
+   stickElementToTopScrollEVhandler, stopBackgroundScan, stopFastScan,
+   stringToRegex, timeAgo, translate, updateBackgroundScanScreenText,
    updateFavoritesBtn, updateNewProductsBtn, updateTileStyle */
 console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 
@@ -66,7 +66,17 @@ console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 let currentMainPage;
 
 // Translation wrapper with a fallback string for early-load timing.
-const translate = (category, key, fallback, ...args) => (typeof t === 'function' ? t(category, key, ...args) : fallback);
+const translate = (category, key, fallback, ...args) => {
+    if (typeof t !== 'function') return fallback;
+    // The function t() returns the key if the translation does not exist. In
+    // that case the fallback of the caller is used, so that a missing
+    // translation shows the text of the caller instead of the key.
+    if (typeof lookupTranslation === 'function' && lookupTranslation(category, key) === null) {
+        console.warn(`translate(): No translation for ${category}.${key}, the fallback is used.`);
+        return fallback;
+    }
+    return t(category, key, ...args);
+};
 
 loadSettings();
 fastStyleChanges();
@@ -469,24 +479,6 @@ function aveResolveUrl(href) {
         console.error(`aveResolveUrl(): could not resolve the URL "${href}":`, error);
         return href;
     }
-}
-
-/**
- * Returns the URL of the current page with the given page number.
- *
- * The pagination parameter of the Vine pages is "page". The previous generic
- * replacement (/=[0-9]+/) could also hit other parameters, e.g. "ave-subpage".
- *
- * @param {number} page The page number to set
- * @returns {string} The URL with the new page number
- */
-function aveUrlWithPage(page) {
-    const _url = window.location.href;
-    if (/([?&]page=)\d+/.test(_url)) {
-        return _url.replace(/([?&]page=)\d+/, `$1${page}`);
-    }
-    // Fallback for the case that the pagination parameter is not named "page".
-    return _url.replace(/=[0-9]+/, `=${page}`);
 }
 
 /**
@@ -1171,6 +1163,20 @@ ${newUrl}`;
 }
 
 /**
+ * Formats the tax prize of a product for the display.
+ *
+ * @param {Product} prod The product of the tile
+ * @returns {string} The formatted prize, or "--.--" if it is not known
+ */
+function formatTaxPrize(prod) {
+    const _prize = prod ? prod.data_estimated_tax_prize : undefined;
+    if (typeof _prize != 'number') return '--.--';
+    let _currencySymbol = '';
+    if (prod.data_tax_currency && prod.data_tax_currency == 'EUR') _currencySymbol = '€';
+    return `${Intl.NumberFormat(undefined, { minimumFractionDigits: 2 }).format(_prize)} ${_currencySymbol}`;
+}
+
+/**
  * Creates the element that shows the tax prize of the product.
  *
  * @param {Product} prod The product of the tile
@@ -1178,9 +1184,6 @@ ${newUrl}`;
  * @returns {Element} The created element
  */
 function createTaxInfoElement(prod, index = Math.round(Math.random() * 10000)) {
-    let _currencySymbol = '';
-    if (prod.data_tax_currency && prod.data_tax_currency == 'EUR') _currencySymbol = '€';
-
     const _taxElement = document.createElement('span');
     _taxElement.setAttribute('id', `ave-taxinfo-${index}`);
     _taxElement.style.cssText = 'position: relative; transform: translate(0px, -30px); width: fit-content; right: 0px;';
@@ -1188,9 +1191,9 @@ function createTaxInfoElement(prod, index = Math.round(Math.random() * 10000)) {
     const _taxElement_span = document.createElement('span');
     _taxElement_span.setAttribute('id', `ave-taxinfo-${index}-text`);
     _taxElement_span.classList.add('ave-taxinfo-text');
-    const _prize = prod.data_estimated_tax_prize;
+    const _prize = prod ? prod.data_estimated_tax_prize : undefined;
     if (SETTINGS.DebugLevel > 10) console.log('createTaxInfoElement(): We have a Taxprize of: ', _prize);
-    _taxElement_span.innerText = `Tax Price: ${typeof _prize == 'number' ? Intl.NumberFormat(undefined, { minimumFractionDigits: 2 }).format(_prize) : '--.--'} ${_currencySymbol}`;
+    _taxElement_span.innerText = `Tax Price: ${formatTaxPrize(prod)}`;
     if (SETTINGS.DebugLevel > 10) console.log('createTaxInfoElement(): After innerText');
 
     _taxElement.appendChild(_taxElement_span);
@@ -1587,6 +1590,10 @@ let lastBtnEventhandlerClickTimeStamp = 0;
  * Handles a click on the "more details" button of a tile. It loads the details
  * of the product from the Vine API and stores them in the database.
  *
+ * NOTE: The details are loaded through the queue, so that the requests are made
+ * one after the other. Otherwise the account of the user can be blocked
+ * temporarily by Amazon.
+ *
  * @param {Event} event The click event
  * @param {Product} data The product of the tile
  */
@@ -1595,32 +1602,28 @@ function btnEventhandlerClick(event, data) {
     lastBtnEventhandlerClickTimeStamp = Date.now();
     if (SETTINGS.DebugLevel > 10) console.log(`called btnEventhandlerClick(${JSON.stringify(event)}, ${JSON.stringify(data)})`);
     if (data.recommendation_id) {
-        database.getById(data.recommendation_id).then(async (prod) => {
-            if (SETTINGS.DebugLevel > 10) console.log(`btnEventhandlerClick() got respose from DB:`, prod);
-            if (prod) {
+        database
+            .getById(data.recommendation_id)
+            .then(async (prod) => {
+                if (SETTINGS.DebugLevel > 10) console.log(`btnEventhandlerClick() got respose from DB:`, prod);
+                if (!prod) return;
                 prod.isNew = 0;
-                requestProductDetails(prod)
-                    .then((_newProd) => {
-                        database
-                            .update(_newProd || prod)
-                            .then(() => {
-                                updateTileStyle(_newProd || prod);
-                            })
-                            .catch((error) => {
-                                console.error(`btnEventhandlerClick(): could not update the product: ${error}`);
-                            });
-                    })
-                    .catch((error) => {
-                        console.error(`btnEventhandlerClick(): could not get the product details: ${error}`);
-                    });
-            }
-        });
+                await requestProductDetailsQueued(prod);
+            })
+            .catch((error) => {
+                console.error(`btnEventhandlerClick(): could not get the product details: ${error}`);
+            });
     }
 }
 
 /**
  * Handles a click on the star of a tile. It marks the product as favorite and
  * removes the mark again on the next click.
+ *
+ * If the product is marked as favorite, the price details are loaded from the
+ * Vine API (if the setting is enabled). They are not loaded during the scan,
+ * because Amazon blocks the account temporarily if too many requests are made
+ * in a short time.
  *
  * @param {Event} event The click event
  * @param {Product} data The product of the tile
@@ -1635,6 +1638,12 @@ function favStarEventhandlerClick(event, data) {
                 database
                     .update(prod)
                     .then(() => {
+                        // The details are only loaded when the product became a
+                        // favorite, not when the mark was removed again.
+                        // NOTE: The loading is started before the tile is updated,
+                        // because an error in the update would otherwise stop the
+                        // loading of the details.
+                        if (prod.isFav) loadProductDetailsIfEnabled(prod);
                         updateTileStyle(prod);
                     })
                     .catch((error) => {
@@ -1646,12 +1655,17 @@ function favStarEventhandlerClick(event, data) {
 }
 
 /**
- * Updates Style and Text of a Product Tile
- * @param {Product} prod
- * @returns
+ * Updates Style and Text of all the Product Tiles of a product.
+ *
+ * NOTE: A product can be shown in more than one tile, e.g. in the list of the
+ * new entries and in the list of all products. All of them are updated, because
+ * the details can arrive asynchronously, long after the tile was created.
+ *
+ * @param {Product} prod The product of the tiles
  */
 function updateTileStyle(prod) {
     if (SETTINGS.DebugLevel > 10) console.log(`Called updateTileStyle(${JSON.stringify(prod, null, 4)})`);
+    if (!prod) return;
     const _tiles = document.getElementsByClassName('vvp-item-tile');
     const _tilesLength = _tiles.length;
 
@@ -1669,14 +1683,12 @@ function updateTileStyle(prod) {
             const _favStar = _tile.querySelector('.ave-favorite-star');
             if (_favStar) _favStar.style.color = prod.isFav ? SETTINGS.FavStarColorChecked : 'white'; // SETTINGS.FavStarColorChecked = Gelb;
 
-            const _taxValue = prod.data_estimated_tax_prize;
-            if (typeof _taxValue == 'number') {
-                const _taxValueElem = _tile.querySelector('.ave-taxinfo-text');
-                if (_taxValueElem) {
-                    _taxValueElem.innerText = _taxValueElem.innerText.replace('--.--', _taxValue);
-                }
+            // The prize is written as a whole, because the element is created
+            // before the details were loaded and still shows the placeholder.
+            const _taxValueElem = _tile.querySelector('.ave-taxinfo-text');
+            if (_taxValueElem) {
+                _taxValueElem.innerText = `Tax Price: ${formatTaxPrize(prod)}`;
             }
-            return;
         }
     }
 }
@@ -1762,50 +1774,6 @@ function addTileEventhandlers(_currTile) {
  */
 function completeDelayedInit() {
     initTileEventHandlers();
-}
-
-/**
- * Shows the overlay of the auto scan, which covers the whole page.
- * @param {string} text The text that is shown in the overlay
- */
-function showAutoScanScreen(text) {
-    const _overlay = document.createElement('div');
-    _overlay.style.position = 'fixed';
-    _overlay.style.top = '0';
-    _overlay.style.left = '0';
-    _overlay.style.width = '100%';
-    _overlay.style.height = '100%';
-    _overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)'; // Semi transparent dark background
-    _overlay.style.zIndex = '1000'; // The overlay has to be above the other elements
-
-    const _text = document.createElement('div');
-    _text.style.position = 'absolute';
-    _text.style.top = '50%';
-    _text.style.left = '50%';
-    _text.style.transform = 'translate(-50%, -50%)';
-    _text.style.color = 'orange'; // Text colour
-    _text.style.textAlign = 'center';
-    _text.style.fontSize = '50px'; // Font size of the text
-    _text.style.lineHeight = '1';
-    _text.style.zIndex = '1001';
-    const _autoScanText = document.getElementById('ave-autoscan-text');
-    if (!_autoScanText) {
-        _text.innerHTML = `<p id="ave-autoscan-text">${text}</p>`;
-    } else {
-        _autoScanText.textContent = text;
-    }
-
-    document.body.appendChild(_overlay);
-    document.body.appendChild(_text);
-}
-
-/**
- * Updates the text of the overlay of the auto scan.
- * @param {string} text The new text
- */
-function updateAutoScanScreenText(text = '') {
-    const _elem = document.getElementById('ave-autoscan-text');
-    _elem.textContent = text;
 }
 
 // Populate settings only once per render to avoid duplicates on re-open.
@@ -1933,14 +1901,14 @@ const AVE_SETTINGS_CSS = `
   color: red;
 }
 
-// Add this attribute to the element that needs a tooltip
+/* Add this attribute to the element that needs a tooltip */
 [data-ave-tooltip] {
   position: relative;
   z-index: 2;
   cursor: pointer;
 }
 
-// Hide the tooltip content by default
+/* Hide the tooltip content by default */
 [data-ave-tooltip]:before,
 [data-ave-tooltip]:after {
   visibility: hidden;
@@ -1948,7 +1916,7 @@ const AVE_SETTINGS_CSS = `
   pointer-events: none;
 }
 
-// Position tooltip above the element
+/* Position tooltip above the element */
 [data-ave-tooltip]:before {
   position: absolute;
   bottom: -50%;
@@ -1956,7 +1924,7 @@ const AVE_SETTINGS_CSS = `
   margin-bottom: 5px;
   margin-left: calc(100% + 10px);
   padding: 7px;
-  width: 160px;
+  width: 320px;
   -webkit-border-radius: 3px;
   -moz-border-radius: 3px;
   border-radius: 3px;
@@ -1966,9 +1934,13 @@ const AVE_SETTINGS_CSS = `
   text-align: center;
   font-size: 14px;
   line-height: 1.2;
+  /* NOTE: A long word, e.g. a URL, does not fit into the tooltip and would be
+     cut off. The word is broken up, so that it stays inside of the tooltip. */
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
-// Triangle hack to make tooltip look like a speech bubble
+/* Triangle hack to make tooltip look like a speech bubble */
 [data-ave-tooltip]:after {
   position: absolute;
   bottom: 25%;
@@ -1983,7 +1955,7 @@ const AVE_SETTINGS_CSS = `
   line-height: 0;
 }
 
-// Show tooltip content on hover
+/* Show tooltip content on hover */
 [data-ave-tooltip]:hover:before,
 [data-ave-tooltip]:hover:after,
 [data-ave-tooltip]:focus-within:before,
@@ -2199,7 +2171,9 @@ function createSettingsBoolElement(dat, _elem, _labelName, _labelDescription) {
     _elem_item_left_label_input.type = 'checkbox';
     _elem_item_left_label_input.className = 'ave-input-binary';
     _elem_item_left_label_input.setAttribute('ave-data-key', dat.key);
-    _elem_item_left_label_input.checked = SETTINGS[dat.key];
+    // NOTE: Every value that is not false means that the setting is switched on,
+    // so that a broken value in the stored settings cannot switch it off silently.
+    _elem_item_left_label_input.checked = SETTINGS[dat.key] !== false;
     _elem_item_left_label_input.addEventListener('click', (event) => {
         console.log('This is a Boolean Value Input', event);
         SETTINGS[dat.key] = event.target.checked;
@@ -3816,60 +3790,6 @@ function updateBackgroundScanScreenText(text = '') {
 }
 
 /**
- * Starts the auto scan, which walks through all pages of the Vine site.
- */
-async function startAutoScan() {
-    if (SETTINGS.DebugLevel > 10) console.log('Called startAutoScan()');
-    showAutoScanScreen('Init Autoscan, please wait...');
-    await markAllCurrentDatabaseProductsAsSeen();
-    if (SETTINGS.DebugLevel > 10) console.log('startAutoScan() - markAllCurrentDatabaseProductsAsSeen() is done');
-    const _pageiDat = getPageinationData();
-    localStorage.setItem('AVE_INIT_AUTO_SCAN', false);
-    localStorage.setItem('AVE_AUTO_SCAN_IS_RUNNING', true);
-    localStorage.setItem('AVE_AUTO_SCAN_PAGE_MAX', _pageiDat.maxPage);
-    localStorage.setItem('AVE_AUTO_SCAN_PAGE_CURRENT', 1);
-    setTimeout(() => {
-        // NOTE: The pagination href of Amazon is relative ("vine-items?...page=").
-        // It has to be resolved to an absolute URL, otherwise a trailing slash
-        // in the current URL would produce a doubled path (see aveResolveUrl()).
-        const _url = aveResolveUrl(`${_pageiDat.href}1`);
-        if (SETTINGS.DebugLevel > 10) console.log(`Loding new Page ${_url}`);
-        window.location.href = _url;
-    }, 5000);
-}
-
-/**
- * Advances the auto scan by one page, or finishes it if the last page was
- * reached.
- */
-async function handleAutoScan() {
-    const _delay = Math.max(SETTINGS.PageLoadMinDelay - (Date.now() - PAGE_LOAD_TIMESTAMP), 0) + 500;
-    if (SETTINGS.DebugLevel > 10) console.log(`handleAutoScan() - _delay: ${_delay}`);
-    if (AUTO_SCAN_PAGE_CURRENT < AUTO_SCAN_PAGE_MAX) {
-        const _nextPage = AUTO_SCAN_PAGE_CURRENT + 1;
-        localStorage.setItem('AVE_AUTO_SCAN_PAGE_CURRENT', _nextPage);
-        setTimeout(() => {
-            // NOTE: Only the pagination parameter is replaced, so that other
-            // parameters with a number (e.g. "ave-subpage") stay untouched.
-            window.location.href = aveUrlWithPage(_nextPage);
-        }, _delay);
-    } else {
-        // We are done ;)
-        updateAutoScanScreenText('Success, cleaning up Database...');
-        await cleanUpDatabase();
-        localStorage.setItem('AVE_AUTO_SCAN_IS_RUNNING', false);
-        localStorage.setItem('AVE_AUTO_SCAN_PAGE_MAX', -1);
-        localStorage.setItem('AVE_AUTO_SCAN_PAGE_CURRENT', -1);
-        setTimeout(() => {
-            updateAutoScanScreenText('Finished Database\nupdate and cleanup\n\nPage reloading incoming... please wait');
-            setTimeout(() => {
-                window.location.href = aveUrlWithPage(1);
-            }, 10000);
-        }, _delay + 2000);
-    }
-}
-
-/**
  * Keeps an element at a fixed position, while the page is scrolled.
  *
  * The element is only moved, if the user scrolled past the position where it
@@ -4055,12 +3975,18 @@ function checkKeywordsForProduct(_prod, _configKeyWords) {
             }
         }
         _prod.isNotified = true;
-        if (SETTINGS.EnableAutoMarkFavorite) {
+        const _markedAsFavorite = SETTINGS.EnableAutoMarkFavorite;
+        if (_markedAsFavorite) {
             _prod.isFav = 1;
         }
         database.update(_prod).catch((error) => {
             console.error(`Could not save the notified product ${_prod.id}: ${error}`);
         });
+        // The details of a product that became a favorite are loaded, so that
+        // the price information is available. The requests are queued, because
+        // Amazon blocks the account temporarily if too many requests are made
+        // in a short time.
+        if (_markedAsFavorite) loadProductDetailsIfEnabled(_prod);
         return true;
     }
     return false;
@@ -4120,7 +4046,6 @@ function notifyAboutNewProducts(_prodArrLength, _notifyed) {
  * Update the "new entries" badge and trigger threshold notifications.
  */
 function updateNewProductsBtn() {
-    if (AUTO_SCAN_IS_RUNNING) return;
     if (SETTINGS.DebugLevel > 1) console.log('Called updateNewProductsBtn()');
 
     // The search for the keywords is expensive, because every new product is
@@ -4438,15 +4363,167 @@ function addStyleToTile(_currTile, _product) {
 }
 
 /**
- * Loads the details of a product from the Vine API and adds them to the
- * product.
+ * The minimum delay between two requests of the product details in
+ * milliseconds.
+ *
+ * NOTE: Amazon blocks the account temporarily if too many requests are made
+ * in a short time. The requests are therefore not made in parallel and not
+ * faster than this delay.
+ */
+const PRODUCT_DETAILS_REQUEST_DELAY = 1500;
+
+/**
+ * The products whose details still have to be loaded. Every entry holds the
+ * product and the resolve function of the promise that waits for it.
+ * @type {object[]}
+ */
+const productDetailsQueue = [];
+
+/**
+ * Loads the details of all variations of a product with a parent ASIN.
+ *
+ * A product with a parent ASIN has no price of its own, the Vine API returns
+ * the variations for it. The price of the product is the highest price of its
+ * variations.
+ *
+ * NOTE: The requests are made one after the other and not in parallel, because
+ * Amazon blocks the account temporarily if too many requests are made in a short
+ * time.
+ *
+ * @param {Product} prod The product with the variations
+ * @returns {Promise<void>} Resolves when the details of the variations are loaded
+ */
+async function loadProductDetailsOfVariations(prod) {
+    const _variations = prod.data_childs || [];
+    if (_variations.length === 0) return;
+
+    for (let i = 0; i < _variations.length; i++) {
+        const _child = _variations[i];
+        if (!_child || !_child.asin) continue;
+
+        // The delay is also made between the variations of a product, because
+        // they are requests to the same API.
+        if (i > 0) await delay(PRODUCT_DETAILS_REQUEST_DELAY);
+
+        try {
+            const _childRes = await vineFetch(
+                `${window.location.origin}/vine/api/recommendations/${prod.id}/item/${_child.asin}`.replace(/#/g, '%23')
+            ).then((r) => r.json());
+            if (_childRes.error) {
+                console.error(`Could not load the details of the variation ${_child.asin}: ${_childRes.error.exceptionType}`);
+                continue;
+            }
+            // Copy over all the returned data points of the variation, so that
+            // they are not lost when the product is stored.
+            for (const _dataPoint of Object.keys(_childRes.result)) {
+                _child[_dataPoint] = _childRes.result[_dataPoint];
+            }
+            // The price of the product is the highest price of its variations.
+            if (typeof _child.taxValue == 'number' && (prod.data_estimated_tax_prize ?? 0) < _child.taxValue) {
+                prod.data_estimated_tax_prize = _child.taxValue;
+                prod.data_tax_currency = _child.taxCurrency;
+            }
+        } catch (error) {
+            console.error(`Could not load the details of the variation ${_child.asin}: ${error}`);
+        }
+    }
+}
+
+/**
+ * Loads the details of a product and stores them in the database.
+ *
+ * The requests are queued and made one after the other, because Amazon blocks
+ * the account temporarily if too many requests are made in a short time.
  *
  * @param {Product} prod The product to load the details for
- * @returns {Promise<Product>} The product with the details
+ * @returns {Promise<void>} Resolves when the details were loaded and stored
  */
+async function requestProductDetailsQueued(prod) {
+    return new Promise((resolve) => {
+        productDetailsQueue.push({ prod: prod, resolve: resolve });
+        processProductDetailsQueue();
+    });
+}
+
+/**
+ * Works off the queue of the product details, one product at a time.
+ */
+async function processProductDetailsQueue() {
+    if (productDetailsQueue.length === 0) return;
+    if (processProductDetailsQueue._isRunning) return;
+    processProductDetailsQueue._isRunning = true;
+
+    while (productDetailsQueue.length > 0) {
+        const _entry = productDetailsQueue.shift();
+        try {
+            const _newProd = await requestProductDetails(_entry.prod);
+            await database.update(_newProd || _entry.prod);
+            updateTileStyle(_newProd || _entry.prod);
+        } catch (error) {
+            // NOTE: The error can be a string, an error object or null, so the
+            // message is built for every case.
+            const _reason = error?.message || error || 'unknown error';
+            console.error(`Could not load the details of the product ${_entry.prod.id}: ${_reason}`);
+        }
+        _entry.resolve();
+        if (productDetailsQueue.length > 0) await delay(PRODUCT_DETAILS_REQUEST_DELAY);
+    }
+
+    processProductDetailsQueue._isRunning = false;
+}
+
+/**
+ * Checks if the details of a product were already loaded.
+ *
+ * NOTE: A product with a parent ASIN has no price of its own, the API returns
+ * the variations for it. The details are only complete when all variations were
+ * loaded.
+ *
+ * @param {Product} prod The product to check
+ * @returns {boolean} true if the details are already in the product
+ */
+function hasProductDetails(prod) {
+    if (!prod) return false;
+    if (prod.data_asin_is_parent) {
+        if (!prod.data_childs) return false;
+        // A variation is loaded when it has the data of the API. The asin is
+        // always there, because it comes with the list of the variations.
+        return prod.data_childs.every((_child) => !_child || !_child.asin || _child.taxValue !== undefined);
+    }
+    return prod.data_estimated_tax_prize !== undefined;
+}
+
+/**
+ * Loads the details of a product, if the setting is enabled and the details
+ * were not loaded yet.
+ *
+ * @param {Product} prod The product to load the details for
+ * @returns {Promise<void>} Resolves when the details were loaded and stored
+ */
+async function loadProductDetailsIfEnabled(prod) {
+    // NOTE: Every value that is not false means that the setting is switched on,
+    // so that a broken value in the stored settings cannot switch it off silently.
+    if (SETTINGS.EnableDetailsOnFavorite === false) {
+        console.info(`AVE: The details of ${prod.id} were not loaded, the setting is off.`);
+        return;
+    }
+    // A product that is marked as favorite and unmarked again would be loaded
+    // a second time otherwise.
+    if (hasProductDetails(prod)) {
+        console.info(`AVE: The details of ${prod.id} are already loaded.`);
+        return;
+    }
+    console.info(`AVE: Loading the details of ${prod.id} ...`);
+    await requestProductDetailsQueued(prod);
+    console.info(`AVE: The details of ${prod.id} were loaded.`);
+}
+
 async function requestProductDetails(prod) {
     if (prod.data_asin_is_parent) {
-        const res = await vineFetch(`${window.location.origin}/vine/api/recommendations/${prod.id}`.replace(/#/g, '#')).then((r) =>
+        /* NOTE: The recommendation id contains a # as a separator. It has to be
+           encoded, otherwise everything after the first # is treated as a
+           fragment of the URL and never reaches the server. */
+        const res = await vineFetch(`${window.location.origin}/vine/api/recommendations/${prod.id}`.replace(/#/g, '%23')).then((r) =>
             r.json()
         );
         if (res.error) {
@@ -4454,13 +4531,23 @@ async function requestProductDetails(prod) {
                 prod.forceRemove = true;
                 return prod;
             } else {
-                console.error('requestProductDetails():ERROR:', res.error);
-                throw res.error.exceptionType;
+                // The exception type is not set for every error, so the message
+                // of the error is used as a fallback.
+                const _reason = res.error.exceptionType || res.error.message || 'unknown error';
+                console.error(`requestProductDetails(): The product ${prod.id} could not be loaded: ${_reason}`);
+                throw new Error(_reason);
             }
         }
         const _data = res.result;
         if (SETTINGS.DebugLevel > 1) console.log('DATA:', _data);
         prod.data_childs = _data.variations || [];
+
+        /* A product with a parent ASIN has no price of its own, the API returns
+           the variations for it. The details of every variation are loaded, so
+           that the price of the product is known. The requests are made one
+           after the other, because Amazon blocks the account temporarily if too
+           many requests are made in a short time. */
+        await loadProductDetailsOfVariations(prod);
         return prod;
     } else {
         const ret = await vineFetch(
@@ -4468,7 +4555,11 @@ async function requestProductDetails(prod) {
         ).then((r) => r.json());
         if (SETTINGS.DebugLevel > 1) console.log('RETURN:', ret);
         if (ret.error) {
-            throw ret.error.exceptionType;
+            // The exception type is not set for every error, so the message of
+            // the error is used as a fallback.
+            const _reason = ret.error.exceptionType || ret.error.message || 'unknown error';
+            console.error(`requestProductDetails(): The product ${prod.id} could not be loaded: ${_reason}`);
+            throw new Error(_reason);
         }
         const data = ret.result;
         prod.data_feature_bullets = data.featureBullets;
@@ -4527,13 +4618,7 @@ function initTileParsing(hasTiles) {
                 }
             }
         }
-        if (INIT_AUTO_SCAN) {
-            startAutoScan();
-        } else if (AUTO_SCAN_IS_RUNNING) {
-            handleAutoScan();
-        } else {
-            completeDelayedInit();
-        }
+        completeDelayedInit();
     });
 }
 
@@ -4679,16 +4764,12 @@ function initPagination() {
 function init(hasTiles) {
     // Get all Products on this page ;)
 
-    if (AUTO_SCAN_IS_RUNNING) showAutoScanScreen(`Autoscan is running...Page (${AUTO_SCAN_PAGE_CURRENT}/${AUTO_SCAN_PAGE_MAX})`);
-
     const _aveSubpageRequest = getUrlParameter('ave-subpage');
     if (SETTINGS.DebugLevel > 10) console.log(`Got Subpage Parameter`, _aveSubpageRequest);
 
     if (_aveSubpageRequest) createNewSite(parseInt(_aveSubpageRequest));
 
     initTileParsing(hasTiles);
-
-    if (AUTO_SCAN_IS_RUNNING) return;
 
     initNavigationButtons();
 

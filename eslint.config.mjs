@@ -15,14 +15,9 @@ const globalsFile = [
     'AVE_SESSION_ID',
     'AVE_TITLE',
     'AVE_VERSION',
-    'AUTO_SCAN_IS_RUNNING',
-    'AUTO_SCAN_PAGE_CURRENT',
-    'AUTO_SCAN_PAGE_MAX',
     'DATABASE_NAME',
     'DATABASE_OBJECT_STORE_NAME',
     'DATABASE_VERSION',
-    'INIT_AUTO_SCAN',
-    'PAGE_LOAD_TIMESTAMP',
     'SECONDS_PER_DAY',
     'SECONDS_PER_WEEK',
     'SETTINGS',
@@ -47,7 +42,7 @@ const globalsFile = [
 ];
 
 /** Names declared in i18n.js */
-const i18nFile = ['I18N', 'detectLanguage', 't'];
+const i18nFile = ['I18N', 'detectLanguage', 'lookupTranslation', 't'];
 
 /** Names declared in class_db_handler.js */
 const dbHandlerFile = ['DB_HANDLER'];
@@ -85,7 +80,6 @@ const mainFile = [
     'appendInfiniteScrollTiles',
     'aveFixRelativeVineLinks',
     'aveResolveUrl',
-    'aveUrlWithPage',
     'backgroundScanFinished',
     'backgroundScanLoop',
     'backGroundTileScanner',
@@ -122,7 +116,6 @@ const mainFile = [
     'getUrlParameter',
     'getBackgroundScanStageZeroSites',
     'gotifyNotification',
-    'handleAutoScan',
     'handleInfiniteScroll',
     'importDatabase',
     'init',
@@ -157,16 +150,13 @@ const mainFile = [
     'searchKeywordsInProducts',
     'shareEventHandlerClick',
     'shouldStopFastScan',
-    'showAutoScanScreen',
     'showBackgroundScanScreen',
     'sort_by_key',
-    'startAutoScan',
     'stopFastScan',
     'stickElementToTopScrollEVhandler',
     'stringToRegex',
     'timeAgo',
     'translate',
-    'updateAutoScanScreenText',
     'updateBackgroundScanScreenText',
     'updateFavoritesBtn',
     'updateNewProductsBtn',

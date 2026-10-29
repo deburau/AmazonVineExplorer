@@ -1,8 +1,7 @@
 'use strict';
 
 /* exported AVE_EVENTHANDLER, AVE_IS_THIS_SESSION_MASTER, AVE_SESSION_ID, AVE_TITLE, AVE_VERSION,
-   AUTO_SCAN_IS_RUNNING, AUTO_SCAN_PAGE_CURRENT, AUTO_SCAN_PAGE_MAX, DATABASE_NAME,
-   DATABASE_OBJECT_STORE_NAME, DATABASE_VERSION, INIT_AUTO_SCAN, PAGE_LOAD_TIMESTAMP,
+   DATABASE_NAME, DATABASE_OBJECT_STORE_NAME, DATABASE_VERSION,
    SECONDS_PER_DAY, SECONDS_PER_WEEK, SETTINGS, SETTINGS_DEFAULT, SETTINGS_USERCONFIG_DEFINES,
    SITE_IS_SHOPPING, SITE_IS_VINE, addBranding, ave_eventhandler, delay, fastStyleChanges,
    findActiveMenuButton, generateSessionID, getCountry, loadSettings, saveSettings,
@@ -32,13 +31,6 @@ sessionStorage.setItem('AVE_SESSION_ID', AVE_SESSION_ID);
  * Is this Browser Tab / Window the Master Instance ??
  */
 let AVE_IS_THIS_SESSION_MASTER = false;
-
-// Persisted scan state from previous runs (used by auto-scan logic).
-const INIT_AUTO_SCAN = localStorage.getItem('AVE_INIT_AUTO_SCAN') == 'true' ? true : false;
-const AUTO_SCAN_IS_RUNNING = localStorage.getItem('AVE_AUTO_SCAN_IS_RUNNING') == 'true' ? true : false;
-const AUTO_SCAN_PAGE_CURRENT = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_CURRENT')) || -1;
-const AUTO_SCAN_PAGE_MAX = parseInt(localStorage.getItem('AVE_AUTO_SCAN_PAGE_MAX')) || -1;
-const PAGE_LOAD_TIMESTAMP = Date.now();
 
 // NOTE: The database is still stored in IndexedDB of the browser and not in the
 // storage of the userscript manager, so these constants are needed.
@@ -441,6 +433,13 @@ SETTINGS_USERCONFIG_DEFINES.push({
     description: 'If a new product matches a highlight keyword it is automatically marked as favorite'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableDetailsOnFavorite',
+    type: 'bool',
+    name: 'Load the price details when a product is marked as favorite',
+    description:
+        'If a product is marked as favorite, the price details are loaded from the Vine API. They are not loaded during the scan, because Amazon blocks the account if too many requests are made in a short time.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
     key: 'EnableCleanupFavorites',
     type: 'bool',
     name: 'Also remove favorites when cleaning up products',
@@ -584,7 +583,6 @@ SETTINGS_USERCONFIG_DEFINES.push({
 });
 SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorMarkAllAsSeen', type: 'color', name: 'Button Color Mark All As Seen', description: '' });
 SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorBackToTop', type: 'color', name: 'Button Color Back To Top', description: '' });
-SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorUpdateDB', type: 'color', name: 'Button Color Update Database', description: '' });
 SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorAllProducts', type: 'color', name: 'Button Color All Products', description: '' });
 SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorFavorites', type: 'color', name: 'Button Color Favorites', description: '' });
 SETTINGS_USERCONFIG_DEFINES.push({ key: 'BtnColorFavoritesBadge', type: 'color', name: 'Button Color Favorites Badge', description: '' });
@@ -679,6 +677,7 @@ class SETTINGS_DEFAULT {
     //   compatibility with already stored settings (see note above).
     EnableDesktopNotifikation = false;
     EnableAutoMarkFavorite = false;
+    EnableDetailsOnFavorite = true;
     EnableCleanupFavorites = false;
     EnableBtnAll = true;
     EnablePaginationTop = true;
@@ -693,7 +692,6 @@ class SETTINGS_DEFAULT {
     BtnColorMarkCurrSiteAsSeen = '#00FF00';
     BtnColorMarkAllAsSeen = '#FFA28E';
     BtnColorBackToTop = '#FFFFFF';
-    BtnColorUpdateDB = '#00FF00';
     BtnColorAllProducts = '#FFFFFF';
 
     FavStarColorDefault = 'white';
@@ -772,10 +770,6 @@ ave_eventhandler.on('ave-save-cofig', () => {
 
 // All keys of the local storage that AVE uses for its state information
 const AVE_LOCAL_STORAGE_KEYS = [
-    'AVE_INIT_AUTO_SCAN',
-    'AVE_AUTO_SCAN_IS_RUNNING',
-    'AVE_AUTO_SCAN_PAGE_CURRENT',
-    'AVE_AUTO_SCAN_PAGE_MAX',
     'AVE_BACKGROUND_SCAN_IS_RUNNING',
     'AVE_BACKGROUND_SCAN_LAST_TIME',
     'AVE_BACKGROUND_SCAN_PAGE_CURRENT',
@@ -810,6 +804,17 @@ function clearAVEState() {
 }
 
 /**
+ * The settings that are only used when they are switched on. Every value that
+ * is not false means that the setting is switched on.
+ *
+ * NOTE: The setting is not part of the stored settings of an older version, so
+ * it has to fall back to the default. A value that is not a boolean comes from
+ * a manual change of the stored settings and must not switch the setting off
+ * silently.
+ */
+const SETTINGS_ON_BY_DEFAULT = ['EnableDetailsOnFavorite'];
+
+/**
  * Load Settings from GM Storage
  */
 function loadSettings() {
@@ -836,6 +841,18 @@ function loadSettings() {
             const _currKey = _keys[i];
             console.log(`Restore Setting: ${_currKey} with Value: ${_settingsStore[_currKey]}`);
             SETTINGS[_currKey] = _settingsStore[_currKey];
+        }
+    }
+
+    // The settings that are on by default are switched on, unless the stored
+    // value is exactly false. A setting that is not stored at all keeps its
+    // default from SETTINGS_DEFAULT.
+    for (const _key of SETTINGS_ON_BY_DEFAULT) {
+        if (SETTINGS[_key] !== false) {
+            if (SETTINGS[_key] !== true) {
+                console.log(`loadSettings(): The setting ${_key} is not switched off, so it is switched on.`);
+            }
+            SETTINGS[_key] = true;
         }
     }
 }

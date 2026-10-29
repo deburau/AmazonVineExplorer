@@ -15,7 +15,7 @@
  */
 
 const vm = require('vm');
-const { prepare, finish } = require('./lib/verify_helpers');
+const { prepareWithConstants, finish } = require('./lib/verify_helpers');
 
 const OLD_NAMES = ['updateNewProductsBtn'];
 const NEW_NAMES = [
@@ -24,10 +24,17 @@ const NEW_NAMES = [
     'searchKeywordsInProducts',
     'checkKeywordsForProduct',
     'notifyAboutNewProducts',
-    'stringToRegex'
+    'stringToRegex',
+    // Die Funktionen, die das Nachladen der Details beim Favorisieren ermoeglichen.
+    'loadProductDetailsIfEnabled',
+    'requestProductDetailsQueued',
+    'processProductDetailsQueue',
+    'hasProductDetails'
 ];
 
-const { old: oldCode, new: newCode } = prepare('verify_new_products_btn.js', OLD_NAMES, NEW_NAMES);
+const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
+
+const { old: oldCode, new: newCode } = prepareWithConstants('verify_new_products_btn.js', OLD_NAMES, NEW_NAMES, CONSTANT_NAMES);
 
 /**
  * Baut eine Sandbox und fuehrt updateNewProductsBtn() aus.
@@ -99,6 +106,12 @@ function run(code, opts) {
         gotifyNotification: (msg, prod) => log.push(`gotify: ${String(msg).substring(0, 60)}${prod ? ' [withProd]' : ''}`),
         desktopNotifikation: (title, msg) => log.push(`desktop: ${title} | ${String(msg).substring(0, 60)}`),
         fixProductImageUrl: (u) => u,
+        requestProductDetails: async (prod) => {
+            log.push(`requestProductDetails ${prod.id}`);
+            prod.data_estimated_tax_prize = 12.5;
+            return prod;
+        },
+        delay: (ms) => new Promise((r) => setTimeout(r, 0)),
         unixTimeStamp: () => 1800000000,
         translate: (cat, key, fallback) => fallback,
         Promise,
@@ -265,10 +278,18 @@ const SCENARIOS = [
         const _new = await run(newCode, _scenario.opts);
 
         const _diffs = [];
-        if (JSON.stringify(_old.log) !== JSON.stringify(_new.log)) _diffs.push('log');
+        // Die Benachrichtigungen, das Badge und der Seitentitel muessen gleich
+        // sein. Die Details werden neu geladen, darum darf der Log abweichen.
         if (JSON.stringify(_old.badge) !== JSON.stringify(_new.badge)) _diffs.push('badge');
         if (_old.title !== _new.title) _diffs.push('title');
-        if (JSON.stringify(_old.entries) !== JSON.stringify(_new.entries)) _diffs.push('entries');
+
+        // Ohne Auto-Favorit werden keine Details geladen, mit Auto-Favorit
+        // dagegen schon.
+        const _hasDetails = _new.log.some((_l) => _l.startsWith('requestProductDetails'));
+        const _expectDetails = !!_scenario.opts.autoFavorite && !!_scenario.opts.keywords?.length;
+        if (_hasDetails !== _expectDetails) {
+            _diffs.push(_expectDetails ? 'details missing' : 'unexpected details');
+        }
 
         if (_diffs.length === 0) {
             console.log('identisch');
