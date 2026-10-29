@@ -7,9 +7,9 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 
 | Punkt | Stand |
 |---|---|
-| Branch | `dev-0.14.0` (gepusht, HEAD = `d949dda`) |
-| Version im User-Script | `0.13.0.12` |
-| Letztes Release | `0.13.0` (auf `main`, veröffentlicht) |
+| Branch | `dev-0.15.0` (gepusht, aus `main` angelegt) |
+| Version im User-Script | `0.14.0.1` |
+| Letztes Release | **0.14.0** (auf `main`, veröffentlicht, Merge-Commit `5146428`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 6 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
@@ -86,6 +86,25 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
   Beschreibungen mit einem `i` weniger geschrieben, dadurch wurde die
   Beschreibung nie gefunden. Der Wächter `scripts/check_settings_keys.js`
   prüft jetzt alle Schlüssel.
+
+### Release 0.14.0 (auf `main` veröffentlicht)
+
+* Das **Feature „Preisdetails beim Favorisieren"** ist fertig: Der Preis wird
+  geladen, wenn ein Produkt als Favorit markiert wird (Stern oder Keyword-Match).
+  Abschaltbar über `EnableDetailsOnFavorite`, Queue mit 1,5 s Abstand, nicht
+  während des Scans. Bei Produkten mit Parent-ASIN werden alle Varianten
+  abgefragt, der Preis ist der höchste.
+* Der **Recommendation-ID-Fehler** (`replace(/#/g, '#')` statt `'%23'`) wurde
+  behoben. Er bestand seit Februar und ist der Grund, warum „Weitere Details"
+  bei Varianten-Produkten nie funktioniert hat.
+* Die **Tooltips** der Einstellungen funktionieren wieder (CSS-Kommentar `//`),
+  sind neu formuliert (de + en) und 320 px breit.
+* Der **tote Auto-Scan** (nie ausführbar) und die Einstellung `BtnColorUpdateDB`
+  wurden entfernt.
+* Zwei **Wächter-Skripte** schützen vor Wiederholungen:
+  `scripts/check_css_syntax.js` und `scripts/check_settings_keys.js`.
+* Der Changelog der Versionen 0.13.0.1 bis 0.13.0.13 ist in **einem** Eintrag
+  für die Version 0.14.0 zusammengefasst (Merge-Commit `5146428`).
 
 ## Wichtige Dateien
 
