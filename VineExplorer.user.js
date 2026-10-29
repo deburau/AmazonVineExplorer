@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.13.0.12
+// @version      0.13.0.13
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1924,7 +1924,7 @@ const AVE_SETTINGS_CSS = `
   margin-bottom: 5px;
   margin-left: calc(100% + 10px);
   padding: 7px;
-  width: 160px;
+  width: 320px;
   -webkit-border-radius: 3px;
   -moz-border-radius: 3px;
   border-radius: 3px;
@@ -1934,6 +1934,10 @@ const AVE_SETTINGS_CSS = `
   text-align: center;
   font-size: 14px;
   line-height: 1.2;
+  /* NOTE: A long word, e.g. a URL, does not fit into the tooltip and would be
+     cut off. The word is broken up, so that it stays inside of the tooltip. */
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Triangle hack to make tooltip look like a speech bubble */

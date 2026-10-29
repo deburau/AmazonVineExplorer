@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-29] - Version 0.13.0.13
+
+* The tooltips of the settings are now 320 pixels wide instead of 160 pixels, so that the text is mostly on one line. A long word, e.g. a URL, is broken up, so that it is not cut off.
+
 ##### [2026-10-29] - Version 0.13.0.12
 
 * Fix: the key of the description of the setting for the waiting time between the notifications was spelled wrong, so that the tooltip of the setting showed the name of the setting instead of its description.
