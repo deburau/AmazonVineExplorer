@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-28] - Version 0.13.0.1
+
+* The development continues on the branch `dev-0.14.0`, the version was raised to prepare the next release.
+
 ##### [2026-10-28] - Version 0.13.0
 
 * Fix: the background scan reused a single iframe for all scanned pages. The frame accumulated a session history with one entry per navigation and the renderer kept the documents of those entries in memory, so the memory usage grew by about 270 MB per hour until the container ran out of memory. The iframe is now created for every scanned page and removed again after the page was scanned, which reduces the memory usage by about 670 MB (measured). The scanned document is also no longer kept in `unsafeWindow.ave.backGroundIFrame` outside of the debug mode.
