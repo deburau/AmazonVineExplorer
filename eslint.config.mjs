@@ -47,7 +47,7 @@ const globalsFile = [
 ];
 
 /** Names declared in i18n.js */
-const i18nFile = ['I18N', 'detectLanguage', 't'];
+const i18nFile = ['I18N', 'detectLanguage', 'lookupTranslation', 't'];
 
 /** Names declared in class_db_handler.js */
 const dbHandlerFile = ['DB_HANDLER'];

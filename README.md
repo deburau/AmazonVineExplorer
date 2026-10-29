@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-29] - Version 0.13.0.8
+
+* Fix: the fallback of the translation function was ignored. If a translation does not exist, the key was shown instead of the text of the caller. All the settings have a translation in both languages, so nothing was visible so far, but a new setting without a translation would have shown its key.
+
 ##### [2026-10-29] - Version 0.13.0.7
 
 * Fix: the tooltips of the settings were not shown anymore. The comments of the CSS of the settings menu used the JavaScript syntax "//" instead of the CSS syntax "/* */". The browser discards the whole rule of such a line without any error message, so all the rules of the tooltips were lost.

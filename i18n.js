@@ -339,6 +339,24 @@ function detectLanguage() {
 }
 
 /**
+ * Looks up the message of a translation in the current language.
+ *
+ * The message can be a string or a function that formats the text with the
+ * arguments of the caller.
+ *
+ * @param {string} category The category of the translation (e.g. "buttons")
+ * @param {string} key The key of the translation
+ * @returns {string|Function|null} The message or null if it does not exist
+ */
+function lookupTranslation(category, key) {
+    const lang = detectLanguage();
+    if (!I18N[lang] || !I18N[lang][category]) {
+        return null;
+    }
+    return I18N[lang][category][key] || null;
+}
+
+/**
  * Looks up a translation and formats it if the entry is a function.
  *
  * If the translation is missing, the key is returned and a warning is logged.
@@ -354,7 +372,7 @@ function t(category, key, ...args) {
         console.warn(`Translation missing for category: ${category}`);
         return key || '';
     }
-    const message = I18N[lang][category][key];
+    const message = lookupTranslation(category, key);
     if (!message) {
         console.warn(`Translation missing for key: ${category}.${key}`);
         return key || '';

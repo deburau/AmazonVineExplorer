@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.13.0.7
+// @version      0.13.0.8
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -66,7 +66,17 @@ console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 let currentMainPage;
 
 // Translation wrapper with a fallback string for early-load timing.
-const translate = (category, key, fallback, ...args) => (typeof t === 'function' ? t(category, key, ...args) : fallback);
+const translate = (category, key, fallback, ...args) => {
+    if (typeof t !== 'function') return fallback;
+    // The function t() returns the key if the translation does not exist. In
+    // that case the fallback of the caller is used, so that a missing
+    // translation shows the text of the caller instead of the key.
+    if (typeof lookupTranslation === 'function' && lookupTranslation(category, key) === null) {
+        console.warn(`translate(): No translation for ${category}.${key}, the fallback is used.`);
+        return fallback;
+    }
+    return t(category, key, ...args);
+};
 
 loadSettings();
 fastStyleChanges();
