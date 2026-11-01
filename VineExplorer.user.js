@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.14.0.1
+// @version      0.14.0.2
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -38,7 +38,7 @@
 
 /* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
-   appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveResolveUrl,
+   appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
    backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct, cleanUpDatabase,
    colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
@@ -415,10 +415,12 @@ function handleInfiniteScroll() {
             blockHandleInfiniteScroll = false;
             return;
         } else if (infiniteScrollTilesBufferArray.length < 1000 && infiniteScrollLastPreloadedPage < infiniteScrollMaxPreloadPage) {
-            // NOTE: The unescaped dots in the regex match any character, but Amazon's
-            //   URL structure is stable. A null return from .exec() is theoretically
-            //   possible only if Amazon changes domains, in which case AVE is unusable.
-            const _baseUrl = /(http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items)/.exec(window.location.href)[1];
+            const _baseUrl = aveGetVineBaseUrl();
+            // NOTE: Without a base URL no page can be loaded, the preloading is skipped.
+            if (!_baseUrl) {
+                blockHandleInfiniteScroll = false;
+                return;
+            }
             infiniteScrollLastPreloadedPage++;
             getTilesFromURL(`${_baseUrl}?queue=encore&pn=&cn=&page=${infiniteScrollLastPreloadedPage}`, (tiles) => {
                 infiniteScrollTilesBufferArray = infiniteScrollTilesBufferArray.concat(tiles);
@@ -441,6 +443,22 @@ function getUrlParameter(name) {
     const _queryString = window.location.search;
     const _urlParams = new URLSearchParams(_queryString);
     return _urlParams.get(name);
+}
+
+/**
+ * Returns the base URL of the Vine pages for the current page.
+ *
+ * The base URL is used to load the other pages of a list, e.g. for the infinite
+ * scroll and for the background scan. The language segment of the current URL
+ * is kept, so that the pages are loaded in the same language as the current one.
+ *
+ * @returns {string|null} The base URL, or null if the current URL is no Vine URL
+ */
+function aveGetVineBaseUrl() {
+    // NOTE: The dots of the domain are unescaped, they match any character. The
+    //   URL structure of the Vine platform is stable, so this is not a problem.
+    const _match = /(https?:\/\/(?:www\.)?amazon(?:\.co)?\.[a-z]{2,}\/(?:-\/[^/]+\/)?vine\/vine-items)/i.exec(window.location.href);
+    return _match ? _match[1] : null;
 }
 
 /**
@@ -576,7 +594,12 @@ function detectCurrentPageType() {
     // NOTE: The trailing slash is optional, because Amazon redirects to
     // ".../vine/vine-items/" and the relative links of the page are resolved
     // against the directory of the URL (see aveResolveUrl()).
-    if (/http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items\/?$/.test(window.location.href)) {
+    // The language segment of the URL (e.g. "/-/de/") is ignored, because the
+    // browser can put it in front of the path (see aveStripLocalePrefix()).
+    const _isVineItemsPage = /^\/vine\/vine-items\/?$/.test(aveStripLocalePrefix(window.location.pathname));
+    // NOTE: The query string and the hash have to be empty, because the check is
+    // for the plain Vine page without any parameter.
+    if (_isVineItemsPage && !window.location.search && !window.location.hash) {
         currentMainPage = PAGETYPE.ORIGINAL_LAST_CHANCE;
     } else if (getUrlParameter('queue') == 'last_chance') {
         currentMainPage = PAGETYPE.ORIGINAL_LAST_CHANCE;
@@ -1490,17 +1513,13 @@ function createNewSite(type, data) {
                     _btn.classList.add('a-button-selected');
                     _btn.setAttribute('aria-checked', true);
                 }
-                // NOTE: Same regex caveat as in handleInfiniteScroll: unescaped dots
-                //   are lax, but the URL structure is stable for the Vine platform.
-                const _baseUrl = /(http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items)/.exec(
-                    window.location.href
-                )[1];
+                const _baseUrl = aveGetVineBaseUrl();
                 const _preloadPages = ['potluck', 'last_chance', 'encore'];
                 infiniteScrollLastPreloadedPage = 1;
                 infiniteScrollMaxPreloadPage = 100;
                 infiniteScrollTilesBufferArray = [];
 
-                if (SETTINGS.EnableInfiniteScrollLiveQuerry) {
+                if (SETTINGS.EnableInfiniteScrollLiveQuerry && _baseUrl) {
                     getTilesFromURL(`${_baseUrl}?queue=${_preloadPages[0]}`, (tiles1) => {
                         infiniteScrollTilesBufferArray = infiniteScrollTilesBufferArray.concat(tiles1);
                         appendInfiniteScrollTiles();
@@ -3112,9 +3131,13 @@ function initBackgroundScan() {
         return;
     }
     BackGroundScanIsRunning = true;
-    // NOTE: Same regex caveat as above: .exec() is safe because Amazon's Vine URLs
-    //   are stable. If Amazon changes domains, AVE is broken regardless of this check.
-    const _baseUrl = /(http[s]{0,1}:\/\/[w]{0,3}.amazon.[a-z]{1,}.{0,1}[a-z]{0,}\/vine\/vine-items)/.exec(window.location.href)[1];
+    const _baseUrl = aveGetVineBaseUrl();
+    // NOTE: Without a base URL the pages of the scan cannot be loaded, the scan is stopped.
+    if (!_baseUrl) {
+        console.warn('initBackgroundScan(): no Vine URL found => Exit');
+        BackGroundScanIsRunning = false;
+        return;
+    }
 
     showBackgroundScanScreen('Start Background Scanner');
 

@@ -10,6 +10,7 @@ import pluginJs from '@eslint/js';
 
 /** Names declared in globals.js */
 const globalsFile = [
+    'AVE_AMAZON_DOMAIN_PATTERN',
     'AVE_EVENTHANDLER',
     'AVE_IS_THIS_SESSION_MASTER',
     'AVE_SESSION_ID',
@@ -27,6 +28,7 @@ const globalsFile = [
     'SITE_IS_VINE',
     'addBranding',
     'ave_eventhandler',
+    'aveStripLocalePrefix',
     'delay',
     'fastStyleChanges',
     'findActiveMenuButton',
@@ -79,6 +81,7 @@ const mainFile = [
     'addTileEventhandlers',
     'appendInfiniteScrollTiles',
     'aveFixRelativeVineLinks',
+    'aveGetVineBaseUrl',
     'aveResolveUrl',
     'backgroundScanFinished',
     'backgroundScanLoop',

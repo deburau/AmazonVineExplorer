@@ -18,6 +18,7 @@ const FIXED_NOW = 1800000000000;
 const OLD_NAMES = ['initBackgroundScan'];
 const NEW_NAMES = [
     'initBackgroundScan',
+    'aveGetVineBaseUrl',
     'initBackgroundScanStorage',
     'getBackgroundScanStageZeroSites',
     'backgroundScanLoop',
