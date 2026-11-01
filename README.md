@@ -63,6 +63,11 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-10-29] - Version 0.14.0.3
+
+* The notification for a keyword match now shows the keyword before the description of the product, because the keyword is the reason for the notification. The word "key" is replaced by "Treffer" in German and by "Match" in English.
+* The images of the desktop notifications were loaded from an old fork of the project and from a branch that does not exist any more. They are now loaded from the repository of the project and from the branch that the userscript was loaded from, so that the images of the development branch are used while testing.
+
 ##### [2026-10-29] - Version 0.14.0.2
 
 * Fix: the userscript was not activated on the Vine pages of Firefox. Firefox puts the language of the browser into the URL, e.g. "https://www.amazon.de/-/de/vine/vine-items" or "https://www.amazon.de/-/en/vine/vine-items". The detection of the Vine pages expected the path "/vine/" directly after the domain, so the script did not recognize the page and stayed inactive. The language segment is now ignored by the detection.

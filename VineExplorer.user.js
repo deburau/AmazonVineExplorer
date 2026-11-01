@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.14.0.2
+// @version      0.14.0.3
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -3966,9 +3966,12 @@ function checkKeywordsForProduct(_prod, _configKeyWords) {
         if (!_keyFound) continue;
 
         if (SETTINGS.EnableDesktopNotifikation) {
+            // NOTE: The key of the keyword is shown before the description of the
+            // product, because it is the reason for the notification.
+            const _matchText = translate('notifications', 'keywordMatch', `Treffer: ${_currKey}`, _currKey);
             desktopNotifikation(
                 `Amazon Vine Explorer - ${AVE_VERSION}`,
-                `${_prod.description_full}\nkey: ${_currKey}`,
+                `${_matchText}\n${_prod.description_full}`,
                 fixProductImageUrl(_prod.data_img_url),
                 true,
                 function (event) {
@@ -4124,14 +4127,11 @@ function updateNewProductsBtn() {
  * @param {function} onClick The function that is called on a click
  */
 function desktopNotifikation(title, message, image = null, requireInteraction = null, onClick = () => {}) {
-    const _vineLogo = 'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/main/vine_logo.png';
-    // NOTE: The 'dev-main' branch no longer exists; this URL returns 404.
-    //   The notification still works, it just falls back to the default icon.
-    const _vineLogoImp = 'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_important.png';
-    // NOTE: Same as above — 'dev-main' no longer exists, this URL returns 404.
-    //   The notification still works, it just falls back to the default icon.
-    const _defaultImage =
-        'https://raw.githubusercontent.com/Amazon-Vine-Explorer/AmazonVineExplorer/dev-main/vine_logo_notification_image.png';
+    // NOTE: The images are loaded from the branch of the userscript, so that the
+    //   images of the development branch are used while testing.
+    const _vineLogo = aveProjectImageUrl('vine_logo.png');
+    const _vineLogoImp = aveProjectImageUrl('vine_logo_important.png');
+    const _defaultImage = aveProjectImageUrl('vine_logo_notification_image.png');
 
     if (Notification.permission === 'granted') {
         const _notification = new Notification(title, {
