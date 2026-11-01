@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-01] - Version 0.15.0.1
+
+* The development continues on the branch `dev-0.16.0`, the version was raised to prepare the next release.
+
 ##### [2026-11-01] - Version 0.15.0
 
 * New: the keyword is now shown in the desktop notification of a keyword match. It is shown before the description of the product, because it is the reason for the notification. The word "key" is replaced by "Treffer" in German and by "Match" in English. (Fix for issue #68)
