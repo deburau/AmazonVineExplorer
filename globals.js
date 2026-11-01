@@ -1,10 +1,10 @@
 'use strict';
 
-/* exported AVE_EVENTHANDLER, AVE_IS_THIS_SESSION_MASTER, AVE_SESSION_ID, AVE_TITLE, AVE_VERSION,
-   DATABASE_NAME, DATABASE_OBJECT_STORE_NAME, DATABASE_VERSION,
+/* exported AVE_AMAZON_DOMAIN_PATTERN, AVE_EVENTHANDLER, AVE_IS_THIS_SESSION_MASTER,
+   AVE_SESSION_ID, AVE_TITLE, AVE_VERSION, DATABASE_NAME, DATABASE_OBJECT_STORE_NAME, DATABASE_VERSION,
    SECONDS_PER_DAY, SECONDS_PER_WEEK, SETTINGS, SETTINGS_DEFAULT, SETTINGS_USERCONFIG_DEFINES,
-   SITE_IS_SHOPPING, SITE_IS_VINE, addBranding, ave_eventhandler, delay, fastStyleChanges,
-   findActiveMenuButton, generateSessionID, getCountry, loadSettings, saveSettings,
+   SITE_IS_SHOPPING, SITE_IS_VINE, addBranding, ave_eventhandler, aveStripLocalePrefix, delay,
+   fastStyleChanges, findActiveMenuButton, generateSessionID, getCountry, loadSettings, saveSettings,
    toTimestamp, toUnixTimestamp, unixTimeStamp, waitForHtmlElement, waitForHtmlElementPromise */
 
 // Don't run on frames or iframes.
@@ -13,13 +13,36 @@
 // The script is also excluded from frames with the @noframes directive.
 if (window.top != window.self) return;
 
+/**
+ * Removes the language segment from the path of an Amazon URL.
+ *
+ * Amazon can put a language segment in front of the path of a page, e.g.
+ * "https://www.amazon.de/-/de/vine/vine-items" or "https://www.amazon.de/-/en/vine/vine-items".
+ * The segment depends on the language settings of the browser, Firefox uses it
+ * more often than Chrome. It is not part of the page structure, so every check
+ * of the path has to ignore it.
+ *
+ * @param {string} pathname The path of the page, e.g. "/-/de/vine/vine-items"
+ * @returns {string} The path without the language segment, e.g. "/vine/vine-items"
+ */
+function aveStripLocalePrefix(pathname) {
+    return String(pathname ?? '').replace(/\/-\/[^/]+\//g, '/');
+}
+
+// The domains of the Amazon shops. The path of the page is checked separately,
+// because Amazon can put a language segment in front of it (see aveStripLocalePrefix()).
+const AVE_AMAZON_DOMAIN_PATTERN = /^(www\.)?amazon(\.co)?\.[a-z]{2,}$/i;
+
 // Constants Needed for some things
 const AVE_VERSION = GM_info?.script?.version;
 const AVE_TITLE = GM_info?.script?.name;
 const SECONDS_PER_DAY = 86400;
 const SECONDS_PER_WEEK = 604800;
-const SITE_IS_VINE = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/vine\//.test(window.location.href);
-const SITE_IS_SHOPPING = /https?:\/\/(www\.)?amazon(\.co)?\.[a-z]{2,}\/(?!vine)(?!gp\/video)(?!music)/.test(window.location.href);
+const SITE_IS_VINE =
+    AVE_AMAZON_DOMAIN_PATTERN.test(window.location.hostname) && /^\/vine\//.test(aveStripLocalePrefix(window.location.pathname));
+const SITE_IS_SHOPPING =
+    AVE_AMAZON_DOMAIN_PATTERN.test(window.location.hostname) &&
+    /^\/(?!vine)(?!gp\/video)(?!music)/.test(aveStripLocalePrefix(window.location.pathname));
 // Session id is used for multi-tab master/slave coordination.
 // Reuse the id from sessionStorage so that reloads and navigations inside the
 // same tab keep the same session. This avoids a dead session blocking the

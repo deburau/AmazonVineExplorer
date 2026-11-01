@@ -63,6 +63,14 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-01] - Version 0.15.0
+
+* New: the keyword is now shown in the desktop notification of a keyword match. It is shown before the description of the product, because it is the reason for the notification. The word "key" is replaced by "Treffer" in German and by "Match" in English. (Fix for issue #68)
+* Fix: the userscript was not activated on the Vine pages of Firefox. Firefox puts the language of the browser into the URL, e.g. "https://www.amazon.de/-/de/vine/vine-items" or "https://www.amazon.de/-/en/vine/vine-items". The detection of the Vine pages expected the path "/vine/" directly after the domain, so the script did not recognize the page and stayed inactive. The language segment is now ignored by the detection.
+* Fix: the pages of the infinite scroll and of the background scan are not loaded at all if the URL contains the language segment. The base URL of the Vine pages was searched with a pattern that did not allow the segment, so the search returned nothing and the script stopped with an error. The base URL is now searched with a helper function that returns null instead of throwing an error, if no Vine URL is found.
+* The images of the desktop notifications were loaded from an old fork of the project and from a branch that does not exist any more. They are now loaded from the main branch of the repository of the project.
+* The script `scripts/verify/verify_site_detection.js` checks the detection of the Vine pages against 16 different URLs. It is part of `npm run verify`.
+
 ##### [2026-10-29] - Version 0.14.0
 
 * New: the price details of a product are now loaded from the Vine API when the product is marked as favorite, both when the star is clicked and when a product is marked as favorite automatically because of a keyword match. The new setting "Load the price details when a product is marked as favorite" turns the behaviour on and off, it is on by default. The details are not loaded during the scan, because Amazon blocks the account temporarily if too many requests are made in a short time. The requests are queued and made one after the other with a delay of 1.5 seconds.

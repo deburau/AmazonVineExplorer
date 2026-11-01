@@ -134,6 +134,12 @@ The baseline is only used for the comparison, it is never part of the build.
 | `verify_new_products_btn.js` | The notifications, the badge and the page title of the new entries button |
 | `verify_init.js` | The created DOM and the calls of the page initialisation |
 | `verify_details_on_favorite.js` | The requests of the price details when a product is marked as favorite |
+| `verify_site_detection.js` | The detection of the Vine pages against a table of 16 URLs |
+
+**NOTE:** `verify_site_detection.js` is the only script that does not compare an
+old with a new implementation. It checks the current behaviour against expected
+values, because the support for the language segment of the URL is a change of
+the behaviour and not a refactoring.
 
 **NOTE:** A new verification needs the same structure: a `vm` sandbox with mocked
 browser APIs, a list of the function names of the old and the new version and a
@@ -448,5 +454,24 @@ console.log(`[${logLevel}] Your message here`);
 - **Amazon's DOM changes frequently** - robust selectors and timing are essential
 - **Cross-origin requests** are handled through Tampermonkey APIs
 - **LocalStorage is avoided** in favor of Tampermonkey storage for cross-browser compatibility
+
+### The language segment of the URL
+
+Amazon can put a language segment in front of the path of a page, e.g.
+`https://www.amazon.de/-/de/vine/vine-items` or `https://www.amazon.de/-/en/vine/vine-items`.
+The segment depends on the language settings of the browser, Firefox uses it more
+often than Chrome. It is **not** part of the page structure.
+
+Every check of the path has to ignore it:
+
+- `aveStripLocalePrefix(pathname)` in `globals.js` removes it from a path.
+  `SITE_IS_VINE` and `SITE_IS_SHOPPING` use the cleaned path.
+- `aveGetVineBaseUrl()` in `VineExplorer.user.js` returns the base URL of the
+  Vine pages **with** the segment, so that the next pages are loaded in the same
+  language as the current one.
+- `detectCurrentPageType()` uses the cleaned path.
+
+A check of the path that forgets the segment makes the script inactive on the
+affected pages. `scripts/verify/verify_site_detection.js` guards against that.
 
 When working on this codebase, always prioritize stability and graceful error handling, as the userscript runs in production environments on live Amazon pages.

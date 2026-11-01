@@ -21,7 +21,8 @@ const I18N = {
             copySuccess: 'Text wurde in die Zwischenablage kopiert.',
             copyError: 'Fehler beim Kopieren in die Zwischenablage:',
             unseenItemsTitle: (version) => `Amazon Vine Explorer - ${version}`,
-            unseenItemsBody: (count) => `Es wurden ${count} neue Eintraege gefunden`
+            unseenItemsBody: (count) => `Es wurden ${count} neue Eintraege gefunden`,
+            keywordMatch: (key) => `Treffer: ${key}`
         },
         share: {
             myFSE: 'Mein FSE',
@@ -178,7 +179,8 @@ const I18N = {
             copySuccess: 'Text copied to clipboard',
             copyError: 'Error copying to clipboard:',
             unseenItemsTitle: (version) => `Amazon Vine Explorer - ${version}`,
-            unseenItemsBody: (count) => `${count} new entries found`
+            unseenItemsBody: (count) => `${count} new entries found`,
+            keywordMatch: (key) => `Match: ${key}`
         },
         share: {
             myFSE: 'My FSE',

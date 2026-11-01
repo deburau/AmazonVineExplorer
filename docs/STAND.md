@@ -7,11 +7,12 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 
 | Punkt | Stand |
 |---|---|
-| Branch | `dev-0.15.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.14.0.1` |
+| Branch | `dev-0.15.0` (gepusht) |
+| Version im User-Script | `0.15.0` |
 | Letztes Release | **0.14.0** (auf `main`, veröffentlicht, Merge-Commit `5146428`) |
+| Release in Vorbereitung | **0.15.0** – vorbereitet auf `dev-0.15.0`, `main` ist noch nicht aktualisiert |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
-| Verifikationen | alle 6 erfolgreich (`npm run verify`) |
+| Verifikationen | alle 7 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
 
 ## Was in dieser Session gemacht wurde
@@ -105,6 +106,24 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
   `scripts/check_css_syntax.js` und `scripts/check_settings_keys.js`.
 * Der Changelog der Versionen 0.13.0.1 bis 0.13.0.13 ist in **einem** Eintrag
   für die Version 0.14.0 zusammengefasst (Merge-Commit `5146428`).
+
+### Release 0.15.0 (vorbereitet, noch nicht auf `main`)
+
+* Die **Erkennung der Vine-Seiten** unterstützt jetzt das Sprachsegment in der
+  URL, das Firefox setzt (`/-/de/vine/vine-items`). Vorher war das Script auf
+  diesen Seiten **gar nicht aktiv** und der Infinite Scroll sowie der
+  Background-Scan brachen mit einem Fehler ab.
+* Die **Desktop-Benachrichtigung** zeigt das auslösende Keyword jetzt **vor**
+  der Beschreibung des Produktes, übersetzt als „Treffer" (de) bzw. „Match" (en).
+  Damit ist **Issue #68** erledigt.
+* Die **Bilder der Benachrichtigungen** kommen aus dem richtigen Repository
+  (`deburau/AmazonVineExplorer`) statt aus einem alten Fork.
+* Der neue Wächter `scripts/verify/verify_site_detection.js` prüft die Erkennung
+  gegen 16 verschiedene URLs.
+
+**Offen:** `main` pushen, dann in Issue #68 einen Kommentar schreiben und das
+Issue schließen. Die fertigen Kommandos und der Kommentartext stehen in
+`docs/RELEASE-0.15.0.md`.
 
 ## Wichtige Dateien
 
