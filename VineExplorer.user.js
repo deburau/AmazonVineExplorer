@@ -4127,11 +4127,12 @@ function updateNewProductsBtn() {
  * @param {function} onClick The function that is called on a click
  */
 function desktopNotifikation(title, message, image = null, requireInteraction = null, onClick = () => {}) {
-    // NOTE: The images are loaded from the branch of the userscript, so that the
-    //   images of the development branch are used while testing.
-    const _vineLogo = aveProjectImageUrl('vine_logo.png');
-    const _vineLogoImp = aveProjectImageUrl('vine_logo_important.png');
-    const _defaultImage = aveProjectImageUrl('vine_logo_notification_image.png');
+    // NOTE: The images are loaded from the main branch of the repository of the
+    //   project. They are not changed any more, so the main branch is enough.
+    const _imageBaseUrl = 'https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/';
+    const _vineLogo = `${_imageBaseUrl}vine_logo.png`;
+    const _vineLogoImp = `${_imageBaseUrl}vine_logo_important.png`;
+    const _defaultImage = `${_imageBaseUrl}vine_logo_notification_image.png`;
 
     if (Notification.permission === 'granted') {
         const _notification = new Notification(title, {

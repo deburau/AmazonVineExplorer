@@ -66,7 +66,7 @@ details.
 ##### [2026-10-29] - Version 0.14.0.3
 
 * The notification for a keyword match now shows the keyword before the description of the product, because the keyword is the reason for the notification. The word "key" is replaced by "Treffer" in German and by "Match" in English.
-* The images of the desktop notifications were loaded from an old fork of the project and from a branch that does not exist any more. They are now loaded from the repository of the project and from the branch that the userscript was loaded from, so that the images of the development branch are used while testing.
+* The images of the desktop notifications were loaded from an old fork of the project and from a branch that does not exist any more. They are now loaded from the main branch of the repository of the project.
 
 ##### [2026-10-29] - Version 0.14.0.2
 

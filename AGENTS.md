@@ -91,10 +91,6 @@ change the behaviour. See the section "Verifying a refactoring".
   `0.12.1.1` to `0.12.1.49` become one entry of `0.13.0`).
 - Commit messages follow the pattern `type(scope): short description`
   (e.g. `fix(settings): read the settings if they are stored as a JSON string`).
-- The constant `AVE_BRANCH` in `globals.js` holds the branch the userscript was
-  loaded from. It is used for the URLs of the images of the notifications. It
-  has to be set to the name of the new development branch when a branch is
-  started and to `main` when a release is made.
 
 ### Working Style (important)
 - Work **step by step: one single change at a time**. Do not bundle several fixes into

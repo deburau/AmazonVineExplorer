@@ -1,12 +1,11 @@
 'use strict';
 
-/* exported AVE_AMAZON_DOMAIN_PATTERN, AVE_BRANCH, AVE_EVENTHANDLER, AVE_IS_THIS_SESSION_MASTER,
+/* exported AVE_AMAZON_DOMAIN_PATTERN, AVE_EVENTHANDLER, AVE_IS_THIS_SESSION_MASTER,
    AVE_SESSION_ID, AVE_TITLE, AVE_VERSION, DATABASE_NAME, DATABASE_OBJECT_STORE_NAME, DATABASE_VERSION,
    SECONDS_PER_DAY, SECONDS_PER_WEEK, SETTINGS, SETTINGS_DEFAULT, SETTINGS_USERCONFIG_DEFINES,
-   SITE_IS_SHOPPING, SITE_IS_VINE, addBranding, ave_eventhandler, aveProjectImageUrl,
-   aveStripLocalePrefix, delay, fastStyleChanges, findActiveMenuButton, generateSessionID, getCountry,
-   loadSettings, saveSettings, toTimestamp, toUnixTimestamp, unixTimeStamp, waitForHtmlElement,
-   waitForHtmlElementPromise */
+   SITE_IS_SHOPPING, SITE_IS_VINE, addBranding, ave_eventhandler, aveStripLocalePrefix, delay,
+   fastStyleChanges, findActiveMenuButton, generateSessionID, getCountry, loadSettings, saveSettings,
+   toTimestamp, toUnixTimestamp, unixTimeStamp, waitForHtmlElement, waitForHtmlElementPromise */
 
 // Don't run on frames or iframes.
 // A top level "return" aborts the script silently, a thrown error would show up as an
@@ -33,24 +32,6 @@ function aveStripLocalePrefix(pathname) {
 // The domains of the Amazon shops. The path of the page is checked separately,
 // because Amazon can put a language segment in front of it (see aveStripLocalePrefix()).
 const AVE_AMAZON_DOMAIN_PATTERN = /^(www\.)?amazon(\.co)?\.[a-z]{2,}$/i;
-
-// The branch of the repository the userscript was loaded from. The images of
-// the notifications are loaded from that branch, so that the images of the
-// development branch are used while testing.
-//
-// NOTE: The value has to be changed when a new development branch is started
-//   and when a release is made. The release uses the branch "main".
-const AVE_BRANCH = 'dev-0.15.0';
-
-/**
- * Returns the URL of an image of the project in the branch of the userscript.
- *
- * @param {string} fileName The name of the file in the repository
- * @returns {string} The URL of the image
- */
-function aveProjectImageUrl(fileName) {
-    return `https://raw.githubusercontent.com/deburau/AmazonVineExplorer/${AVE_BRANCH}/${fileName}`;
-}
 
 // Constants Needed for some things
 const AVE_VERSION = GM_info?.script?.version;
