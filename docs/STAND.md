@@ -7,10 +7,9 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 
 | Punkt | Stand |
 |---|---|
-| Branch | `dev-0.15.0` (gepusht) |
-| Version im User-Script | `0.15.0` |
-| Letztes Release | **0.14.0** (auf `main`, veröffentlicht, Merge-Commit `5146428`) |
-| Release in Vorbereitung | **0.15.0** – vorbereitet auf `dev-0.15.0`, `main` ist noch nicht aktualisiert |
+| Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
+| Version im User-Script | `0.15.0.1` |
+| Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 7 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
@@ -107,7 +106,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 * Der Changelog der Versionen 0.13.0.1 bis 0.13.0.13 ist in **einem** Eintrag
   für die Version 0.14.0 zusammengefasst (Merge-Commit `5146428`).
 
-### Release 0.15.0 (vorbereitet, noch nicht auf `main`)
+### Release 0.15.0 (auf `main` veröffentlicht)
 
 * Die **Erkennung der Vine-Seiten** unterstützt jetzt das Sprachsegment in der
   URL, das Firefox setzt (`/-/de/vine/vine-items`). Vorher war das Script auf
@@ -121,9 +120,8 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 * Der neue Wächter `scripts/verify/verify_site_detection.js` prüft die Erkennung
   gegen 16 verschiedene URLs.
 
-**Offen:** `main` pushen, dann in Issue #68 einen Kommentar schreiben und das
-Issue schließen. Die fertigen Kommandos und der Kommentartext stehen in
-`docs/RELEASE-0.15.0.md`.
+Das Release ist veröffentlicht (Merge-Commit `75bb04b`). Issue #68 ist mit dem
+Release erledigt und wurde geschlossen.
 
 ## Wichtige Dateien
 
