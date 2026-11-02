@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.14
+// @version      0.15.0.15
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -4011,9 +4011,8 @@ function normalizePriceInput(value) {
 /**
  * Parses a price condition of the keyword configuration.
  *
- * The format of a condition is
- * "[data_estimated_tax_prices <operator> <price>]". The operator can be
- * "=" or "==" (one of the prices is equal), "!=" or "<>" (none of the prices
+ * The format of a condition is "[price <operator> <value>]". The operator can
+ * be "=" or "==" (one of the prices is equal), "!=" or "<>" (none of the prices
  * is equal), "<" or "<=" (the lowest price is lower), ">" or ">=" (the highest
  * price is higher).
  *
@@ -4021,7 +4020,7 @@ function normalizePriceInput(value) {
  * @returns {object|null} The condition, or null if it is not valid
  */
 function parsePriceCondition(text) {
-    const _match = /^\s*data_estimated_tax_prices\s*(<=|>=|==|!=|<>|=|<|>)\s*(.+?)\s*$/.exec(String(text ?? ''));
+    const _match = /^\s*price\s*(<=|>=|==|!=|<>|=|<|>)\s*(.+?)\s*$/i.exec(String(text ?? ''));
     if (!_match) return null;
     const _price = normalizePriceInput(_match[2]);
     if (_price === null) return null;
@@ -4032,7 +4031,7 @@ function parsePriceCondition(text) {
  * Parses the keyword of the configuration.
  *
  * A keyword can contain price conditions, e.g.
- * "toaster [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]".
+ * "toaster [price >= 10] [price < 20]".
  * The text without the conditions is the keyword itself, the conditions are
  * checked against the prices of the product.
  *
@@ -4045,7 +4044,7 @@ function parseKeywordConfig(config) {
 
     // NOTE: Only a keyword with a price condition is parsed. The keywords can be
     // regular expressions and they can contain brackets themselves.
-    if (!_text.toLowerCase().includes('data_estimated_tax_prices')) return _result;
+    if (!_text.toLowerCase().includes('price')) return _result;
 
     const _conditions = [];
     _result.keyword = _text
@@ -4056,8 +4055,8 @@ function parseKeywordConfig(config) {
                 return ' ';
             }
             // The bracket does not contain a valid price condition. If it names
-            // the field, the keyword is broken and it does not match.
-            if (_content.toLowerCase().includes('data_estimated_tax_prices')) {
+            // the price, the keyword is broken and it does not match.
+            if (_content.toLowerCase().includes('price')) {
                 _result.valid = false;
                 console.warn(`The price condition "${_content}" is not valid.`);
             }

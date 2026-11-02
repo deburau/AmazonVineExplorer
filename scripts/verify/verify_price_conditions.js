@@ -5,7 +5,7 @@
  * Prueft die Preisbedingungen der Keywords.
  *
  * Ein Keyword kann Preisbedingungen enthalten, z. B.
- * "toaster [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]".
+ * "toaster [price >= 10] [price < 20]".
  * Die Bedingungen werden nur zusammen mit dem Keyword geprueft.
  *
  * Geprueft werden:
@@ -94,22 +94,22 @@ const PRICE_CASES = [
  * Die erwarteten Ergebnisse des Parsens einer Preisbedingung.
  */
 const CONDITION_CASES = [
-    { label: 'Groesser als', input: 'data_estimated_tax_prices > 10', expected: { op: '>', price: 10 } },
-    { label: 'Groesser oder gleich', input: 'data_estimated_tax_prices >= 10', expected: { op: '>=', price: 10 } },
-    { label: 'Kleiner als', input: 'data_estimated_tax_prices < 10', expected: { op: '<', price: 10 } },
-    { label: 'Kleiner oder gleich', input: 'data_estimated_tax_prices <= 10', expected: { op: '<=', price: 10 } },
-    { label: 'Gleich', input: 'data_estimated_tax_prices = 10', expected: { op: '=', price: 10 } },
-    { label: 'Gleich (zwei Zeichen)', input: 'data_estimated_tax_prices == 10', expected: { op: '==', price: 10 } },
-    { label: 'Ungleich', input: 'data_estimated_tax_prices != 10', expected: { op: '!=', price: 10 } },
-    { label: 'Ungleich (zwei Zeichen)', input: 'data_estimated_tax_prices <> 10', expected: { op: '<>', price: 10 } },
+    { label: 'Groesser als', input: 'price > 10', expected: { op: '>', price: 10 } },
+    { label: 'Groesser oder gleich', input: 'price >= 10', expected: { op: '>=', price: 10 } },
+    { label: 'Kleiner als', input: 'price < 10', expected: { op: '<', price: 10 } },
+    { label: 'Kleiner oder gleich', input: 'price <= 10', expected: { op: '<=', price: 10 } },
+    { label: 'Gleich', input: 'price = 10', expected: { op: '=', price: 10 } },
+    { label: 'Gleich (zwei Zeichen)', input: 'price == 10', expected: { op: '==', price: 10 } },
+    { label: 'Ungleich', input: 'price != 10', expected: { op: '!=', price: 10 } },
+    { label: 'Ungleich (zwei Zeichen)', input: 'price <> 10', expected: { op: '<>', price: 10 } },
     {
         label: 'Preis mit Komma und Leerzeichen',
-        input: 'data_estimated_tax_prices >= 10,50',
+        input: 'price >= 10,50',
         expected: { op: '>=', price: 10.5 }
     },
     { label: 'Ein unbekanntes Feld', input: 'data_estimated_tax_prize > 10', expected: null },
-    { label: 'Ein unbekannter Operator', input: 'data_estimated_tax_prices ~ 10', expected: null },
-    { label: 'Ein ungueltiger Preis', input: 'data_estimated_tax_prices > abc', expected: null }
+    { label: 'Ein unbekannter Operator', input: 'price ~ 10', expected: null },
+    { label: 'Ein ungueltiger Preis', input: 'price > abc', expected: null }
 ];
 
 /**
@@ -128,12 +128,12 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Ein Keyword mit einer Preisbedingung',
-        input: 'toaster [data_estimated_tax_prices >= 10]',
+        input: 'toaster [price >= 10]',
         expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], valid: true }
     },
     {
         label: 'Ein Keyword mit zwei Preisbedingungen',
-        input: 'toaster [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]',
+        input: 'toaster [price >= 10] [price < 20]',
         expected: {
             keyword: 'toaster',
             conditions: [
@@ -145,13 +145,23 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Eine Preisbedingung ohne Keyword',
-        input: '[data_estimated_tax_prices >= 10]',
+        input: '[price >= 10]',
         expected: { keyword: '', conditions: [{ op: '>=', price: 10 }], valid: true }
     },
     {
         label: 'Eine kaputte Preisbedingung macht das Keyword ungueltig',
-        input: 'toaster [data_estimated_tax_prices > abc]',
-        expected: { keyword: 'toaster [data_estimated_tax_prices > abc]', conditions: [], valid: false }
+        input: 'toaster [price > abc]',
+        expected: { keyword: 'toaster [price > abc]', conditions: [], valid: false }
+    },
+    {
+        label: 'Ein Keyword mit dem Wort price, aber ohne Bedingung',
+        input: 'special price',
+        expected: { keyword: 'special price', conditions: [], valid: true }
+    },
+    {
+        label: 'Eine Bedingung mit dem alten Feldnamen ist ungueltig',
+        input: 'toaster [data_estimated_tax_prices >= 10]',
+        expected: { keyword: 'toaster [data_estimated_tax_prices >= 10]', conditions: [], valid: false }
     }
 ];
 
