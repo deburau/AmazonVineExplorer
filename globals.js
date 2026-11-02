@@ -712,7 +712,7 @@ class SETTINGS_DEFAULT {
     EnableDesktopNotifikation = false;
     EnableAutoMarkFavorite = false;
     EnableDetailsOnFavorite = true;
-    VariationRequestDelay = 100;
+    VariationRequestDelay = 550;
     EnableCleanupFavorites = false;
     EnableBtnAll = true;
     EnablePaginationTop = true;

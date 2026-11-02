@@ -150,7 +150,7 @@ function run(code, opts, requestDetailsCode) {
             EnableDetailsOnFavorite: opts.detailsOnFavorite !== false,
             EnableAutoMarkFavorite: !!opts.autoFavorite,
             EnableDesktopNotifikation: false,
-            VariationRequestDelay: 100,
+            VariationRequestDelay: 550,
             GotifyUrl: '',
             DesktopNotifikationKeywords: opts.keywords || []
         },
@@ -410,15 +410,15 @@ const SCENARIOS = [
         }
 
         // Zwischen den Varianten wird die Verzoegerung der Einstellung
-        // verwendet (100 ms +/- 50 Prozent). Die Pause zwischen den Produkten
+        // verwendet (550 ms +/- 50 Prozent). Die Pause zwischen den Produkten
         // der Queue bleibt bei 1500 ms.
         if (_scenario.expectVariationDelay) {
             const _delays = _new.log.filter((_l) => _l.startsWith('delay ')).map((_l) => parseInt(_l.slice(6), 10));
-            const _allInRange = _delays.length > 0 && _delays.every((_d) => _d >= 50 && _d <= 150);
+            const _allInRange = _delays.length > 0 && _delays.every((_d) => _d >= 275 && _d <= 825);
             if (!_allInRange) {
                 _allOk = false;
                 _totalDiffs++;
-                console.log(`  EXPECTED the delay between the variations to be between 50 and 150 ms: ${JSON.stringify(_delays)}`);
+                console.log(`  EXPECTED the delay between the variations to be between 275 and 825 ms: ${JSON.stringify(_delays)}`);
             }
         }
 

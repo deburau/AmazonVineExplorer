@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-02] - Version 0.15.0.6
+
+* The default of the setting `VariationRequestDelay` was raised from 100 to 550 milliseconds. The real delay is still random between 50 percent and 150 percent of the value, so it is between 275 and 825 milliseconds.
+
 ##### [2026-11-02] - Version 0.15.0.5
 
 * The setting `VariationRequestDelay` was moved down in the settings menu, to the other settings with a numeric value. At the top of the menu there are only the toggles.

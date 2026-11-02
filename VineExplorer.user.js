@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.5
+// @version      0.15.0.6
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -4444,7 +4444,7 @@ const PRODUCT_DETAILS_REQUEST_DELAY = 1500;
  * NOTE: Only the requests for the variations use this delay. The pause
  * between two products of the queue is PRODUCT_DETAILS_REQUEST_DELAY.
  */
-const VARIATION_REQUEST_DELAY = 100;
+const VARIATION_REQUEST_DELAY = 550;
 
 /**
  * Returns the delay between two requests for the details of the variations.

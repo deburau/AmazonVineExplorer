@@ -78,31 +78,31 @@ function delayWith(setting, random) {
  */
 const CASES = [
     {
-        label: 'Ohne Einstellung: der Default von 100 ms',
+        label: 'Ohne Einstellung: der Default von 550 ms',
         setting: undefined,
         random: 0.5,
-        expected: 100
+        expected: 550
     },
     {
         label: 'Ohne Einstellung: der untere Rand des Defaults',
         setting: undefined,
         random: 0,
-        expected: 50
+        expected: 275
     },
     {
         label: 'Ohne Einstellung: der obere Rand des Defaults',
         setting: undefined,
         random: 1,
-        expected: 150
+        expected: 825
     },
     {
-        label: 'Einstellung 100 ms: der untere Rand',
+        label: 'Einstellung 100 ms: der untere Rand (die Einstellung gilt, nicht der Default)',
         setting: 100,
         random: 0,
         expected: 50
     },
     {
-        label: 'Einstellung 100 ms: der obere Rand',
+        label: 'Einstellung 100 ms: der obere Rand (die Einstellung gilt, nicht der Default)',
         setting: 100,
         random: 1,
         expected: 150
@@ -129,13 +129,13 @@ const CASES = [
         label: 'Ungueltige Einstellung: der Default wird verwendet',
         setting: 'abc',
         random: 0.5,
-        expected: 100
+        expected: 550
     },
     {
         label: 'Negative Einstellung: der Default wird verwendet',
         setting: -5,
         random: 0.5,
-        expected: 100
+        expected: 550
     }
 ];
 
