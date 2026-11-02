@@ -183,7 +183,7 @@ Release erledigt und wurde geschlossen.
 ### Preisbedingungen in den Keywords (0.15.0.13, in Arbeit auf `dev-0.16.0`)
 
 * Ein Keyword kann **Preisbedingungen** enthalten:
-  `kanne [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]`
+  `toaster [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]`
 * Der Ablauf ist: **Keyword-Match → Preise abrufen → Preis-Match → Aktionen**.
   Eine Preisbedingung **ohne** Keyword matcht nie. Die Preise werden **erst
   nach einem erfolgreichen Keyword-Match** geladen – passt das Keyword nicht,

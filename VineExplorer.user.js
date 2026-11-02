@@ -4032,7 +4032,7 @@ function parsePriceCondition(text) {
  * Parses the keyword of the configuration.
  *
  * A keyword can contain price conditions, e.g.
- * "kanne [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]".
+ * "toaster [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]".
  * The text without the conditions is the keyword itself, the conditions are
  * checked against the prices of the product.
  *

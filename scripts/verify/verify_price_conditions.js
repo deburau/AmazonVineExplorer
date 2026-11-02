@@ -5,7 +5,7 @@
  * Prueft die Preisbedingungen der Keywords.
  *
  * Ein Keyword kann Preisbedingungen enthalten, z. B.
- * "kanne [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]".
+ * "toaster [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]".
  * Die Bedingungen werden nur zusammen mit dem Keyword geprueft.
  *
  * Geprueft werden:
@@ -118,8 +118,8 @@ const CONDITION_CASES = [
 const KEYWORD_CASES = [
     {
         label: 'Ein einfaches Keyword bleibt unveraendert',
-        input: 'kanne',
-        expected: { keyword: 'kanne', conditions: [], valid: true }
+        input: 'toaster',
+        expected: { keyword: 'toaster', conditions: [], valid: true }
     },
     {
         label: 'Ein regulaerer Ausdruck bleibt unveraendert',
@@ -128,14 +128,14 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Ein Keyword mit einer Preisbedingung',
-        input: 'kanne [data_estimated_tax_prices >= 10]',
-        expected: { keyword: 'kanne', conditions: [{ op: '>=', price: 10 }], valid: true }
+        input: 'toaster [data_estimated_tax_prices >= 10]',
+        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], valid: true }
     },
     {
         label: 'Ein Keyword mit zwei Preisbedingungen',
-        input: 'kanne [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]',
+        input: 'toaster [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]',
         expected: {
-            keyword: 'kanne',
+            keyword: 'toaster',
             conditions: [
                 { op: '>=', price: 10 },
                 { op: '<', price: 20 }
@@ -150,8 +150,8 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Eine kaputte Preisbedingung macht das Keyword ungueltig',
-        input: 'kanne [data_estimated_tax_prices > abc]',
-        expected: { keyword: 'kanne [data_estimated_tax_prices > abc]', conditions: [], valid: false }
+        input: 'toaster [data_estimated_tax_prices > abc]',
+        expected: { keyword: 'toaster [data_estimated_tax_prices > abc]', conditions: [], valid: false }
     }
 ];
 
