@@ -29,7 +29,9 @@ const NEW_NAMES = [
     'loadProductDetailsIfEnabled',
     'requestProductDetailsQueued',
     'processProductDetailsQueue',
-    'hasProductDetails'
+    'hasProductDetails',
+    // Die Funktion, die die Verzoegerung zwischen den Requests berechnet.
+    'getProductDetailsRequestDelay'
 ];
 
 const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
@@ -93,6 +95,7 @@ function run(code, opts) {
             NewItemsNotificationThreshold: 0,
             EnableDesktopNotifikation: !!opts.desktop,
             EnableAutoMarkFavorite: !!opts.autoFavorite,
+            DetailsRequestDelay: 100,
             GotifyUrl: opts.gotify ? 'https://gotify.example.com' : '',
             DesktopNotifikationKeywords: opts.keywords || [],
             DesktopNotifikationDelay: opts.notifDelay || 0

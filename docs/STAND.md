@@ -8,10 +8,10 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.2` |
+| Version im User-Script | `0.15.0.3` |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
-| Verifikationen | alle 8 erfolgreich (`npm run verify`) |
+| Verifikationen | alle 9 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
 
 ## Was in dieser Session gemacht wurde
@@ -141,6 +141,20 @@ Release erledigt und wurde geschlossen.
 * neuer Wächter `scripts/verify/verify_tax_prizes.js` (12 Fälle: Migration und
   Anzeige), `verify_details_on_favorite.js` prüft zusätzlich die gespeicherten
   Variantenpreise.
+
+### Beschleunigung der Preisdetails (0.15.0.3, in Arbeit auf `dev-0.16.0`)
+
+* Die Verzögerung zwischen den Requests der Preisdetails war fest **1500 ms**.
+  Bei einem Produkt mit 20 Varianten dauerte das Nachladen deshalb rund
+  **30 Sekunden** (19 × 1,5 s + Request-Zeit), das Tile wurde erst am Ende
+  aktualisiert.
+* Die Verzögerung ist jetzt die Einstellung **`DetailsRequestDelay`**
+  (Default **100 ms**). Der echte Abstand ist **zufällig zwischen 50 % und
+  150 %** des Werts, damit die Requests nicht in einem festen Rhythmus kommen.
+  20 Varianten brauchen damit ca. 3 s.
+* Risiko: Ein zu kleiner Wert kann zu einer temporären Sperre des Accounts
+  durch Amazon führen. Der Wert ist darum bis 10.000 ms einstellbar.
+* neuer Wächter `scripts/verify/verify_request_delay.js` (10 Fälle).
 
 ## Wichtige Dateien
 

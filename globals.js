@@ -465,6 +465,15 @@ SETTINGS_USERCONFIG_DEFINES.push({
         'If a product is marked as favorite, the price details are loaded from the Vine API. They are not loaded during the scan, because Amazon blocks the account if too many requests are made in a short time.'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'DetailsRequestDelay',
+    type: 'number',
+    min: 0,
+    max: 10000,
+    name: 'Delay between the requests of the product details (Milliseconds)',
+    description:
+        'The wait time between two requests to the Vine API, when the price details are loaded. The real delay is random between 50 percent and 150 percent of this value. A low value makes the loading of the prices faster, but Amazon can block the account temporarily, if too many requests are made in a short time.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
     key: 'EnableCleanupFavorites',
     type: 'bool',
     name: 'Also remove favorites when cleaning up products',
@@ -703,6 +712,7 @@ class SETTINGS_DEFAULT {
     EnableDesktopNotifikation = false;
     EnableAutoMarkFavorite = false;
     EnableDetailsOnFavorite = true;
+    DetailsRequestDelay = 100;
     EnableCleanupFavorites = false;
     EnableBtnAll = true;
     EnablePaginationTop = true;

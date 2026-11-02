@@ -25,7 +25,9 @@ const NEW_NAMES = [
     'processProductDetailsQueue',
     'hasProductDetails',
     // Die Funktion, die die Details aller Varianten eines Elternprodukts laedt.
-    'loadProductDetailsOfVariations'
+    'loadProductDetailsOfVariations',
+    // Die Funktion, die die Verzoegerung zwischen den Requests berechnet.
+    'getProductDetailsRequestDelay'
 ];
 
 const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
@@ -148,6 +150,7 @@ function run(code, opts, requestDetailsCode) {
             EnableDetailsOnFavorite: opts.detailsOnFavorite !== false,
             EnableAutoMarkFavorite: !!opts.autoFavorite,
             EnableDesktopNotifikation: false,
+            DetailsRequestDelay: 100,
             GotifyUrl: '',
             DesktopNotifikationKeywords: opts.keywords || []
         },

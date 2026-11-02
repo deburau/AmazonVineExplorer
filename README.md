@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-02] - Version 0.15.0.3
+
+* New: the delay between the requests of the price details is now a setting (`DetailsRequestDelay`). The default is 100 milliseconds, the real delay is random between 50 percent and 150 percent of the value, so that the requests are not sent in a fixed rhythm. The loading of the prices is much faster now: a product with 20 variations took about 30 seconds before, now it takes about 3 seconds. A low value can lead to a temporary block of the account by Amazon, so the value can be increased if that happens.
+
 ##### [2026-11-02] - Version 0.15.0.2
 
 * New: the prices of all variations of a product are stored in the database. The products have a new column `data_estimated_tax_prizes` with the list of the prices. The database has a new version (5), the existing products are migrated to it. The migration takes the prices from the variations of the products, so that they do not have to be requested from Amazon again.

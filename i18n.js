@@ -54,6 +54,7 @@ const I18N = {
             EnableDesktopNotifikation: 'Desktop-Benachrichtigungen aktivieren',
             EnableAutoMarkFavorite: 'Auto-Favorit markieren aktivieren',
             EnableDetailsOnFavorite: 'Preisdetails beim Favorisieren laden',
+            DetailsRequestDelay: 'Verzögerung zwischen den Detail-Requests (ms)',
             EnableCleanupFavorites: 'Favoriten bei Cleanup löschen',
             EnableBtnMarkAllAsSeen: 'Button Alles als gesehen markieren',
             ShowFirstSeen: 'Erst gesehen statt zuletzt gesehen',
@@ -115,6 +116,8 @@ const I18N = {
             EnableDesktopNotifikation: 'Benachrichtigt bei neuen Produkten.',
             EnableAutoMarkFavorite: 'Markiert neue Produkte bei Keyword-Treff als Favorit.',
             EnableDetailsOnFavorite: 'Lädt den Preis beim Favorisieren. Beim Scan nicht, sonst sperrt Amazon den Account.',
+            DetailsRequestDelay:
+                'Wartezeit zwischen zwei Requests an die Vine-API. Der echte Abstand liegt zufällig zwischen 50 % und 150 % des Werts. Kleine Werte laden die Preise schneller, aber Amazon kann den Account sperren.',
             EnableCleanupFavorites: 'Entfernt beim Cleanup auch die Favoriten.',
             EnableBtnMarkAllAsSeen: 'Zeigt den Button „Alle als gesehen markieren“ an.',
             ShowFirstSeen: 'Zeigt das Datum des ersten statt des letzten Auftretens.',
@@ -212,6 +215,7 @@ const I18N = {
             EnableDesktopNotifikation: 'Enable Desktop Notifications',
             EnableAutoMarkFavorite: 'Enable auto marking product as favorite',
             EnableDetailsOnFavorite: 'Load the price details when a product is marked as favorite',
+            DetailsRequestDelay: 'Delay between the detail requests (ms)',
             EnableCleanupFavorites: 'Also remove favorites when cleaning up products',
             EnableBtnMarkAllAsSeen: 'Enable Button Mark all as seen',
             ShowFirstSeen: 'Show first seen instead of last seen',
@@ -273,6 +277,8 @@ const I18N = {
             EnableDesktopNotifikation: 'Notifies about new products.',
             EnableAutoMarkFavorite: 'Marks new products as favorite on a keyword match.',
             EnableDetailsOnFavorite: 'Loads the price when favoriting. Not during the scan, Amazon blocks the account.',
+            DetailsRequestDelay:
+                'Wait time between two requests to the Vine API. The real delay is random between 50 percent and 150 percent of the value. Low values load the prices faster, but Amazon can block the account.',
             EnableCleanupFavorites: 'Removes the favorites during the cleanup as well.',
             EnableBtnMarkAllAsSeen: 'Shows the "Mark all as seen" button.',
             ShowFirstSeen: 'Shows the date of the first appearance instead of the last one.',
