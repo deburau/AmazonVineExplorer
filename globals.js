@@ -61,7 +61,7 @@ const DATABASE_NAME = 'VineVoiceExplorer';
 const DATABASE_OBJECT_STORE_NAME = `${DATABASE_NAME}_Objects`;
 // NOTE: Every change of the data model of the products needs a new version of
 // the database and a migration in the upgrade of the database (class_db_handler.js).
-const DATABASE_VERSION = 7;
+const DATABASE_VERSION = 5;
 
 // Make some things accessible from console
 unsafeWindow.ave = {};

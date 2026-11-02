@@ -43,7 +43,7 @@ const mainSrc = readSource('VineExplorer.user.js');
 // aus den echten Dateien geschnitten, damit der Test die echte Implementierung
 // prueft und keinen Nachbau.
 const CODE = [
-    extractBody(dbSrc, 'migrateProductToVersion7'),
+    extractBody(dbSrc, 'migrateProductToVersion5'),
     extractBody(mainSrc, 'getTaxPrices'),
     extractBody(mainSrc, 'formatTaxPrize')
 ].join('\n\n');
@@ -68,7 +68,7 @@ sandbox.globalThis = sandbox;
 const ctx = vm.createContext(sandbox);
 vm.runInContext(CODE, ctx, { filename: 'tax_prizes.js' });
 
-const migrateProductToVersion7 = vm.runInContext('migrateProductToVersion7', ctx);
+const migrateProductToVersion5 = vm.runInContext('migrateProductToVersion5', ctx);
 const getTaxPrices = vm.runInContext('getTaxPrices', ctx);
 const formatTaxPrize = vm.runInContext('formatTaxPrize', ctx);
 
@@ -129,12 +129,6 @@ const MIGRATION_CASES = [
         label: 'Ein Produkt ohne Varianten in der Datenbank bleibt gueltig',
         product: { id: 'p7', data_asin: 'ASIN7', data_childs: [] },
         expected: []
-    },
-    {
-        // Die Liste der Version 6 hieß noch data_estimated_tax_prizes.
-        label: 'Die Preise der Version 6 werden uebernommen',
-        product: { id: 'p8', data_asin: 'ASIN8', data_estimated_tax_prizes: [12.5, 25] },
-        expected: [12.5, 25]
     }
 ];
 
@@ -205,7 +199,7 @@ console.log('='.repeat(70));
 let _errors = 0;
 
 for (const _case of MIGRATION_CASES) {
-    const _result = migrateProductToVersion7(JSON.parse(JSON.stringify(_case.product)));
+    const _result = migrateProductToVersion5(JSON.parse(JSON.stringify(_case.product)));
     const _actual = Array.isArray(_result.data_estimated_tax_prices) ? _result.data_estimated_tax_prices : [];
 
     if (JSON.stringify(_actual) === JSON.stringify(_case.expected)) {

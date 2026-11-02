@@ -129,7 +129,7 @@ Release erledigt und wurde geschlossen.
   der Preise **aller** Varianten. Produkte ohne Varianten haben dort ein Array
   mit einem Element. Das Feld `data_estimated_tax_prize` wird **nicht mehr
   geschrieben** (es bleibt bis zu einem späteren Release in der Datenbank).
-* Die **Datenbank hat die Version 7**. Der Upgrade migriert die vorhandenen
+* Die **Datenbank hat die Version 5**. Der Upgrade migriert die vorhandenen
   Produkte: der Preis des Produkts wird aus `data_estimated_tax_prize`
   übernommen, die Preise der Varianten aus den Varianten (`data_childs`). Die
   Produkte müssen also **nicht** neu bei Amazon angefragt werden.
