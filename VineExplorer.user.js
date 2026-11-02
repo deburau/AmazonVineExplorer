@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.12
+// @version      0.15.0.13
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -46,7 +46,7 @@
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, formatTaxPrize, getContrastColor,
-   getPageinationData, getTaxPrizes, getTilesFromURL,
+   getPageinationData, getTaxPrices, getTilesFromURL,
    getUrlParameter, getVariationRequestDelay, gotifyNotification,
    loadProductDetails, matchPriceConditions, normalizePriceInput, parseKeywordConfig,
    parsePriceCondition,
@@ -1193,16 +1193,16 @@ ${newUrl}`;
 /**
  * Returns the prices of a product, that are shown on the tile.
  *
- * The prices are in the list data_estimated_tax_prizes. A product with
+ * The prices are in the list data_estimated_tax_prices. A product with
  * variations has the prices of all its variations, a product without
  * variations has a list with one price.
  *
  * @param {Product} prod The product of the tile
  * @returns {number[]} The prices of the product, empty if no price is known
  */
-function getTaxPrizes(prod) {
-    if (!prod || !Array.isArray(prod.data_estimated_tax_prizes)) return [];
-    return prod.data_estimated_tax_prizes.filter((_prize) => Number.isFinite(_prize));
+function getTaxPrices(prod) {
+    if (!prod || !Array.isArray(prod.data_estimated_tax_prices)) return [];
+    return prod.data_estimated_tax_prices.filter((_prize) => Number.isFinite(_prize));
 }
 
 /**
@@ -1216,7 +1216,7 @@ function getTaxPrizes(prod) {
  * @returns {string} The formatted prize, or "--.--" if it is not known
  */
 function formatTaxPrize(prod) {
-    const _prizes = getTaxPrizes(prod);
+    const _prizes = getTaxPrices(prod);
     if (_prizes.length === 0) return '--.--';
 
     let _currencySymbol = '';
@@ -4012,7 +4012,7 @@ function normalizePriceInput(value) {
  * Parses a price condition of the keyword configuration.
  *
  * The format of a condition is
- * "[data_estimated_tax_prizes <operator> <price>]". The operator can be
+ * "[data_estimated_tax_prices <operator> <price>]". The operator can be
  * "=" or "==" (one of the prices is equal), "!=" or "<>" (none of the prices
  * is equal), "<" or "<=" (the lowest price is lower), ">" or ">=" (the highest
  * price is higher).
@@ -4021,7 +4021,7 @@ function normalizePriceInput(value) {
  * @returns {object|null} The condition, or null if it is not valid
  */
 function parsePriceCondition(text) {
-    const _match = /^\s*data_estimated_tax_prizes\s*(<=|>=|==|!=|<>|=|<|>)\s*(.+?)\s*$/.exec(String(text ?? ''));
+    const _match = /^\s*data_estimated_tax_prices\s*(<=|>=|==|!=|<>|=|<|>)\s*(.+?)\s*$/.exec(String(text ?? ''));
     if (!_match) return null;
     const _price = normalizePriceInput(_match[2]);
     if (_price === null) return null;
@@ -4032,7 +4032,7 @@ function parsePriceCondition(text) {
  * Parses the keyword of the configuration.
  *
  * A keyword can contain price conditions, e.g.
- * "kanne [data_estimated_tax_prizes >= 10] [data_estimated_tax_prizes < 20]".
+ * "kanne [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]".
  * The text without the conditions is the keyword itself, the conditions are
  * checked against the prices of the product.
  *
@@ -4045,7 +4045,7 @@ function parseKeywordConfig(config) {
 
     // NOTE: Only a keyword with a price condition is parsed. The keywords can be
     // regular expressions and they can contain brackets themselves.
-    if (!_text.toLowerCase().includes('data_estimated_tax_prizes')) return _result;
+    if (!_text.toLowerCase().includes('data_estimated_tax_prices')) return _result;
 
     const _conditions = [];
     _result.keyword = _text
@@ -4057,7 +4057,7 @@ function parseKeywordConfig(config) {
             }
             // The bracket does not contain a valid price condition. If it names
             // the field, the keyword is broken and it does not match.
-            if (_content.toLowerCase().includes('data_estimated_tax_prizes')) {
+            if (_content.toLowerCase().includes('data_estimated_tax_prices')) {
                 _result.valid = false;
                 console.warn(`The price condition "${_content}" is not valid.`);
             }
@@ -4176,7 +4176,7 @@ async function checkKeywordsForProduct(_prod, _configKeyWords) {
         // without price conditions are loaded.
         if (_entry.conditions.length > 0) {
             await loadProductDetails(_prod);
-            const _prices = getTaxPrizes(_prod);
+            const _prices = getTaxPrices(_prod);
             if (!matchPriceConditions(_entry.conditions, _prices)) {
                 if (SETTINGS.DebugLevel > 1)
                     console.log(
@@ -4668,7 +4668,7 @@ const productDetailsQueue = [];
  *
  * A product with a parent ASIN has no price of its own, the Vine API returns
  * the variations for it. The prices of all variations are stored in the list
- * data_estimated_tax_prizes, so that the range of the prices can be shown.
+ * data_estimated_tax_prices, so that the range of the prices can be shown.
  *
  * NOTE: The requests are made one after the other and not in parallel, because
  * Amazon blocks the account temporarily if too many requests are made in a short
@@ -4726,7 +4726,7 @@ async function loadProductDetailsOfVariations(prod) {
     // the prices can be shown on the tile. If no price could be loaded, the
     // old list is kept, because it still holds the prices of the last load.
     if (_prizes.length > 0) {
-        prod.data_estimated_tax_prizes = _prizes;
+        prod.data_estimated_tax_prices = _prizes;
         if (_currency) prod.data_tax_currency = _currency;
     }
 }
@@ -4793,7 +4793,7 @@ function hasProductDetails(prod) {
         return prod.data_childs.every((_child) => !_child || !_child.asin || _child.taxValue !== undefined);
     }
     // The price of a product without variations is in the list of the prices.
-    return getTaxPrizes(prod).length > 0;
+    return getTaxPrices(prod).length > 0;
 }
 
 /**
@@ -4886,7 +4886,7 @@ async function requestProductDetails(prod) {
         // The price is stored in the list of the prices, so that the prices of
         // the variations and the price of a product without variations are
         // handled the same way.
-        if (Number.isFinite(data.taxValue)) prod.data_estimated_tax_prizes = [data.taxValue];
+        if (Number.isFinite(data.taxValue)) prod.data_estimated_tax_prices = [data.taxValue];
         prod.data_limited_quantity = data.limitedQuantity;
         return prod;
     }

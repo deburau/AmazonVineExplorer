@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.12` |
+| Version im User-Script | `0.15.0.13` |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -123,13 +123,13 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 Das Release ist veröffentlicht (Merge-Commit `75bb04b`). Issue #68 ist mit dem
 Release erledigt und wurde geschlossen.
 
-### Feature: Preise der Varianten (0.15.0.12, in Arbeit auf `dev-0.16.0`)
+### Feature: Preise der Varianten (0.15.0.13, in Arbeit auf `dev-0.16.0`)
 
-* Die Produkte haben eine neue Spalte `data_estimated_tax_prizes` mit der Liste
+* Die Produkte haben eine neue Spalte `data_estimated_tax_prices` mit der Liste
   der Preise **aller** Varianten. Produkte ohne Varianten haben dort ein Array
   mit einem Element. Das Feld `data_estimated_tax_prize` wird **nicht mehr
   geschrieben** (es bleibt bis zu einem späteren Release in der Datenbank).
-* Die **Datenbank hat die Version 6**. Der Upgrade migriert die vorhandenen
+* Die **Datenbank hat die Version 7**. Der Upgrade migriert die vorhandenen
   Produkte: der Preis des Produkts wird aus `data_estimated_tax_prize`
   übernommen, die Preise der Varianten aus den Varianten (`data_childs`). Die
   Produkte müssen also **nicht** neu bei Amazon angefragt werden.
@@ -140,12 +140,12 @@ Release erledigt und wurde geschlossen.
 * Die **Tiles** zeigen den Bereich vom kleinsten bis zum größten Preis
   („12,34 - 25,00 €"), die Währung steht einmal am Ende. Ohne Variantenpreise
   bleibt es wie bisher (ein Preis bzw. „--.--"). Die Preise werden **nur** aus
-  `data_estimated_tax_prizes` gelesen.
+  `data_estimated_tax_prices` gelesen.
 * neuer Wächter `scripts/verify/verify_tax_prizes.js` (12 Fälle: Migration und
   Anzeige), `verify_details_on_favorite.js` prüft zusätzlich die gespeicherten
   Variantenpreise.
 
-### Beschleunigung der Preisdetails (0.15.0.12, in Arbeit auf `dev-0.16.0`)
+### Beschleunigung der Preisdetails (0.15.0.13, in Arbeit auf `dev-0.16.0`)
 
 * Die Verzögerung zwischen den Requests der Preisdetails war fest **1500 ms**.
   Bei einem Produkt mit 20 Varianten dauerte das Nachladen deshalb rund
@@ -164,7 +164,7 @@ Release erledigt und wurde geschlossen.
   durch Amazon führen. Der Wert ist darum bis 10.000 ms einstellbar.
 * neuer Wächter `scripts/verify/verify_request_delay.js` (11 Fälle).
 
-### Reihenfolge beim Keyword-Treffer (0.15.0.12, in Arbeit auf `dev-0.16.0`)
+### Reihenfolge beim Keyword-Treffer (0.15.0.13, in Arbeit auf `dev-0.16.0`)
 
 * Die Benachrichtigung bei einem Keyword-Treffer wird jetzt **nach** dem Laden
   der Preise gesendet: **Produkt matcht Keyword → Preise abfragen → Desktop-
@@ -178,10 +178,10 @@ Release erledigt und wurde geschlossen.
 * Das Produkt wird **vor** dem Laden der Preise gespeichert (`isNotified = 1`),
   damit es bei einem zweiten Suchlauf nicht doppelt benachrichtigt wird.
 
-### Preisbedingungen in den Keywords (0.15.0.12, in Arbeit auf `dev-0.16.0`)
+### Preisbedingungen in den Keywords (0.15.0.13, in Arbeit auf `dev-0.16.0`)
 
 * Ein Keyword kann **Preisbedingungen** enthalten:
-  `kanne [data_estimated_tax_prizes >= 10] [data_estimated_tax_prizes < 20]`
+  `kanne [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]`
 * Der Ablauf ist: **Keyword-Match → Preise abrufen → Preis-Match → Aktionen**.
   Eine Preisbedingung **ohne** Keyword matcht nie. Die Preise werden **erst
   nach einem erfolgreichen Keyword-Match** geladen – passt das Keyword nicht,

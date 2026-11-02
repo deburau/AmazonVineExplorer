@@ -25,7 +25,7 @@ const NEW_NAMES = [
     'processProductDetailsQueue',
     'hasProductDetails',
     // Die Funktion, die die Preise des Produkts liefert.
-    'getTaxPrizes',
+    'getTaxPrices',
     // Die Funktionen fuer die Preisbedingungen der Keywords.
     'normalizePriceInput',
     'parsePriceCondition',
@@ -96,7 +96,7 @@ async function run(code, opts, requestDetailsCode) {
         },
         update(entry) {
             log.push(
-                `db.update ${entry.id} isNotified=${entry.isNotified} isFav=${entry.isFav} prices=${JSON.stringify(entry.data_estimated_tax_prizes)}`
+                `db.update ${entry.id} isNotified=${entry.isNotified} isFav=${entry.isFav} prices=${JSON.stringify(entry.data_estimated_tax_prices)}`
             );
             const _idx = _entries.findIndex((e) => e.id === entry.id);
             if (_idx >= 0) _entries[_idx] = Object.assign({}, entry);
@@ -175,13 +175,13 @@ async function run(code, opts, requestDetailsCode) {
                     const _childRes = await _apiCall(`/vine/api/recommendations/${prod.id}/item/${prod.data_childs[0].asin}`);
                     const _childData = await _childRes.json();
                     prod.data_tax_currency = _childData.result.taxCurrency;
-                    prod.data_estimated_tax_prizes = [_childData.result.taxValue];
+                    prod.data_estimated_tax_prices = [_childData.result.taxValue];
                 }
                 return prod;
             }
             const _res = await _apiCall(`/vine/api/recommendations/${prod.id}/item/${prod.data_asin}`);
             const _data = await _res.json();
-            prod.data_estimated_tax_prizes = [_data.result.taxValue];
+            prod.data_estimated_tax_prices = [_data.result.taxValue];
             prod.data_tax_currency = _data.result.taxCurrency;
             prod.data_feature_bullets = _data.result.featureBullets;
             return prod;
@@ -272,7 +272,7 @@ const SCENARIOS = [
                     isFav: 1,
                     isNotified: 0,
                     data_asin: 'ASIN1',
-                    data_estimated_tax_prizes: [9.9]
+                    data_estimated_tax_prices: [9.9]
                 }
             ],
             product: {
@@ -282,7 +282,7 @@ const SCENARIOS = [
                 isFav: 1,
                 isNotified: 0,
                 data_asin: 'ASIN1',
-                data_estimated_tax_prizes: [9.9]
+                data_estimated_tax_prices: [9.9]
             }
         }
     },
@@ -316,7 +316,7 @@ const SCENARIOS = [
             mode: 'keyword',
             autoFavorite: true,
             desktop: true,
-            keywords: ['wichtig [data_estimated_tax_prizes >= 10]'],
+            keywords: ['wichtig [data_estimated_tax_prices >= 10]'],
             entries: [],
             product: {
                 id: 'p1',
@@ -337,7 +337,7 @@ const SCENARIOS = [
             mode: 'keyword',
             autoFavorite: true,
             desktop: true,
-            keywords: ['wichtig [data_estimated_tax_prizes >= 10]'],
+            keywords: ['wichtig [data_estimated_tax_prices >= 10]'],
             entries: [],
             product: {
                 id: 'p1',
@@ -359,7 +359,7 @@ const SCENARIOS = [
             mode: 'keyword',
             autoFavorite: true,
             desktop: true,
-            keywords: ['wichtig [data_estimated_tax_prizes >= 20]'],
+            keywords: ['wichtig [data_estimated_tax_prices >= 20]'],
             entries: [],
             product: {
                 id: 'p1',
@@ -382,7 +382,7 @@ const SCENARIOS = [
             autoFavorite: true,
             desktop: true,
             detailsOnFavorite: false,
-            keywords: ['wichtig [data_estimated_tax_prizes >= 10]'],
+            keywords: ['wichtig [data_estimated_tax_prices >= 10]'],
             entries: [],
             product: {
                 id: 'p1',

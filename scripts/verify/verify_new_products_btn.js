@@ -31,7 +31,7 @@ const NEW_NAMES = [
     'processProductDetailsQueue',
     'hasProductDetails',
     // Die Funktion, die die Preise des Produkts liefert.
-    'getTaxPrizes',
+    'getTaxPrices',
     // Die Funktionen fuer die Preisbedingungen der Keywords.
     'normalizePriceInput',
     'parsePriceCondition',
@@ -120,7 +120,7 @@ function run(code, opts) {
         fixProductImageUrl: (u) => u,
         requestProductDetails: async (prod) => {
             log.push(`requestProductDetails ${prod.id}`);
-            prod.data_estimated_tax_prizes = [12.5];
+            prod.data_estimated_tax_prices = [12.5];
             return prod;
         },
         delay: (ms) => new Promise((r) => setTimeout(r, 0)),

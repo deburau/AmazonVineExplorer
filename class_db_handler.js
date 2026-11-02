@@ -1,4 +1,4 @@
-/* exported DB_HANDLER, migrateProductToVersion6 */
+/* exported DB_HANDLER, migrateProductToVersion7 */
 console.log('loaded db_handler.js');
 class DB_HANDLER {
     #version;
@@ -106,10 +106,10 @@ class DB_HANDLER {
                     _store.createIndex('isFav', 'isFav', { unique: false });
                 }
 
-                // The products are migrated to the version 6 of the database. They
+                // The products are migrated to the version 7 of the database. They
                 // get the list with the prices of the product and of its
                 // variations.
-                const _needsMigration = event.oldVersion < 6;
+                const _needsMigration = event.oldVersion < 7;
 
                 // The index of the ASIN can only be unique, if there are no
                 // duplicated ASINs in the database.
@@ -150,7 +150,7 @@ class DB_HANDLER {
             const _cursor = event.target.result;
             if (_cursor) {
                 if (checkDuplicates && _cursor.value && _cursor.value.data_asin) _asins.push(_cursor.value.data_asin);
-                if (migrate) _cursor.update(migrateProductToVersion6(_cursor.value));
+                if (migrate) _cursor.update(migrateProductToVersion7(_cursor.value));
                 _cursor.continue();
             } else if (checkDuplicates) {
                 const _uniqueAsins = new Set(_asins);
@@ -501,7 +501,7 @@ class DB_HANDLER {
                 for (const data of datas) {
                     // NOTE: The products of an old backup do not have the list of
                     // the prices, so they are migrated too.
-                    _addRequest = _store.add(migrateProductToVersion6(data));
+                    _addRequest = _store.add(migrateProductToVersion7(data));
                     _addRequest.onerror = (event) => {
                         reject(`DB_HANDLER.import().add(): ${event.target.error.name}`);
                     };
@@ -548,23 +548,29 @@ class DB_HANDLER {
 }
 
 /**
- * Migrates a product of the database to the version 6.
+ * Migrates a product of the database to the version 7.
  *
- * The version 6 of the database has the list with the prices of a product
- * (data_estimated_tax_prizes). The price of the product is in
- * data_estimated_tax_prize, the prices of the variations are in the variations
- * of the product. Both are taken over, so that the prices do not have to be
- * requested from Amazon again after the migration.
+ * The version 7 of the database has the list with the prices of a product
+ * (data_estimated_tax_prices). In the version 6 the list was called
+ * data_estimated_tax_prizes, so the list has to be renamed. The price of the
+ * product is in data_estimated_tax_prize, the prices of the variations are in
+ * the variations of the product. Both are taken over, so that the prices do
+ * not have to be requested from Amazon again after the migration.
  *
  * @param {object} prod The product from the database
  * @returns {object} The product with the list of the prices
  */
-function migrateProductToVersion6(prod) {
+function migrateProductToVersion7(prod) {
     if (!prod || typeof prod != 'object') return prod;
 
-    const _prices = Array.isArray(prod.data_estimated_tax_prizes)
-        ? prod.data_estimated_tax_prizes.filter((_prize) => Number.isFinite(_prize))
-        : [];
+    // NOTE: The list of the version 6 is still read, so that the prices of the
+    // products of that version are not lost.
+    const _storedPrices = Array.isArray(prod.data_estimated_tax_prices)
+        ? prod.data_estimated_tax_prices
+        : Array.isArray(prod.data_estimated_tax_prizes)
+          ? prod.data_estimated_tax_prizes
+          : [];
+    const _prices = _storedPrices.filter((_prize) => Number.isFinite(_prize));
 
     // The price of the product. It is the only price that is known for the
     // products without variations.
@@ -580,6 +586,6 @@ function migrateProductToVersion6(prod) {
         }
     }
 
-    prod.data_estimated_tax_prizes = _prices;
+    prod.data_estimated_tax_prices = _prices;
     return prod;
 }

@@ -47,7 +47,7 @@ const globalsFile = [
 const i18nFile = ['I18N', 'detectLanguage', 'lookupTranslation', 't'];
 
 /** Names declared in class_db_handler.js */
-const dbHandlerFile = ['DB_HANDLER', 'migrateProductToVersion6'];
+const dbHandlerFile = ['DB_HANDLER', 'migrateProductToVersion7'];
 
 /** Names declared in class_product.js */
 const productFile = ['Product'];
@@ -113,7 +113,7 @@ const mainFile = [
     'fixProductImageUrl',
     'formatDuration',
     'formatTaxPrize',
-    'getTaxPrizes',
+    'getTaxPrices',
     'handleFastScanFinished',
     'getContrastColor',
     'getPageinationData',

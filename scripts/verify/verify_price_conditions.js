@@ -5,7 +5,7 @@
  * Prueft die Preisbedingungen der Keywords.
  *
  * Ein Keyword kann Preisbedingungen enthalten, z. B.
- * "kanne [data_estimated_tax_prizes >= 10] [data_estimated_tax_prizes < 20]".
+ * "kanne [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]".
  * Die Bedingungen werden nur zusammen mit dem Keyword geprueft.
  *
  * Geprueft werden:
@@ -94,22 +94,22 @@ const PRICE_CASES = [
  * Die erwarteten Ergebnisse des Parsens einer Preisbedingung.
  */
 const CONDITION_CASES = [
-    { label: 'Groesser als', input: 'data_estimated_tax_prizes > 10', expected: { op: '>', price: 10 } },
-    { label: 'Groesser oder gleich', input: 'data_estimated_tax_prizes >= 10', expected: { op: '>=', price: 10 } },
-    { label: 'Kleiner als', input: 'data_estimated_tax_prizes < 10', expected: { op: '<', price: 10 } },
-    { label: 'Kleiner oder gleich', input: 'data_estimated_tax_prizes <= 10', expected: { op: '<=', price: 10 } },
-    { label: 'Gleich', input: 'data_estimated_tax_prizes = 10', expected: { op: '=', price: 10 } },
-    { label: 'Gleich (zwei Zeichen)', input: 'data_estimated_tax_prizes == 10', expected: { op: '==', price: 10 } },
-    { label: 'Ungleich', input: 'data_estimated_tax_prizes != 10', expected: { op: '!=', price: 10 } },
-    { label: 'Ungleich (zwei Zeichen)', input: 'data_estimated_tax_prizes <> 10', expected: { op: '<>', price: 10 } },
+    { label: 'Groesser als', input: 'data_estimated_tax_prices > 10', expected: { op: '>', price: 10 } },
+    { label: 'Groesser oder gleich', input: 'data_estimated_tax_prices >= 10', expected: { op: '>=', price: 10 } },
+    { label: 'Kleiner als', input: 'data_estimated_tax_prices < 10', expected: { op: '<', price: 10 } },
+    { label: 'Kleiner oder gleich', input: 'data_estimated_tax_prices <= 10', expected: { op: '<=', price: 10 } },
+    { label: 'Gleich', input: 'data_estimated_tax_prices = 10', expected: { op: '=', price: 10 } },
+    { label: 'Gleich (zwei Zeichen)', input: 'data_estimated_tax_prices == 10', expected: { op: '==', price: 10 } },
+    { label: 'Ungleich', input: 'data_estimated_tax_prices != 10', expected: { op: '!=', price: 10 } },
+    { label: 'Ungleich (zwei Zeichen)', input: 'data_estimated_tax_prices <> 10', expected: { op: '<>', price: 10 } },
     {
         label: 'Preis mit Komma und Leerzeichen',
-        input: 'data_estimated_tax_prizes >= 10,50',
+        input: 'data_estimated_tax_prices >= 10,50',
         expected: { op: '>=', price: 10.5 }
     },
     { label: 'Ein unbekanntes Feld', input: 'data_estimated_tax_prize > 10', expected: null },
-    { label: 'Ein unbekannter Operator', input: 'data_estimated_tax_prizes ~ 10', expected: null },
-    { label: 'Ein ungueltiger Preis', input: 'data_estimated_tax_prizes > abc', expected: null }
+    { label: 'Ein unbekannter Operator', input: 'data_estimated_tax_prices ~ 10', expected: null },
+    { label: 'Ein ungueltiger Preis', input: 'data_estimated_tax_prices > abc', expected: null }
 ];
 
 /**
@@ -128,12 +128,12 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Ein Keyword mit einer Preisbedingung',
-        input: 'kanne [data_estimated_tax_prizes >= 10]',
+        input: 'kanne [data_estimated_tax_prices >= 10]',
         expected: { keyword: 'kanne', conditions: [{ op: '>=', price: 10 }], valid: true }
     },
     {
         label: 'Ein Keyword mit zwei Preisbedingungen',
-        input: 'kanne [data_estimated_tax_prizes >= 10] [data_estimated_tax_prizes < 20]',
+        input: 'kanne [data_estimated_tax_prices >= 10] [data_estimated_tax_prices < 20]',
         expected: {
             keyword: 'kanne',
             conditions: [
@@ -145,13 +145,13 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Eine Preisbedingung ohne Keyword',
-        input: '[data_estimated_tax_prizes >= 10]',
+        input: '[data_estimated_tax_prices >= 10]',
         expected: { keyword: '', conditions: [{ op: '>=', price: 10 }], valid: true }
     },
     {
         label: 'Eine kaputte Preisbedingung macht das Keyword ungueltig',
-        input: 'kanne [data_estimated_tax_prizes > abc]',
-        expected: { keyword: 'kanne [data_estimated_tax_prizes > abc]', conditions: [], valid: false }
+        input: 'kanne [data_estimated_tax_prices > abc]',
+        expected: { keyword: 'kanne [data_estimated_tax_prices > abc]', conditions: [], valid: false }
     }
 ];
 

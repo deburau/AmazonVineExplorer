@@ -13,7 +13,7 @@
  * Geprueft werden:
  *   - die Migration der Produkte auf die Version 5 der Datenbank
  *     (migrateProductToVersion5() in class_db_handler.js)
- *   - die Preise, die fuer die Anzeige benutzt werden (getTaxPrizes())
+ *   - die Preise, die fuer die Anzeige benutzt werden (getTaxPrices())
  *   - die Formatierung der Preise (formatTaxPrize())
  *
  * Usage: node scripts/verify/verify_tax_prizes.js
@@ -43,8 +43,8 @@ const mainSrc = readSource('VineExplorer.user.js');
 // aus den echten Dateien geschnitten, damit der Test die echte Implementierung
 // prueft und keinen Nachbau.
 const CODE = [
-    extractBody(dbSrc, 'migrateProductToVersion6'),
-    extractBody(mainSrc, 'getTaxPrizes'),
+    extractBody(dbSrc, 'migrateProductToVersion7'),
+    extractBody(mainSrc, 'getTaxPrices'),
     extractBody(mainSrc, 'formatTaxPrize')
 ].join('\n\n');
 
@@ -68,8 +68,8 @@ sandbox.globalThis = sandbox;
 const ctx = vm.createContext(sandbox);
 vm.runInContext(CODE, ctx, { filename: 'tax_prizes.js' });
 
-const migrateProductToVersion6 = vm.runInContext('migrateProductToVersion6', ctx);
-const getTaxPrizes = vm.runInContext('getTaxPrizes', ctx);
+const migrateProductToVersion7 = vm.runInContext('migrateProductToVersion7', ctx);
+const getTaxPrices = vm.runInContext('getTaxPrices', ctx);
 const formatTaxPrize = vm.runInContext('formatTaxPrize', ctx);
 
 /**
@@ -122,13 +122,19 @@ const MIGRATION_CASES = [
     },
     {
         label: 'Ein bereits migriertes Produkt bleibt unveraendert',
-        product: { id: 'p6', data_asin: 'ASIN6', data_estimated_tax_prizes: [7.7] },
+        product: { id: 'p6', data_asin: 'ASIN6', data_estimated_tax_prices: [7.7] },
         expected: [7.7]
     },
     {
         label: 'Ein Produkt ohne Varianten in der Datenbank bleibt gueltig',
         product: { id: 'p7', data_asin: 'ASIN7', data_childs: [] },
         expected: []
+    },
+    {
+        // Die Liste der Version 6 hieß noch data_estimated_tax_prizes.
+        label: 'Die Preise der Version 6 werden uebernommen',
+        product: { id: 'p8', data_asin: 'ASIN8', data_estimated_tax_prizes: [12.5, 25] },
+        expected: [12.5, 25]
     }
 ];
 
@@ -145,14 +151,14 @@ const DISPLAY_CASES = [
     },
     {
         label: 'Die Liste mit einem Preis: der Preis wird gezeigt',
-        product: { data_estimated_tax_prizes: [12.5], data_tax_currency: 'EUR' },
+        product: { data_estimated_tax_prices: [12.5], data_tax_currency: 'EUR' },
         expectedPrizes: [12.5],
         expected: '12.50 €'
     },
     {
         label: 'Die Preise der Varianten sind bekannt: der Bereich wird gezeigt',
         product: {
-            data_estimated_tax_prizes: [25, 12.5],
+            data_estimated_tax_prices: [25, 12.5],
             data_tax_currency: 'EUR'
         },
         expectedPrizes: [25, 12.5],
@@ -161,7 +167,7 @@ const DISPLAY_CASES = [
     {
         label: 'Alle Varianten haben den gleichen Preis: der Bereich wird immer gezeigt',
         product: {
-            data_estimated_tax_prizes: [12.5, 12.5],
+            data_estimated_tax_prices: [12.5, 12.5],
             data_tax_currency: 'EUR'
         },
         expectedPrizes: [12.5, 12.5],
@@ -171,7 +177,7 @@ const DISPLAY_CASES = [
         label: 'Eine andere Waehrung: es wird kein Waehrungszeichen gezeigt',
         // NOTE: Der Leerzeichen am Ende ist das bisherige Verhalten, es ist im
         // Text nicht zu sehen.
-        product: { data_estimated_tax_prizes: [12.5], data_tax_currency: 'USD' },
+        product: { data_estimated_tax_prices: [12.5], data_tax_currency: 'USD' },
         expectedPrizes: [12.5],
         expected: '12.50 '
     },
@@ -185,7 +191,7 @@ const DISPLAY_CASES = [
         label: 'Eine leere Liste: es wird kein Preis angezeigt',
         product: {
             data_estimated_tax_prize: 12.5,
-            data_estimated_tax_prizes: [],
+            data_estimated_tax_prices: [],
             data_tax_currency: 'EUR'
         },
         expectedPrizes: [],
@@ -199,8 +205,8 @@ console.log('='.repeat(70));
 let _errors = 0;
 
 for (const _case of MIGRATION_CASES) {
-    const _result = migrateProductToVersion6(JSON.parse(JSON.stringify(_case.product)));
-    const _actual = Array.isArray(_result.data_estimated_tax_prizes) ? _result.data_estimated_tax_prizes : [];
+    const _result = migrateProductToVersion7(JSON.parse(JSON.stringify(_case.product)));
+    const _actual = Array.isArray(_result.data_estimated_tax_prices) ? _result.data_estimated_tax_prices : [];
 
     if (JSON.stringify(_actual) === JSON.stringify(_case.expected)) {
         console.log(`  OK   ${_case.label}`);
@@ -217,7 +223,7 @@ console.log('='.repeat(70));
 
 for (const _case of DISPLAY_CASES) {
     const _actual = formatTaxPrize(_case.product);
-    const _actualPrizes = getTaxPrizes(_case.product);
+    const _actualPrizes = getTaxPrices(_case.product);
 
     const _problems = [];
     if (_actual !== _case.expected) _problems.push(`erwartet: "${_case.expected}"  bekommen: "${_actual}"`);

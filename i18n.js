@@ -120,7 +120,7 @@ const I18N = {
             EnableBtnMarkAllAsSeen: 'Zeigt den Button „Alle als gesehen markieren“ an.',
             ShowFirstSeen: 'Zeigt das Datum des ersten statt des letzten Auftretens.',
             DesktopNotifikationKeywords:
-                'Keywords für Benachrichtigung und Auto-Favorit. Preisbedingungen wie [data_estimated_tax_prizes >= 10] gelten nur zusammen mit dem Keyword. Dafür werden die Preise geladen.',
+                'Keywords für Benachrichtigung und Auto-Favorit. Preisbedingungen wie [data_estimated_tax_prices >= 10] gelten nur zusammen mit dem Keyword. Dafür werden die Preise geladen.',
             GotifyUrl: 'Adresse des Gotify-Servers, z. B. https://gotify.example.com',
             GotifyToken: 'Authentifizierungs-Token der Gotify-Anwendung.',
             BackGroundScanDelayPerPage: 'Min. Wartezeit pro Seite in Millisekunden.',
@@ -282,7 +282,7 @@ const I18N = {
             EnableBtnMarkAllAsSeen: 'Shows the "Mark all as seen" button.',
             ShowFirstSeen: 'Shows the date of the first appearance instead of the last one.',
             DesktopNotifikationKeywords:
-                'Keywords for the notification and the auto favorite. Price conditions like [data_estimated_tax_prizes >= 10] only work together with the keyword. The prices are loaded for them.',
+                'Keywords for the notification and the auto favorite. Price conditions like [data_estimated_tax_prices >= 10] only work together with the keyword. The prices are loaded for them.',
             GotifyUrl: 'Address of the Gotify server, e.g. https://gotify.example.com',
             GotifyToken: 'Authentication token of the Gotify application.',
             BackGroundScanDelayPerPage: 'Minimum wait time per page in milliseconds.',
