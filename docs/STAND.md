@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.14` |
+| Version im User-Script | `0.16.0` (Release vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -123,7 +123,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 Das Release ist veröffentlicht (Merge-Commit `75bb04b`). Issue #68 ist mit dem
 Release erledigt und wurde geschlossen.
 
-### Feature: Preise der Varianten (0.15.0.13, in Arbeit auf `dev-0.16.0`)
+### Feature: Preise der Varianten (Release 0.16.0)
 
 * Die Produkte haben eine neue Spalte `data_estimated_tax_prices` mit der Liste
   der Preise **aller** Varianten. Produkte ohne Varianten haben dort ein Array
@@ -145,7 +145,7 @@ Release erledigt und wurde geschlossen.
   Anzeige), `verify_details_on_favorite.js` prüft zusätzlich die gespeicherten
   Variantenpreise.
 
-### Beschleunigung der Preisdetails (0.15.0.14, in Arbeit auf `dev-0.16.0`)
+### Beschleunigung der Preisdetails (Release 0.16.0)
 
 * Die Verzögerung zwischen den Requests der Preisdetails war fest **1500 ms**.
   Bei einem Produkt mit 20 Varianten dauerte das Nachladen deshalb rund
@@ -166,7 +166,7 @@ Release erledigt und wurde geschlossen.
   durch Amazon führen. Der Wert ist darum bis 10.000 ms einstellbar.
 * neuer Wächter `scripts/verify/verify_request_delay.js` (11 Fälle).
 
-### Reihenfolge beim Keyword-Treffer (0.15.0.13, in Arbeit auf `dev-0.16.0`)
+### Reihenfolge beim Keyword-Treffer (Release 0.16.0)
 
 * Die Benachrichtigung bei einem Keyword-Treffer wird jetzt **nach** dem Laden
   der Preise gesendet: **Produkt matcht Keyword → Preise abfragen → Desktop-
@@ -180,7 +180,7 @@ Release erledigt und wurde geschlossen.
 * Das Produkt wird **vor** dem Laden der Preise gespeichert (`isNotified = 1`),
   damit es bei einem zweiten Suchlauf nicht doppelt benachrichtigt wird.
 
-### Preisbedingungen in den Keywords (0.15.0.13, in Arbeit auf `dev-0.16.0`)
+### Preisbedingungen in den Keywords (Release 0.16.0)
 
 * Ein Keyword kann **Preisbedingungen** enthalten:
   `toaster [price >= 10] [price < 20]`
