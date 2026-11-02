@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-02] - Version 0.15.0.10
+
+* The prices for the price conditions of the keywords are loaded with the same function as the prices of a product that is marked as favorite. The setting `EnableDetailsOnFavorite` decides if they are loaded automatically, the user can always load them with the button "Weitere Details". Without a known price the price conditions can not be checked and the product is not notified.
+
 ##### [2026-11-02] - Version 0.15.0.9
 
 * New: the keywords of the notification can contain price conditions, e.g. `kanne [data_estimated_tax_prizes >= 10] [data_estimated_tax_prizes < 20]`. The product has to match the keyword and the price conditions. A keyword that only has price conditions never matches.

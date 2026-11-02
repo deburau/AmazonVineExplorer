@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.9
+// @version      0.15.0.10
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -4164,8 +4164,13 @@ async function checkKeywordsForProduct(_prod, _configKeyWords) {
 
         // The keyword matched. If the keyword has price conditions, the prices
         // have to be loaded, before the conditions can be checked.
+        //
+        // NOTE: The prices are loaded with the same function as the prices of a
+        // product that is marked as favorite. The setting EnableDetailsOnFavorite
+        // decides if they are loaded automatically, the user can always load
+        // them with the button "Weitere Details".
         if (_entry.conditions.length > 0) {
-            await loadProductDetails(_prod);
+            await loadProductDetailsIfEnabled(_prod);
             const _prices = getTaxPrizes(_prod);
             if (!matchPriceConditions(_entry.conditions, _prices)) {
                 if (SETTINGS.DebugLevel > 1)
@@ -4787,24 +4792,6 @@ function hasProductDetails(prod) {
 }
 
 /**
- * Loads the details of a product, if they are not loaded yet.
- *
- * @param {Product} prod The product to load the details for
- * @returns {Promise<void>} Resolves when the details were loaded and stored
- */
-async function loadProductDetails(prod) {
-    // A product that is marked as favorite and unmarked again would be loaded
-    // a second time otherwise.
-    if (hasProductDetails(prod)) {
-        console.info(`AVE: The details of ${prod.id} are already loaded.`);
-        return;
-    }
-    console.info(`AVE: Loading the details of ${prod.id} ...`);
-    await requestProductDetailsQueued(prod);
-    console.info(`AVE: The details of ${prod.id} were loaded.`);
-}
-
-/**
  * Loads the details of a product, if the setting is enabled and the details
  * were not loaded yet.
  *
@@ -4818,7 +4805,15 @@ async function loadProductDetailsIfEnabled(prod) {
         console.info(`AVE: The details of ${prod.id} were not loaded, the setting is off.`);
         return;
     }
-    await loadProductDetails(prod);
+    // A product that is marked as favorite and unmarked again would be loaded
+    // a second time otherwise.
+    if (hasProductDetails(prod)) {
+        console.info(`AVE: The details of ${prod.id} are already loaded.`);
+        return;
+    }
+    console.info(`AVE: Loading the details of ${prod.id} ...`);
+    await requestProductDetailsQueued(prod);
+    console.info(`AVE: The details of ${prod.id} were loaded.`);
 }
 
 async function requestProductDetails(prod) {

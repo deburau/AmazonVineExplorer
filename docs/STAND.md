@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.9` |
+| Version im User-Script | `0.15.0.10` |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -184,6 +184,12 @@ Release erledigt und wurde geschlossen.
   `kanne [data_estimated_tax_prizes >= 10] [data_estimated_tax_prizes < 20]`
 * Der Ablauf ist: **Keyword-Match → Preise abrufen → Preis-Match → Aktionen**.
   Eine Preisbedingung **ohne** Keyword matcht nie.
+* Die Preise werden mit **demselben Weg** geladen wie die Preise eines
+  automatisch favorisierten Produkts (`loadProductDetailsIfEnabled()`). Die
+  Einstellung `EnableDetailsOnFavorite` gilt also auch für die
+  Preisbedingungen; der Benutzer kann die Preise immer über „Weitere Details“
+  laden. Ohne bekannten Preis kann die Bedingung nicht geprüft werden → keine
+  Benachrichtigung.
 * Operatoren: `=`/`==` (ein Preis ist gleich), `!=`/`<>` (kein Preis ist gleich),
   `<`/`<=` (der kleinste Preis ist kleiner), `>`/`>=` (der größte Preis ist
   größer).
@@ -193,7 +199,7 @@ Release erledigt und wurde geschlossen.
 * Passt die Preisbedingung nicht, wird das Produkt **nicht** benachrichtigt und
   **nicht** als Favorit markiert – es wird beim nächsten Scan erneut geprüft.
 * Neue Funktionen: `normalizePriceInput()`, `parsePriceCondition()`,
-  `parseKeywordConfig()`, `matchPriceConditions()`, `loadProductDetails()`.
+  `parseKeywordConfig()`, `matchPriceConditions()`.
 * neuer Wächter `scripts/verify/verify_price_conditions.js` (45 Fälle).
 
 ## Wichtige Dateien

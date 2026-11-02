@@ -31,8 +31,6 @@ const NEW_NAMES = [
     'parsePriceCondition',
     'parseKeywordConfig',
     'matchPriceConditions',
-    // Die Funktion, die die Details laedt.
-    'loadProductDetails',
     // Die Funktion, die die Details aller Varianten eines Elternprodukts laedt.
     'loadProductDetailsOfVariations',
     // Die Funktion, die die Verzoegerung zwischen den Requests berechnet.
@@ -339,6 +337,29 @@ const SCENARIOS = [
             autoFavorite: true,
             desktop: true,
             keywords: ['wichtig [data_estimated_tax_prizes >= 20]'],
+            entries: [],
+            product: {
+                id: 'p1',
+                description_full: 'Ein WICHTIGES Produkt',
+                isNew: 1,
+                isFav: 0,
+                isNotified: 0,
+                data_asin: 'ASIN1'
+            }
+        }
+    },
+    {
+        name: 'Keyword-Match mit Preisbedingung und ausgeschalteter Einstellung: es werden keine Preise geladen',
+        expectDetails: false,
+        // Ohne die Preise kann die Bedingung nicht geprueft werden, darum wird
+        // das Produkt nicht benachrichtigt.
+        expectNoNotification: true,
+        opts: {
+            mode: 'keyword',
+            autoFavorite: true,
+            desktop: true,
+            detailsOnFavorite: false,
+            keywords: ['wichtig [data_estimated_tax_prizes >= 10]'],
             entries: [],
             product: {
                 id: 'p1',

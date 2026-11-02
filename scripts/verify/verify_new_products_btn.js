@@ -37,8 +37,6 @@ const NEW_NAMES = [
     'parsePriceCondition',
     'parseKeywordConfig',
     'matchPriceConditions',
-    // Die Funktion, die die Details laedt.
-    'loadProductDetails',
     // Die Funktion, die die Verzoegerung zwischen den Requests berechnet.
     'getVariationRequestDelay'
 ];

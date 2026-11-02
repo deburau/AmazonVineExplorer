@@ -115,7 +115,8 @@ const I18N = {
             EnableInfiniteSpinnerFix: 'Behebt fehlerhafte Variantendaten.',
             EnableDesktopNotifikation: 'Benachrichtigt bei neuen Produkten.',
             EnableAutoMarkFavorite: 'Markiert neue Produkte bei Keyword-Treff als Favorit.',
-            EnableDetailsOnFavorite: 'Lädt den Preis beim Favorisieren. Beim Scan nicht, sonst sperrt Amazon den Account.',
+            EnableDetailsOnFavorite:
+                'Lädt den Preis beim Favorisieren und für die Preisbedingungen der Keywords. Ohne den Preis können die Bedingungen nicht geprüft werden.',
             EnableCleanupFavorites: 'Entfernt beim Cleanup auch die Favoriten.',
             EnableBtnMarkAllAsSeen: 'Zeigt den Button „Alle als gesehen markieren“ an.',
             ShowFirstSeen: 'Zeigt das Datum des ersten statt des letzten Auftretens.',
@@ -277,7 +278,8 @@ const I18N = {
             EnableInfiniteSpinnerFix: 'Repairs faulty variant data.',
             EnableDesktopNotifikation: 'Notifies about new products.',
             EnableAutoMarkFavorite: 'Marks new products as favorite on a keyword match.',
-            EnableDetailsOnFavorite: 'Loads the price when favoriting. Not during the scan, Amazon blocks the account.',
+            EnableDetailsOnFavorite:
+                'Loads the price when favoriting and for the price conditions of the keywords. Without the price the conditions can not be checked.',
             EnableCleanupFavorites: 'Removes the favorites during the cleanup as well.',
             EnableBtnMarkAllAsSeen: 'Shows the "Mark all as seen" button.',
             ShowFirstSeen: 'Shows the date of the first appearance instead of the last one.',
