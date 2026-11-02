@@ -32,6 +32,13 @@ const NEW_NAMES = [
     'hasProductDetails',
     // Die Funktion, die die Preise des Produkts liefert.
     'getTaxPrizes',
+    // Die Funktionen fuer die Preisbedingungen der Keywords.
+    'normalizePriceInput',
+    'parsePriceCondition',
+    'parseKeywordConfig',
+    'matchPriceConditions',
+    // Die Funktion, die die Details laedt.
+    'loadProductDetails',
     // Die Funktion, die die Verzoegerung zwischen den Requests berechnet.
     'getVariationRequestDelay'
 ];

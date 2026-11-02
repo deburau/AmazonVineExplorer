@@ -26,6 +26,13 @@ const NEW_NAMES = [
     'hasProductDetails',
     // Die Funktion, die die Preise des Produkts liefert.
     'getTaxPrizes',
+    // Die Funktionen fuer die Preisbedingungen der Keywords.
+    'normalizePriceInput',
+    'parsePriceCondition',
+    'parseKeywordConfig',
+    'matchPriceConditions',
+    // Die Funktion, die die Details laedt.
+    'loadProductDetails',
     // Die Funktion, die die Details aller Varianten eines Elternprodukts laedt.
     'loadProductDetailsOfVariations',
     // Die Funktion, die die Verzoegerung zwischen den Requests berechnet.
@@ -88,7 +95,9 @@ async function run(code, opts, requestDetailsCode) {
             return Promise.resolve(_found ? _clone(_found) : undefined);
         },
         update(entry) {
-            log.push(`db.update ${entry.id} isFav=${entry.isFav} prices=${JSON.stringify(entry.data_estimated_tax_prizes)}`);
+            log.push(
+                `db.update ${entry.id} isNotified=${entry.isNotified} isFav=${entry.isFav} prices=${JSON.stringify(entry.data_estimated_tax_prizes)}`
+            );
             const _idx = _entries.findIndex((e) => e.id === entry.id);
             if (_idx >= 0) _entries[_idx] = Object.assign({}, entry);
             return Promise.resolve(true);
@@ -299,6 +308,49 @@ const SCENARIOS = [
         }
     },
     {
+        name: 'Keyword-Match mit Preisbedingung: der Preis passt, es wird benachrichtigt',
+        expectDetails: true,
+        // Die Benachrichtigung wird erst gesendet, nachdem die Preise geladen sind.
+        expectNotificationAfterDetails: true,
+        opts: {
+            mode: 'keyword',
+            autoFavorite: true,
+            desktop: true,
+            keywords: ['wichtig [data_estimated_tax_prizes >= 10]'],
+            entries: [],
+            product: {
+                id: 'p1',
+                description_full: 'Ein WICHTIGES Produkt',
+                isNew: 1,
+                isFav: 0,
+                isNotified: 0,
+                data_asin: 'ASIN1'
+            }
+        }
+    },
+    {
+        name: 'Keyword-Match mit Preisbedingung: der Preis passt nicht, es wird nicht benachrichtigt',
+        expectDetails: true,
+        // Der Preis passt nicht, darum wird das Produkt nicht benachrichtigt und
+        // nicht als gesehen markiert.
+        expectNoNotification: true,
+        opts: {
+            mode: 'keyword',
+            autoFavorite: true,
+            desktop: true,
+            keywords: ['wichtig [data_estimated_tax_prizes >= 20]'],
+            entries: [],
+            product: {
+                id: 'p1',
+                description_full: 'Ein WICHTIGES Produkt',
+                isNew: 1,
+                isFav: 0,
+                isNotified: 0,
+                data_asin: 'ASIN1'
+            }
+        }
+    },
+    {
         name: 'Keyword-Match: Auto-Favorit ist aus, es werden keine Details geladen',
         expectDetails: false,
         opts: {
@@ -439,6 +491,18 @@ const SCENARIOS = [
                 _allOk = false;
                 _totalDiffs++;
                 console.log(`  EXPECTED the notification after the prices: ${JSON.stringify(_new.log)}`);
+            }
+        }
+
+        // Wenn die Preisbedingung nicht passt, wird das Produkt nicht
+        // benachrichtigt und nicht als gesehen markiert.
+        if (_scenario.expectNoNotification) {
+            const _hasNotification = _new.log.some((_l) => _l.startsWith('desktopNotifikation'));
+            const _isNotified = _new.log.some((_l) => _l.startsWith('db.update') && _l.includes('isNotified=true'));
+            if (_hasNotification || _isNotified) {
+                _allOk = false;
+                _totalDiffs++;
+                console.log(`  EXPECTED no notification, but: ${JSON.stringify(_new.log)}`);
             }
         }
 

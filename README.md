@@ -63,6 +63,13 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-02] - Version 0.15.0.9
+
+* New: the keywords of the notification can contain price conditions, e.g. `kanne [data_estimated_tax_prizes >= 10] [data_estimated_tax_prizes < 20]`. The product has to match the keyword and the price conditions. A keyword that only has price conditions never matches.
+* The price conditions are checked with the prices of the product. The prices are loaded, after the keyword matched. If the price conditions do not match, the product is not notified and not marked as favorite, so that it is checked again at the next scan.
+* The operators are `=` and `==` (one of the prices is equal), `!=` and `<>` (none of the prices is equal), `<` and `<=` (the lowest price is lower), `>` and `>=` (the highest price is higher).
+* The price can use the dot or the comma as the decimal separator, so that it does not depend on the language of the user. A thousand separator is not allowed, the input is normalized if possible.
+
 ##### [2026-11-02] - Version 0.15.0.8
 
 * The prices are now only stored in the list `data_estimated_tax_prizes`. A product without variations has a list with one entry. The field `data_estimated_tax_prize` is not written any more, it will be removed in a future release.

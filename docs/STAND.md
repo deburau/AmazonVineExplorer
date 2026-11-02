@@ -8,10 +8,10 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.8` |
+| Version im User-Script | `0.15.0.9` |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
-| Verifikationen | alle 9 erfolgreich (`npm run verify`) |
+| Verifikationen | alle 10 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
 
 ## Was in dieser Session gemacht wurde
@@ -177,6 +177,24 @@ Release erledigt und wurde geschlossen.
   **asynchron** geworden, `updateNewProductsBtn()` wartet auf die Suche.
 * Das Produkt wird **vor** dem Laden der Preise gespeichert (`isNotified = 1`),
   damit es bei einem zweiten Suchlauf nicht doppelt benachrichtigt wird.
+
+### Preisbedingungen in den Keywords (0.15.0.9, in Arbeit auf `dev-0.16.0`)
+
+* Ein Keyword kann **Preisbedingungen** enthalten:
+  `kanne [data_estimated_tax_prizes >= 10] [data_estimated_tax_prizes < 20]`
+* Der Ablauf ist: **Keyword-Match → Preise abrufen → Preis-Match → Aktionen**.
+  Eine Preisbedingung **ohne** Keyword matcht nie.
+* Operatoren: `=`/`==` (ein Preis ist gleich), `!=`/`<>` (kein Preis ist gleich),
+  `<`/`<=` (der kleinste Preis ist kleiner), `>`/`>=` (der größte Preis ist
+  größer).
+* Die Zahl darf nur ein Trennzeichen (`.` oder `,`) haben. Sind beide
+  vorhanden, ist das letzte das Dezimaltrennzeichen, die anderen sind
+  Tausendertrennzeichen und werden entfernt.
+* Passt die Preisbedingung nicht, wird das Produkt **nicht** benachrichtigt und
+  **nicht** als Favorit markiert – es wird beim nächsten Scan erneut geprüft.
+* Neue Funktionen: `normalizePriceInput()`, `parsePriceCondition()`,
+  `parseKeywordConfig()`, `matchPriceConditions()`, `loadProductDetails()`.
+* neuer Wächter `scripts/verify/verify_price_conditions.js` (45 Fälle).
 
 ## Wichtige Dateien
 

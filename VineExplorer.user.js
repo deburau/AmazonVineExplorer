@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.8
+// @version      0.15.0.9
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -48,6 +48,8 @@
    favStarEventhandlerClick, fixProductImageUrl, formatTaxPrize, getContrastColor,
    getPageinationData, getTaxPrizes, getTilesFromURL,
    getUrlParameter, getVariationRequestDelay, gotifyNotification,
+   loadProductDetails, matchPriceConditions, normalizePriceInput, parseKeywordConfig,
+   parsePriceCondition,
    handleInfiniteScroll,
    handleFastScanFinished, importDatabase, init, initBackgroundScan, initNavigationButtons,
    initPagination, initSearchBar, initTileEventHandlers, initTileParsing, injectDarkMode,
@@ -3966,8 +3968,156 @@ function stringToRegex(s) {
 }
 
 /**
+ * Normalizes a price of the user input to a number.
+ *
+ * The price can use the dot or the comma as the decimal separator, so that it
+ * does not depend on the language of the user. If both separators are used,
+ * the last one is the decimal separator and the others are thousand
+ * separators, which are removed.
+ *
+ * @param {string|number} value The price of the user input
+ * @returns {number|null} The price, or null if the input is not a valid price
+ */
+function normalizePriceInput(value) {
+    const _text = String(value ?? '').trim();
+    // Only digits, an optional sign and the separators are allowed.
+    if (!/^[+-]?[\d.,]+$/.test(_text)) return null;
+
+    const _lastDot = _text.lastIndexOf('.');
+    const _lastComma = _text.lastIndexOf(',');
+    let _normalized = _text;
+
+    if (_lastDot >= 0 && _lastComma >= 0) {
+        // Both separators are used: the last one is the decimal separator, the
+        // others are thousand separators and are removed.
+        const _decimalIndex = Math.max(_lastDot, _lastComma);
+        const _integerPart = _text.slice(0, _decimalIndex).replace(/[.,]/g, '');
+        const _fractionPart = _text.slice(_decimalIndex + 1);
+        if (!/^\d+$/.test(_fractionPart)) return null;
+        _normalized = `${_integerPart}.${_fractionPart}`;
+    } else {
+        // Only one kind of separator is used: it may only be used once, because
+        // a thousand separator is not allowed.
+        if ((_text.match(/[.,]/g) || []).length > 1) return null;
+        _normalized = _text.replace(',', '.');
+    }
+
+    const _price = Number(_normalized);
+    if (!Number.isFinite(_price)) return null;
+    return _price;
+}
+
+/**
+ * Parses a price condition of the keyword configuration.
+ *
+ * The format of a condition is
+ * "[data_estimated_tax_prizes <operator> <price>]". The operator can be
+ * "=" or "==" (one of the prices is equal), "!=" or "<>" (none of the prices
+ * is equal), "<" or "<=" (the lowest price is lower), ">" or ">=" (the highest
+ * price is higher).
+ *
+ * @param {string} text The content of the brackets
+ * @returns {object|null} The condition, or null if it is not valid
+ */
+function parsePriceCondition(text) {
+    const _match = /^\s*data_estimated_tax_prizes\s*(<=|>=|==|!=|<>|=|<|>)\s*(.+?)\s*$/.exec(String(text ?? ''));
+    if (!_match) return null;
+    const _price = normalizePriceInput(_match[2]);
+    if (_price === null) return null;
+    return { op: _match[1], price: _price };
+}
+
+/**
+ * Parses the keyword of the configuration.
+ *
+ * A keyword can contain price conditions, e.g.
+ * "kanne [data_estimated_tax_prizes >= 10] [data_estimated_tax_prizes < 20]".
+ * The text without the conditions is the keyword itself, the conditions are
+ * checked against the prices of the product.
+ *
+ * @param {string} config The keyword of the configuration
+ * @returns {{keyword: string, conditions: object[], valid: boolean}} The parsed keyword
+ */
+function parseKeywordConfig(config) {
+    const _text = String(config ?? '');
+    const _result = { keyword: _text, conditions: [], valid: true };
+
+    // NOTE: Only a keyword with a price condition is parsed. The keywords can be
+    // regular expressions and they can contain brackets themselves.
+    if (!_text.toLowerCase().includes('data_estimated_tax_prizes')) return _result;
+
+    const _conditions = [];
+    _result.keyword = _text
+        .replace(/\[([^\]]*)\]/g, (_match, _content) => {
+            const _condition = parsePriceCondition(_content);
+            if (_condition) {
+                _conditions.push(_condition);
+                return ' ';
+            }
+            // The bracket does not contain a valid price condition. If it names
+            // the field, the keyword is broken and it does not match.
+            if (_content.toLowerCase().includes('data_estimated_tax_prizes')) {
+                _result.valid = false;
+                console.warn(`The price condition "${_content}" is not valid.`);
+            }
+            return _match;
+        })
+        .trim();
+    _result.conditions = _conditions;
+    return _result;
+}
+
+/**
+ * Checks the price conditions of a keyword against the prices of a product.
+ *
+ * @param {object[]} conditions The conditions of the keyword
+ * @param {number[]} prices The prices of the product
+ * @returns {boolean} true if all conditions are fulfilled
+ */
+function matchPriceConditions(conditions, prices) {
+    // Without a known price the conditions can not be checked.
+    if (!Array.isArray(prices) || prices.length === 0) return false;
+
+    const _minPrize = Math.min(...prices);
+    const _maxPrize = Math.max(...prices);
+
+    for (const _condition of conditions) {
+        switch (_condition.op) {
+            case '=':
+            case '==':
+                if (!prices.includes(_condition.price)) return false;
+                break;
+            case '!=':
+            case '<>':
+                if (prices.includes(_condition.price)) return false;
+                break;
+            case '<':
+                if (!(_minPrize < _condition.price)) return false;
+                break;
+            case '<=':
+                if (!(_minPrize <= _condition.price)) return false;
+                break;
+            case '>':
+                if (!(_maxPrize > _condition.price)) return false;
+                break;
+            case '>=':
+                if (!(_maxPrize >= _condition.price)) return false;
+                break;
+            default:
+                return false;
+        }
+    }
+    return true;
+}
+
+/**
  * Searches a keyword in the description of a product and sends the
  * notifications if the keyword was found.
+ *
+ * A keyword can contain price conditions. The prices are only loaded, if the
+ * keyword itself matched. The conditions are checked with the prices of the
+ * product, a keyword with price conditions but without a keyword never
+ * matches.
  *
  * NOTE: The prices of the product are loaded before the notifications are
  * sent, so that the price is known, when the notification arrives.
@@ -3990,17 +4140,41 @@ async function checkKeywordsForProduct(_prod, _configKeyWords) {
 
     for (let j = 0; j < _configkeyWordsLength; j++) {
         const _currKey = _configKeyWords[j].toLowerCase();
+        const _entry = parseKeywordConfig(_currKey);
+        if (!_entry.valid) continue;
+
+        // NOTE: A price condition only works together with a keyword. A keyword
+        // that only has price conditions can never match.
+        if (!_entry.keyword) {
+            console.warn(`The keyword "${_currKey}" has no keyword next to its price conditions and can never match.`);
+            continue;
+        }
+
         let _keyFound = false;
-        const _regExp = stringToRegex(_currKey);
+        const _regExp = stringToRegex(_entry.keyword);
         if (_regExp !== undefined) {
             if (SETTINGS.DebugLevel > 1)
                 console.log(`updateNewProductsBtn(): Search Product Description for Regular Expression: ${_regExp}`);
             _keyFound = _regExp.test(_descFull);
         } else {
-            if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Search Product Description for Keyword: ${_currKey}`);
-            _keyFound = _descFull.includes(_currKey);
+            if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Search Product Description for Keyword: ${_entry.keyword}`);
+            _keyFound = _descFull.includes(_entry.keyword);
         }
         if (!_keyFound) continue;
+
+        // The keyword matched. If the keyword has price conditions, the prices
+        // have to be loaded, before the conditions can be checked.
+        if (_entry.conditions.length > 0) {
+            await loadProductDetails(_prod);
+            const _prices = getTaxPrizes(_prod);
+            if (!matchPriceConditions(_entry.conditions, _prices)) {
+                if (SETTINGS.DebugLevel > 1)
+                    console.log(
+                        `updateNewProductsBtn(): The price conditions of "${_currKey}" do not match the prices: ${JSON.stringify(_prices)}`
+                    );
+                continue;
+            }
+        }
 
         _prod.isNotified = true;
         const _markedAsFavorite = SETTINGS.EnableAutoMarkFavorite;
@@ -4028,7 +4202,7 @@ async function checkKeywordsForProduct(_prod, _configKeyWords) {
         if (SETTINGS.EnableDesktopNotifikation) {
             // NOTE: The key of the keyword is shown before the description of the
             // product, because it is the reason for the notification.
-            const _matchText = translate('notifications', 'keywordMatch', `Treffer: ${_currKey}`, _currKey);
+            const _matchText = translate('notifications', 'keywordMatch', `Treffer: ${_entry.keyword}`, _entry.keyword);
             desktopNotifikation(
                 `Amazon Vine Explorer - ${AVE_VERSION}`,
                 `${_matchText}\n${_prod.description_full}`,
@@ -4051,12 +4225,12 @@ async function checkKeywordsForProduct(_prod, _configKeyWords) {
         if (SETTINGS.GotifyUrl) {
             if (_prod.link) {
                 gotifyNotification(
-                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \nMatched key: ${_currKey}`,
+                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \nMatched key: ${_entry.keyword}`,
                     _prod
                 );
             } else {
                 gotifyNotification(
-                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \nMatched key: ${_currKey}`
+                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \nMatched key: ${_entry.keyword}`
                 );
             }
         }
@@ -4613,6 +4787,24 @@ function hasProductDetails(prod) {
 }
 
 /**
+ * Loads the details of a product, if they are not loaded yet.
+ *
+ * @param {Product} prod The product to load the details for
+ * @returns {Promise<void>} Resolves when the details were loaded and stored
+ */
+async function loadProductDetails(prod) {
+    // A product that is marked as favorite and unmarked again would be loaded
+    // a second time otherwise.
+    if (hasProductDetails(prod)) {
+        console.info(`AVE: The details of ${prod.id} are already loaded.`);
+        return;
+    }
+    console.info(`AVE: Loading the details of ${prod.id} ...`);
+    await requestProductDetailsQueued(prod);
+    console.info(`AVE: The details of ${prod.id} were loaded.`);
+}
+
+/**
  * Loads the details of a product, if the setting is enabled and the details
  * were not loaded yet.
  *
@@ -4626,15 +4818,7 @@ async function loadProductDetailsIfEnabled(prod) {
         console.info(`AVE: The details of ${prod.id} were not loaded, the setting is off.`);
         return;
     }
-    // A product that is marked as favorite and unmarked again would be loaded
-    // a second time otherwise.
-    if (hasProductDetails(prod)) {
-        console.info(`AVE: The details of ${prod.id} are already loaded.`);
-        return;
-    }
-    console.info(`AVE: Loading the details of ${prod.id} ...`);
-    await requestProductDetailsQueued(prod);
-    console.info(`AVE: The details of ${prod.id} were loaded.`);
+    await loadProductDetails(prod);
 }
 
 async function requestProductDetails(prod) {
