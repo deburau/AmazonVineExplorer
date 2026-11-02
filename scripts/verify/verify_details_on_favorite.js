@@ -329,6 +329,27 @@ const SCENARIOS = [
         }
     },
     {
+        name: 'Keyword-Match mit Preisbedingung: das Keyword passt nicht, die Preise werden nicht geladen',
+        expectDetails: false,
+        // Die Preise werden nur nach einem erfolgreichen Keyword-Match geladen.
+        expectNoNotification: true,
+        opts: {
+            mode: 'keyword',
+            autoFavorite: true,
+            desktop: true,
+            keywords: ['wichtig [data_estimated_tax_prizes >= 10]'],
+            entries: [],
+            product: {
+                id: 'p1',
+                description_full: 'Ein belangloses Produkt',
+                isNew: 1,
+                isFav: 0,
+                isNotified: 0,
+                data_asin: 'ASIN1'
+            }
+        }
+    },
+    {
         name: 'Keyword-Match mit Preisbedingung: der Preis passt nicht, es wird nicht benachrichtigt',
         expectDetails: true,
         // Der Preis passt nicht, darum wird das Produkt nicht benachrichtigt und

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.11
+// @version      0.15.0.12
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -4115,10 +4115,15 @@ function matchPriceConditions(conditions, prices) {
  * Searches a keyword in the description of a product and sends the
  * notifications if the keyword was found.
  *
- * A keyword can contain price conditions. The prices are only loaded, if the
- * keyword itself matched. The conditions are checked with the prices of the
- * product, a keyword with price conditions but without a keyword never
- * matches.
+ * A keyword can contain price conditions. The steps of the search are:
+ *   1. the keyword of the configuration is matched with the description
+ *   2. the prices are loaded, if the keyword has price conditions
+ *   3. the price conditions are checked with the prices of the product
+ *   4. the actions are executed (notification and favorite)
+ *
+ * NOTE: The prices are only loaded after a successful keyword match. A keyword
+ * that only has price conditions and no keyword text never matches, so the
+ * prices are never loaded for it.
  *
  * NOTE: The prices of the product are loaded before the notifications are
  * sent, so that the price is known, when the notification arrives.
@@ -4163,8 +4168,8 @@ async function checkKeywordsForProduct(_prod, _configKeyWords) {
         }
         if (!_keyFound) continue;
 
-        // The keyword matched. If the keyword has price conditions, the prices
-        // have to be loaded, before the conditions can be checked.
+        // The keyword matched. Only now the prices are loaded, if the keyword has
+        // price conditions. The conditions are checked with the prices.
         //
         // NOTE: The prices are loaded, even if the setting EnableDetailsOnFavorite
         // is switched off. The setting decides only, if the prices of a product

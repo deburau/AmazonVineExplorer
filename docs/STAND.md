@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.11` |
+| Version im User-Script | `0.15.0.12` |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -183,7 +183,10 @@ Release erledigt und wurde geschlossen.
 * Ein Keyword kann **Preisbedingungen** enthalten:
   `kanne [data_estimated_tax_prizes >= 10] [data_estimated_tax_prizes < 20]`
 * Der Ablauf ist: **Keyword-Match → Preise abrufen → Preis-Match → Aktionen**.
-  Eine Preisbedingung **ohne** Keyword matcht nie.
+  Eine Preisbedingung **ohne** Keyword matcht nie. Die Preise werden **erst
+  nach einem erfolgreichen Keyword-Match** geladen – passt das Keyword nicht,
+  wird kein einziger Request für die Preise gemacht (wird von
+  `verify_details_on_favorite.js` geprüft).
 * Die Preise werden für die **Preisbedingungen unabhängig** von der Einstellung
   `EnableDetailsOnFavorite` geladen (die Bedingung kann sonst nicht geprüft
   werden). Die Einstellung entscheidet nur, ob die Preise bei einem Keyword

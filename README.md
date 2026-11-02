@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-02] - Version 0.15.0.12
+
+* The prices for the price conditions of the keywords are only loaded, after the keyword of the configuration matched the description of the product. A keyword that does not match does not load any prices.
+
 ##### [2026-11-02] - Version 0.15.0.11
 
 * The price conditions of the keywords load the prices independently of the setting `EnableDetailsOnFavorite`. The setting decides only, if the prices of a product that matches a keyword without a price condition are loaded.
