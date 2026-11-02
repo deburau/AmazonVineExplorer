@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.4` |
+| Version im User-Script | `0.15.0.5` |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 9 erfolgreich (`npm run verify`) |
@@ -152,6 +152,8 @@ Release erledigt und wurde geschlossen.
   **`VariationRequestDelay`** (Default **100 ms**). Der echte Abstand ist
   **zufällig zwischen 50 % und 150 %** des Werts, damit die Requests nicht in
   einem festen Rhythmus kommen. 20 Varianten brauchen damit ca. 3 s.
+  Die Einstellung steht im Menü bei den anderen Zahlenwerten (oben sind nur
+  die Toggles).
 * Die Verzögerung **zwischen den Produkten** der Queue bleibt unverändert bei
   **1500 ms** (`PRODUCT_DETAILS_REQUEST_DELAY`). Die Requests laufen während des
   Scans also nicht schneller als vorher.

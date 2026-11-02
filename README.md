@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-02] - Version 0.15.0.5
+
+* The setting `VariationRequestDelay` was moved down in the settings menu, to the other settings with a numeric value. At the top of the menu there are only the toggles.
+
 ##### [2026-11-02] - Version 0.15.0.4
 
 * Fix: the new delay is only used for the requests for the variations of a product. The pause between two products of the queue of the details stays at 1500 milliseconds, so that the requests during the scan are not faster than before. The setting was renamed from `DetailsRequestDelay` to `VariationRequestDelay`.

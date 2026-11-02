@@ -465,15 +465,6 @@ SETTINGS_USERCONFIG_DEFINES.push({
         'If a product is marked as favorite, the price details are loaded from the Vine API. They are not loaded during the scan, because Amazon blocks the account if too many requests are made in a short time.'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
-    key: 'VariationRequestDelay',
-    type: 'number',
-    min: 0,
-    max: 10000,
-    name: 'Delay between the requests of the variations (Milliseconds)',
-    description:
-        'The wait time between two requests for the details of the variations of a product. The real delay is random between 50 percent and 150 percent of this value. A low value makes the loading of the prices faster, but Amazon can block the account temporarily, if too many requests are made in a short time. The pause between two products is not affected by this setting.'
-});
-SETTINGS_USERCONFIG_DEFINES.push({
     key: 'EnableCleanupFavorites',
     type: 'bool',
     name: 'Also remove favorites when cleaning up products',
@@ -542,6 +533,15 @@ SETTINGS_USERCONFIG_DEFINES.push({
     max: 1000,
     name: 'Search Bar Input Delay until auto search(Milliseconds)',
     description: 'When typing in the search bar, start searching when no key pressed this long milliseconds'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'VariationRequestDelay',
+    type: 'number',
+    min: 0,
+    max: 10000,
+    name: 'Delay between the requests of the variations (Milliseconds)',
+    description:
+        'The wait time between two requests for the details of the variations of a product. The real delay is random between 50 percent and 150 percent of this value. A low value makes the loading of the prices faster, but Amazon can block the account temporarily, if too many requests are made in a short time. The pause between two products is not affected by this setting.'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
     key: 'IdlePeriodAfterScan',
