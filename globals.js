@@ -59,7 +59,9 @@ let AVE_IS_THIS_SESSION_MASTER = false;
 // storage of the userscript manager, so these constants are needed.
 const DATABASE_NAME = 'VineVoiceExplorer';
 const DATABASE_OBJECT_STORE_NAME = `${DATABASE_NAME}_Objects`;
-const DATABASE_VERSION = 4;
+// NOTE: Every change of the data model of the products needs a new version of
+// the database and a migration in the upgrade of the database (class_db_handler.js).
+const DATABASE_VERSION = 5;
 
 // Make some things accessible from console
 unsafeWindow.ave = {};

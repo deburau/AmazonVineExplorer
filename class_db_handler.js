@@ -1,4 +1,4 @@
-/* exported DB_HANDLER */
+/* exported DB_HANDLER, migrateProductToVersion5 */
 console.log('loaded db_handler.js');
 class DB_HANDLER {
     #version;
@@ -106,45 +106,64 @@ class DB_HANDLER {
                     _store.createIndex('isFav', 'isFav', { unique: false });
                 }
 
-                if (!_store.indexNames.contains('data_asin')) {
-                    // if new db, don't check for duplicate asins
-                    if (event.oldVersion === 0) {
-                        _store.createIndex('data_asin', 'data_asin', { unique: true });
-                    } else if (this.#checkForDuplicatedASIN()) {
-                        _store.createIndex('data_asin', 'data_asin', { unique: true });
-                    }
+                // The products are migrated to the version 5 of the database. They
+                // get the list with the prices of their variations.
+                const _needsMigration = event.oldVersion < 5;
+
+                // The index of the ASIN can only be unique, if there are no
+                // duplicated ASINs in the database.
+                const _needsAsinIndex = !_store.indexNames.contains('data_asin');
+
+                if (_needsAsinIndex && event.oldVersion === 0) {
+                    // A new database has no duplicates.
+                    _store.createIndex('data_asin', 'data_asin', { unique: true });
+                } else if (_needsMigration || _needsAsinIndex) {
+                    // The migration and the check for duplicated ASINs both need a
+                    // cursor over the products, so they are done in one run.
+                    this.#updateProducts(_store, _needsMigration, _needsAsinIndex);
                 }
             };
         });
     }
 
     /**
-     * DB ASIN CHECKER
-     * @param {function} [cb] Callback function executes when database query is done
+     * Updates the products of the object store, while the database is upgraded.
+     *
+     * The products are migrated to the current version of the database. The
+     * ASINs are checked for duplicates, so that the index of the ASIN can be
+     * created as unique.
+     *
+     * NOTE: The cursor has to run inside the transaction of the upgrade,
+     * otherwise the changes are not written to the database. The index can only
+     * be created, while this transaction is active.
+     *
+     * @param {IDBObjectStore} store The object store of the database
+     * @param {boolean} migrate true, if the products have to be migrated
+     * @param {boolean} checkDuplicates true, if the ASINs have to be checked
      */
-    #checkForDuplicatedASIN() {
-        const _request = this.#getStore().openCursor();
+    #updateProducts(store, migrate, checkDuplicates) {
+        const _asins = [];
+        const _request = store.openCursor();
 
-        const existingDataAsinValues = [];
         _request.onsuccess = (event) => {
             const _cursor = event.target.result;
             if (_cursor) {
-                existingDataAsinValues.push(_cursor.key);
+                if (checkDuplicates && _cursor.value && _cursor.value.data_asin) _asins.push(_cursor.value.data_asin);
+                if (migrate) _cursor.update(migrateProductToVersion5(_cursor.value));
                 _cursor.continue();
-            } else {
-                const uniqueDataAsinValues = Array.from(new Set(existingDataAsinValues));
-
-                if (existingDataAsinValues.length !== uniqueDataAsinValues.length) {
-                    console.warn('Duplikate in "data_asin" gefunden. Bereinigen oder löschen Sie die Datenbank');
-                    return false;
-                } else {
+            } else if (checkDuplicates) {
+                const _uniqueAsins = new Set(_asins);
+                if (_asins.length === _uniqueAsins.size) {
                     // No duplicates found, the index can be marked as unique
-                    return true;
+                    store.createIndex('data_asin', 'data_asin', { unique: true });
+                } else {
+                    console.warn('Duplikate in "data_asin" gefunden. Bereinigen oder löschen Sie die Datenbank');
                 }
             }
         };
+
         _request.onerror = (event) => {
-            throw new Error(`DB_HANDLER.#checkForDuplicatedAsin: ${event.target.error.name}`);
+            console.error(`DB_HANDLER.#updateProducts: ${event.target.error.name}`);
         };
     }
 
@@ -479,7 +498,9 @@ class DB_HANDLER {
             _clearRequest.onsuccess = () => {
                 let _addRequest;
                 for (const data of datas) {
-                    _addRequest = _store.add(data);
+                    // NOTE: The products of an old backup do not have the list of
+                    // the prices of their variations, so they are migrated too.
+                    _addRequest = _store.add(migrateProductToVersion5(data));
                     _addRequest.onerror = (event) => {
                         reject(`DB_HANDLER.import().add(): ${event.target.error.name}`);
                     };
@@ -523,4 +544,29 @@ class DB_HANDLER {
             };
         });
     }
+}
+
+/**
+ * Migrates a product of the database to the version 5.
+ *
+ * The version 5 of the database has the list with the prices of the variations
+ * of a product. The prices are taken from the variations of the product,
+ * because they are stored there already. The products do not have to be
+ * requested from Amazon again after the migration.
+ *
+ * @param {object} prod The product from the database
+ * @returns {object} The product with the list of the prices of the variations
+ */
+function migrateProductToVersion5(prod) {
+    if (!prod || typeof prod != 'object') return prod;
+    // The product was already migrated.
+    if (Array.isArray(prod.data_estimated_tax_prizes)) return prod;
+
+    const _prizes = [];
+    const _variations = Array.isArray(prod.data_childs) ? prod.data_childs : [];
+    for (const _variation of _variations) {
+        if (_variation && Number.isFinite(_variation.taxValue)) _prizes.push(_variation.taxValue);
+    }
+    prod.data_estimated_tax_prizes = _prizes;
+    return prod;
 }

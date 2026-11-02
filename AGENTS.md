@@ -260,6 +260,11 @@ try {
 - Always use the `DB_HANDLER` class for IndexedDB operations
 - Use async/await patterns for all database calls
 - Database operations return Promises that resolve to data or null
+- The database is versioned (`DATABASE_VERSION` in `globals.js`). Every new
+  field of the products needs a new version and a migration in the upgrade of
+  the database (`onupgradeneeded` in `class_db_handler.js`). The migration of
+  the version 5 is `migrateProductToVersion5()`. The migration has to run
+  inside the transaction of the upgrade, otherwise the changes are not written.
 
 ```javascript
 // Correct pattern

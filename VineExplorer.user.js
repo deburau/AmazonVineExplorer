@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.1
+// @version      0.15.0.2
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -45,8 +45,9 @@
    createProductSite, createSettingsKeywordsTableElement, createSettingsMenuElement,
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
-   favStarEventhandlerClick, fixProductImageUrl, getContrastColor, getPageinationData,
-   getTilesFromURL, getUrlParameter, gotifyNotification, handleInfiniteScroll,
+   favStarEventhandlerClick, fixProductImageUrl, formatTaxPrize, getContrastColor,
+   getPageinationData, getTaxPrizes, getTilesFromURL, getUrlParameter, gotifyNotification,
+   handleInfiniteScroll,
    handleFastScanFinished, importDatabase, init, initBackgroundScan, initNavigationButtons,
    initPagination, initSearchBar, initTileEventHandlers, initTileParsing, injectDarkMode,
    markAllCurrentDatabaseProductsAsSeen, markAllCurrentSiteProductsAsSeen,
@@ -1186,17 +1187,55 @@ ${newUrl}`;
 }
 
 /**
+ * Returns the prices of a product, that are shown on the tile.
+ *
+ * A product with variations has the list with the prices of all its
+ * variations. A product without variations has a single price.
+ *
+ * @param {Product} prod The product of the tile
+ * @returns {number[]} The prices of the product, empty if no price is known
+ */
+function getTaxPrizes(prod) {
+    if (!prod) return [];
+
+    const _variantPrizes = Array.isArray(prod.data_estimated_tax_prizes)
+        ? prod.data_estimated_tax_prizes.filter((_prize) => Number.isFinite(_prize))
+        : [];
+    if (_variantPrizes.length > 0) return _variantPrizes;
+
+    if (Number.isFinite(prod.data_estimated_tax_prize)) return [prod.data_estimated_tax_prize];
+
+    return [];
+}
+
+/**
  * Formats the tax prize of a product for the display.
+ *
+ * If the product has variations, the range from the lowest to the highest price
+ * of the variations is shown. The currency is shown only once at the end of the
+ * range. Otherwise the single price of the product is shown.
  *
  * @param {Product} prod The product of the tile
  * @returns {string} The formatted prize, or "--.--" if it is not known
  */
 function formatTaxPrize(prod) {
-    const _prize = prod ? prod.data_estimated_tax_prize : undefined;
-    if (typeof _prize != 'number') return '--.--';
+    const _prizes = getTaxPrizes(prod);
+    if (_prizes.length === 0) return '--.--';
+
     let _currencySymbol = '';
     if (prod.data_tax_currency && prod.data_tax_currency == 'EUR') _currencySymbol = '€';
-    return `${Intl.NumberFormat(undefined, { minimumFractionDigits: 2 }).format(_prize)} ${_currencySymbol}`;
+
+    const _format = (_prize) => Intl.NumberFormat(undefined, { minimumFractionDigits: 2 }).format(_prize);
+
+    if (_prizes.length === 1) return `${_format(_prizes[0])} ${_currencySymbol}`;
+
+    let _minPrize = _prizes[0];
+    let _maxPrize = _prizes[0];
+    for (const _prize of _prizes) {
+        if (_prize < _minPrize) _minPrize = _prize;
+        if (_prize > _maxPrize) _maxPrize = _prize;
+    }
+    return `${_format(_minPrize)} - ${_format(_maxPrize)} ${_currencySymbol}`;
 }
 
 /**
@@ -1214,9 +1253,9 @@ function createTaxInfoElement(prod, index = Math.round(Math.random() * 10000)) {
     const _taxElement_span = document.createElement('span');
     _taxElement_span.setAttribute('id', `ave-taxinfo-${index}-text`);
     _taxElement_span.classList.add('ave-taxinfo-text');
-    const _prize = prod ? prod.data_estimated_tax_prize : undefined;
+    const _prize = formatTaxPrize(prod);
     if (SETTINGS.DebugLevel > 10) console.log('createTaxInfoElement(): We have a Taxprize of: ', _prize);
-    _taxElement_span.innerText = `Tax Price: ${formatTaxPrize(prod)}`;
+    _taxElement_span.innerText = `Tax Price: ${_prize}`;
     if (SETTINGS.DebugLevel > 10) console.log('createTaxInfoElement(): After innerText');
 
     _taxElement.appendChild(_taxElement_span);
@@ -4408,7 +4447,8 @@ const productDetailsQueue = [];
  *
  * A product with a parent ASIN has no price of its own, the Vine API returns
  * the variations for it. The price of the product is the highest price of its
- * variations.
+ * variations. The prices of all variations are stored in the list
+ * data_estimated_tax_prizes, so that the range of the prices can be shown.
  *
  * NOTE: The requests are made one after the other and not in parallel, because
  * Amazon blocks the account temporarily if too many requests are made in a short
@@ -4420,6 +4460,9 @@ const productDetailsQueue = [];
 async function loadProductDetailsOfVariations(prod) {
     const _variations = prod.data_childs || [];
     if (_variations.length === 0) return;
+
+    // The prices of all variations that could be loaded.
+    const _prizes = [];
 
     for (let i = 0; i < _variations.length; i++) {
         const _child = _variations[i];
@@ -4442,15 +4485,22 @@ async function loadProductDetailsOfVariations(prod) {
             for (const _dataPoint of Object.keys(_childRes.result)) {
                 _child[_dataPoint] = _childRes.result[_dataPoint];
             }
-            // The price of the product is the highest price of its variations.
-            if (typeof _child.taxValue == 'number' && (prod.data_estimated_tax_prize ?? 0) < _child.taxValue) {
-                prod.data_estimated_tax_prize = _child.taxValue;
-                prod.data_tax_currency = _child.taxCurrency;
+            if (typeof _child.taxValue == 'number') {
+                _prizes.push(_child.taxValue);
+                // The price of the product is the highest price of its variations.
+                if ((prod.data_estimated_tax_prize ?? 0) < _child.taxValue) {
+                    prod.data_estimated_tax_prize = _child.taxValue;
+                    prod.data_tax_currency = _child.taxCurrency;
+                }
             }
         } catch (error) {
             console.error(`Could not load the details of the variation ${_child.asin}: ${error}`);
         }
     }
+
+    // The list of the prices is stored with the product, so that the range of
+    // the prices can be shown on the tile.
+    prod.data_estimated_tax_prizes = _prizes;
 }
 
 /**

@@ -16,6 +16,9 @@ class Product {
     data_childs;
     data_estimated_tax;
     data_estimated_tax_prize;
+    // The prices of all variations of the product. It is empty for products
+    // without variations.
+    data_estimated_tax_prizes = [];
     data_tax_currency;
     data_contributors;
     data_feature_bullets;

@@ -8,10 +8,10 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.1` |
+| Version im User-Script | `0.15.0.2` |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
-| Verifikationen | alle 7 erfolgreich (`npm run verify`) |
+| Verifikationen | alle 8 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
 
 ## Was in dieser Session gemacht wurde
@@ -123,13 +123,32 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 Das Release ist veröffentlicht (Merge-Commit `75bb04b`). Issue #68 ist mit dem
 Release erledigt und wurde geschlossen.
 
+### Feature: Preise der Varianten (0.15.0.2, in Arbeit auf `dev-0.16.0`)
+
+* Die Produkte haben eine neue Spalte `data_estimated_tax_prizes` mit der Liste
+  der Preise **aller** Varianten. `data_estimated_tax_prize` bleibt der höchste
+  Preis der Varianten (unverändert).
+* Die **Datenbank hat eine neue Version** (4 → 5). Der Upgrade migriert die
+  vorhandenen Produkte: die Preise werden aus den Varianten (`data_childs`)
+  übernommen, die Produkte müssen also **nicht** neu bei Amazon angefragt werden.
+* Der **Upgrade-Pfad wurde repariert**: Die Duplikat-Prüfung für den
+  ASIN-Index benutzte das Datenbank-Objekt, das während des Upgrades noch nicht
+  existiert (Ausnahme → das Upgrade bricht ab). Die Prüfung läuft jetzt im
+  Cursor der Upgrade-Transaktion und prüft die **ASINs** statt der IDs.
+* Die **Tiles** zeigen den Bereich vom kleinsten bis zum größten Preis
+  („12,34 - 25,00 €"), die Währung steht einmal am Ende. Ohne Variantenpreise
+  bleibt es wie bisher (ein Preis bzw. „--.--").
+* neuer Wächter `scripts/verify/verify_tax_prizes.js` (12 Fälle: Migration und
+  Anzeige), `verify_details_on_favorite.js` prüft zusätzlich die gespeicherten
+  Variantenpreise.
+
 ## Wichtige Dateien
 
 | Datei | Inhalt |
 |---|---|
-| `VineExplorer.user.js` (~4400 Zeilen) | Hauptdatei, alle Funktionen |
+| `VineExplorer.user.js` (~4900 Zeilen) | Hauptdatei, alle Funktionen |
 | `globals.js` | Konstanten, Settings, Session-Management |
-| `scripts/verify/` | 6 Verifikationsskripte für die Refactorings |
+| `scripts/verify/` | 8 Verifikationsskripte für die Refactorings und die Features |
 | `scripts/check_css_syntax.js` | prüft die CSS auf Kommentare mit falscher Syntax |
 | `scripts/check_settings_keys.js` | prüft die Schlüssel der Einstellungen und der Übersetzungen |
 | `scripts/verify/baselines.json` | Git-Stand, gegen den verglichen wird |

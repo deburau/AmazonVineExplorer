@@ -84,7 +84,9 @@ function run(code, opts, requestDetailsCode) {
             return Promise.resolve(_found ? _clone(_found) : undefined);
         },
         update(entry) {
-            log.push(`db.update ${entry.id} isFav=${entry.isFav} tax=${entry.data_estimated_tax_prize}`);
+            log.push(
+                `db.update ${entry.id} isFav=${entry.isFav} tax=${entry.data_estimated_tax_prize} prices=${JSON.stringify(entry.data_estimated_tax_prizes)}`
+            );
             const _idx = _entries.findIndex((e) => e.id === entry.id);
             if (_idx >= 0) _entries[_idx] = Object.assign({}, entry);
             return Promise.resolve(true);
@@ -326,6 +328,8 @@ const SCENARIOS = [
         expectDetails: true,
         // Der Preis des Produkts ist der hoechste der Varianten.
         expectPrice: 25.0,
+        // Die Preise aller Varianten werden gespeichert.
+        expectVariantPrices: [12.5, 25],
         expectChildRequests: 2,
         opts: {
             mode: 'star',
@@ -384,6 +388,17 @@ const SCENARIOS = [
             _allOk = false;
             _totalDiffs++;
             console.log(`  EXPECTED no request, but the API was called`);
+        }
+
+        // Bei einem Elternprodukt werden die Preise aller Varianten gespeichert.
+        if (_scenario.expectVariantPrices) {
+            const _expectedPrices = JSON.stringify(_scenario.expectVariantPrices);
+            const _hasPrices = _new.log.some((_l) => _l.startsWith('db.update') && _l.includes(`prices=${_expectedPrices}`));
+            if (!_hasPrices) {
+                _allOk = false;
+                _totalDiffs++;
+                console.log(`  EXPECTED the prices of the variations to be stored: ${_expectedPrices}`);
+            }
         }
 
         // Der Stern und der Status der Produkte muessen immer uebereinstimmen.

@@ -63,6 +63,12 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-02] - Version 0.15.0.2
+
+* New: the prices of all variations of a product are stored in the database. The products have a new column `data_estimated_tax_prizes` with the list of the prices. The database has a new version (5), the existing products are migrated to it. The migration takes the prices from the variations of the products, so that they do not have to be requested from Amazon again.
+* New: the tiles of the products with variations show the range from the lowest to the highest price of the variations. The currency is shown once at the end of the range. Products without variations show their price as before, products without a known price show no price as before.
+* Fix: the upgrade of the database failed, if the database was created with an older version. The check for duplicated ASINs used the database object, which is not available during the upgrade, and it checked the IDs of the products instead of their ASINs. The check runs now inside the transaction of the upgrade.
+
 ##### [2026-11-01] - Version 0.15.0.1
 
 * The development continues on the branch `dev-0.16.0`, the version was raised to prepare the next release.
