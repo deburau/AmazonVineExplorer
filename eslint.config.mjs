@@ -124,6 +124,7 @@ const mainFile = [
     'gotifyNotification',
     'handleInfiniteScroll',
     'importDatabase',
+    'loadProductDetails',
     'matchPriceConditions',
     'init',
     'initBackgroundScan',

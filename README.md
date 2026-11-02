@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-02] - Version 0.15.0.11
+
+* The price conditions of the keywords load the prices independently of the setting `EnableDetailsOnFavorite`. The setting decides only, if the prices of a product that matches a keyword without a price condition are loaded.
+
 ##### [2026-11-02] - Version 0.15.0.10
 
 * The prices for the price conditions of the keywords are loaded with the same function as the prices of a product that is marked as favorite. The setting `EnableDetailsOnFavorite` decides if they are loaded automatically, the user can always load them with the button "Weitere Details". Without a known price the price conditions can not be checked and the product is not notified.

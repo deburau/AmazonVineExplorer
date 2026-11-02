@@ -31,6 +31,8 @@ const NEW_NAMES = [
     'parsePriceCondition',
     'parseKeywordConfig',
     'matchPriceConditions',
+    // Die Funktion, die die Details laedt.
+    'loadProductDetails',
     // Die Funktion, die die Details aller Varianten eines Elternprodukts laedt.
     'loadProductDetailsOfVariations',
     // Die Funktion, die die Verzoegerung zwischen den Requests berechnet.
@@ -349,11 +351,11 @@ const SCENARIOS = [
         }
     },
     {
-        name: 'Keyword-Match mit Preisbedingung und ausgeschalteter Einstellung: es werden keine Preise geladen',
-        expectDetails: false,
-        // Ohne die Preise kann die Bedingung nicht geprueft werden, darum wird
-        // das Produkt nicht benachrichtigt.
-        expectNoNotification: true,
+        name: 'Keyword-Match mit Preisbedingung und ausgeschalteter Einstellung: die Preise werden trotzdem geladen',
+        expectDetails: true,
+        // Die Preise werden auch geladen, wenn die Einstellung aus ist, weil
+        // die Preisbedingung sonst nicht geprueft werden kann.
+        expectNotificationAfterDetails: true,
         opts: {
             mode: 'keyword',
             autoFavorite: true,

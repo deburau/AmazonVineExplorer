@@ -115,13 +115,12 @@ const I18N = {
             EnableInfiniteSpinnerFix: 'Behebt fehlerhafte Variantendaten.',
             EnableDesktopNotifikation: 'Benachrichtigt bei neuen Produkten.',
             EnableAutoMarkFavorite: 'Markiert neue Produkte bei Keyword-Treff als Favorit.',
-            EnableDetailsOnFavorite:
-                'Lädt den Preis beim Favorisieren und für die Preisbedingungen der Keywords. Ohne den Preis können die Bedingungen nicht geprüft werden.',
+            EnableDetailsOnFavorite: 'Lädt den Preis beim Favorisieren. Beim Scan nicht, sonst sperrt Amazon den Account.',
             EnableCleanupFavorites: 'Entfernt beim Cleanup auch die Favoriten.',
             EnableBtnMarkAllAsSeen: 'Zeigt den Button „Alle als gesehen markieren“ an.',
             ShowFirstSeen: 'Zeigt das Datum des ersten statt des letzten Auftretens.',
             DesktopNotifikationKeywords:
-                'Keywords für Benachrichtigung und Auto-Favorit. Preisbedingungen wie [data_estimated_tax_prizes >= 10] gelten nur zusammen mit dem Keyword.',
+                'Keywords für Benachrichtigung und Auto-Favorit. Preisbedingungen wie [data_estimated_tax_prizes >= 10] gelten nur zusammen mit dem Keyword. Dafür werden die Preise geladen.',
             GotifyUrl: 'Adresse des Gotify-Servers, z. B. https://gotify.example.com',
             GotifyToken: 'Authentifizierungs-Token der Gotify-Anwendung.',
             BackGroundScanDelayPerPage: 'Min. Wartezeit pro Seite in Millisekunden.',
@@ -278,13 +277,12 @@ const I18N = {
             EnableInfiniteSpinnerFix: 'Repairs faulty variant data.',
             EnableDesktopNotifikation: 'Notifies about new products.',
             EnableAutoMarkFavorite: 'Marks new products as favorite on a keyword match.',
-            EnableDetailsOnFavorite:
-                'Loads the price when favoriting and for the price conditions of the keywords. Without the price the conditions can not be checked.',
+            EnableDetailsOnFavorite: 'Loads the price when favoriting. Not during the scan, Amazon blocks the account.',
             EnableCleanupFavorites: 'Removes the favorites during the cleanup as well.',
             EnableBtnMarkAllAsSeen: 'Shows the "Mark all as seen" button.',
             ShowFirstSeen: 'Shows the date of the first appearance instead of the last one.',
             DesktopNotifikationKeywords:
-                'Keywords for the notification and the auto favorite. Price conditions like [data_estimated_tax_prizes >= 10] only work together with the keyword.',
+                'Keywords for the notification and the auto favorite. Price conditions like [data_estimated_tax_prizes >= 10] only work together with the keyword. The prices are loaded for them.',
             GotifyUrl: 'Address of the Gotify server, e.g. https://gotify.example.com',
             GotifyToken: 'Authentication token of the Gotify application.',
             BackGroundScanDelayPerPage: 'Minimum wait time per page in milliseconds.',
