@@ -86,6 +86,14 @@ change the behaviour. See the section "Verifying a refactoring".
   `VineExplorer.user.js` (patch level, e.g. `0.13.0` -> `0.13.1`).
 - Every change gets an entry in the `Changelog Deburau` section of `README.md`.
   The heading is `##### [YYYY-MM-DD] - Version <version>` followed by a short bullet list.
+- The entries of the patch versions of a development branch are consolidated
+  into one entry, that describes the final state. The intermediate steps are not
+  interesting for the users.
+- **The entries describe only what the users notice.** The internal
+  implementation (the names of the fields, the version of the database, the
+  names of the functions, the steps of a migration) does not belong into the
+  changelog. A fix is described by its symptom, e.g. "the script did not
+  start, if the database was created with an older version of AVE".
 - A release consolidates all the entries of the patch versions of a minor
   version into one entry of the new minor version (e.g. all entries of
   `0.12.1.1` to `0.12.1.49` become one entry of `0.13.0`).
