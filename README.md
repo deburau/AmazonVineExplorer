@@ -80,7 +80,6 @@ details.
 * Fix: the userscript was not activated on the Vine pages of Firefox. Firefox puts the language of the browser into the URL, e.g. "https://www.amazon.de/-/de/vine/vine-items" or "https://www.amazon.de/-/en/vine/vine-items". The detection of the Vine pages expected the path "/vine/" directly after the domain, so the script did not recognize the page and stayed inactive. The language segment is now ignored by the detection.
 * Fix: the pages of the infinite scroll and of the background scan are not loaded at all if the URL contains the language segment. The base URL of the Vine pages was searched with a pattern that did not allow the segment, so the search returned nothing and the script stopped with an error. The base URL is now searched with a helper function that returns null instead of throwing an error, if no Vine URL is found.
 * The images of the desktop notifications were loaded from an old fork of the project and from a branch that does not exist any more. They are now loaded from the main branch of the repository of the project.
-* The script `scripts/verify/verify_site_detection.js` checks the detection of the Vine pages against 16 different URLs. It is part of `npm run verify`.
 
 ##### [2026-10-29] - Version 0.14.0
 
