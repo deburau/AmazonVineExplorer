@@ -63,7 +63,7 @@ details.
 
 ## Changelog Deburau
 
-##### [2026-11-02] - Version 0.16.0
+##### [2026-11-02] - Version 0.15.0.16
 
 * New: the tiles of the products with variations show the range from the lowest to the highest price of the variations, the currency is shown once at the end of the range. Products without variations show their price as before, products without a known price show no price as before.
 * New: the prices of all variations are stored in the database. The products of an older version keep their prices, they do not have to be requested from Amazon again.
