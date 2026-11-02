@@ -206,18 +206,41 @@ Release erledigt und wurde geschlossen.
   `parseKeywordConfig()`, `matchPriceConditions()`, `loadProductDetails()`.
 * neuer Wächter `scripts/verify/verify_price_conditions.js` (45 Fälle).
 
+### Turbo-Scan (Konzept, noch nicht implementiert)
+
+**Nächster geplanter Schritt.** Ziel: neue Produkte in einer kleinen, vom
+Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
+(wertvolle Produkte sind oft nach wenigen Minuten vergriffen).
+
+* Eine eigene Schleife lädt in konfigurierbarem Takt (Default **30 s**) die
+  **erste Seite** jeder konfigurierten Kategorie und parst die Tiles wie
+  gewohnt.
+* **Entscheidungen:** Textliste (wie die Keywords) **mit Unterkategorien** –
+  Tendenz zu Nummern statt Namen; der Turbo-Scan läuft **immer** (unabhängig
+  vom Background-Scan), nur in der Master-Session.
+* **Kein** neues Produktfeld, **keine** DB-Migration, **keine**
+  Kategorie-Bedingung in der Keyword-Suche – die Kategorie dient nur zum Bauen
+  der URL.
+* Der bestehende Scan (Haupt-/Fast-Scan) wird **nicht** umgebaut, damit
+  `verify_scan.js` gültig bleibt.
+* Kosten: 1 Kategorie = 120 Seiten/h = **+8 %** auf den Haupt-Scan,
+  2 Kategorien = 240 Seiten/h = **+17 %**.
+* Alle Messwerte, die Kategorie-Struktur (`pn`/`cn`, Sidebar-DOM) und die
+  Begründung, warum der Fast-Scan das nicht leisten kann: **`docs/TURBO-SCAN.md`**.
+
 ## Wichtige Dateien
 
 | Datei | Inhalt |
 |---|---|
 | `VineExplorer.user.js` (~4900 Zeilen) | Hauptdatei, alle Funktionen |
 | `globals.js` | Konstanten, Settings, Session-Management |
-| `scripts/verify/` | 8 Verifikationsskripte für die Refactorings und die Features |
+| `scripts/verify/` | 10 Verifikationsskripte für die Refactorings und die Features |
 | `scripts/check_css_syntax.js` | prüft die CSS auf Kommentare mit falscher Syntax |
 | `scripts/check_settings_keys.js` | prüft die Schlüssel der Einstellungen und der Übersetzungen |
 | `scripts/verify/baselines.json` | Git-Stand, gegen den verglichen wird |
 | `scripts/verify/lib/verify_helpers.js` | Gemeinsame Helfer der Skripte |
 | `.unotes/` | Lokale Testskripte (nicht versioniert) |
+| `docs/TURBO-SCAN.md` | Konzept des Turbo-Scans (Messwerte, Entscheidungen, offene Punkte) |
 | `AGENTS.md` | Arbeitsregeln für AI-Sessions |
 | `HANDOVER.md` | Umzug auf ein anderes System |
 
