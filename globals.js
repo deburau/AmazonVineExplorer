@@ -544,6 +544,15 @@ SETTINGS_USERCONFIG_DEFINES.push({
         'The wait time between two requests for the details of the variations of a product. The real delay is random between 50 percent and 150 percent of this value. A low value makes the loading of the prices faster, but Amazon can block the account temporarily, if too many requests are made in a short time. The pause between two products is not affected by this setting.'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'ProductDetailsRequestDelay',
+    type: 'number',
+    min: 0,
+    max: 60000,
+    name: 'Pause between two products of the queue of the details (Milliseconds)',
+    description:
+        'The pause between two products, whose price details are loaded one after the other. The real pause is random between 50 percent and 150 percent of this value. It is not the delay of the background scan, that one is set with the settings for the background scan.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
     key: 'IdlePeriodAfterScan',
     type: 'number',
     min: 0,
@@ -713,6 +722,7 @@ class SETTINGS_DEFAULT {
     EnableAutoMarkFavorite = false;
     EnableDetailsOnFavorite = true;
     VariationRequestDelay = 500;
+    ProductDetailsRequestDelay = 1500;
     EnableCleanupFavorites = false;
     EnableBtnAll = true;
     EnablePaginationTop = true;

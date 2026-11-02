@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.13
+// @version      0.15.0.14
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -46,8 +46,8 @@
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, formatTaxPrize, getContrastColor,
-   getPageinationData, getTaxPrices, getTilesFromURL,
-   getUrlParameter, getVariationRequestDelay, gotifyNotification,
+   getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay, getTaxPrices,
+   getTilesFromURL, getUrlParameter, getVariationRequestDelay, gotifyNotification,
    loadProductDetails, matchPriceConditions, normalizePriceInput, parseKeywordConfig,
    parsePriceCondition,
    handleInfiniteScroll,
@@ -4622,8 +4622,9 @@ function addStyleToTile(_currTile, _product) {
 }
 
 /**
- * The delay between two products of the queue of the product details in
- * milliseconds.
+ * The default delay between two products of the queue of the product details
+ * in milliseconds. It is used, if the setting
+ * "ProductDetailsRequestDelay" is not set.
  *
  * NOTE: Amazon blocks the account temporarily if too many requests are made
  * in a short time. The requests are therefore not made in parallel and not
@@ -4642,6 +4643,20 @@ const PRODUCT_DETAILS_REQUEST_DELAY = 1500;
 const VARIATION_REQUEST_DELAY = 500;
 
 /**
+ * Returns a delay with a random variation of +/- 50 percent.
+ *
+ * The randomization makes sure that the requests are not sent in a fixed
+ * rhythm.
+ *
+ * @param {number} base The delay in milliseconds
+ * @returns {number} The delay in milliseconds
+ */
+function getRandomizedDelay(base) {
+    if (!(base > 0)) return 0;
+    return Math.round(base * (0.5 + Math.random()));
+}
+
+/**
  * Returns the delay between two requests for the details of the variations.
  *
  * The delay is taken from the setting "VariationRequestDelay". It is randomized
@@ -4652,8 +4667,22 @@ const VARIATION_REQUEST_DELAY = 500;
 function getVariationRequestDelay() {
     const _configured = Number(SETTINGS.VariationRequestDelay);
     const _base = Number.isFinite(_configured) && _configured >= 0 ? _configured : VARIATION_REQUEST_DELAY;
-    if (_base <= 0) return 0;
-    return Math.round(_base * (0.5 + Math.random()));
+    return getRandomizedDelay(_base);
+}
+
+/**
+ * Returns the pause between two products of the queue of the product details.
+ *
+ * The pause is taken from the setting "ProductDetailsRequestDelay". It is
+ * randomized by +/- 50 percent, so that the requests are not sent in a fixed
+ * rhythm.
+ *
+ * @returns {number} The delay in milliseconds
+ */
+function getProductDetailsRequestDelay() {
+    const _configured = Number(SETTINGS.ProductDetailsRequestDelay);
+    const _base = Number.isFinite(_configured) && _configured >= 0 ? _configured : PRODUCT_DETAILS_REQUEST_DELAY;
+    return getRandomizedDelay(_base);
 }
 
 /**
@@ -4768,7 +4797,7 @@ async function processProductDetailsQueue() {
             console.error(`Could not load the details of the product ${_entry.prod.id}: ${_reason}`);
         }
         _entry.resolve();
-        if (productDetailsQueue.length > 0) await delay(PRODUCT_DETAILS_REQUEST_DELAY);
+        if (productDetailsQueue.length > 0) await delay(getProductDetailsRequestDelay());
     }
 
     processProductDetailsQueue._isRunning = false;

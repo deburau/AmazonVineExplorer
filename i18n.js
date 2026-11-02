@@ -65,6 +65,7 @@ const I18N = {
             DesktopNotifikationDelay: 'Desktop-Benachrichtigung Delay (Sek.)',
             SearchBarInputDelay: 'Suchleiste Verzögerung (ms)',
             VariationRequestDelay: 'Verzögerung zwischen den Requests der Varianten (ms)',
+            ProductDetailsRequestDelay: 'Pause zwischen zwei Produkten der Detail-Queue (ms)',
             IdlePeriodAfterScan: 'Wartezeit nach Scan (Min.)',
             HoursBeforeCleanup: 'Stunden bis Cleanup',
             MaxItemsPerPage: 'Maximale Items pro Seite',
@@ -129,6 +130,8 @@ const I18N = {
             SearchBarInputDelay: 'Wartezeit bis zur Suche in Millisekunden.',
             VariationRequestDelay:
                 'Wartezeit zwischen zwei Requests für die Varianten eines Produkts. Der echte Abstand liegt zufällig zwischen 50 % und 150 % des Werts. Kleine Werte laden die Preise schneller, aber Amazon kann den Account sperren. Die Pause zwischen zwei Produkten wird davon nicht verändert.',
+            ProductDetailsRequestDelay:
+                'Pause zwischen zwei Produkten, deren Preisdetails nacheinander geladen werden. Die echte Pause liegt zufällig zwischen 50 % und 150 % des Werts. Das ist nicht die Verzögerung des Background Scans, die wird mit den Einstellungen für den Background Scan gesetzt.',
             IdlePeriodAfterScan: 'Wartezeit bis zum nächsten Scan in Minuten (0 = sofort).',
             HoursBeforeCleanup: 'Stunden ohne gesehen zu werden bis zum Löschen (0 = sofort).',
             MaxItemsPerPage: 'Maximale Anzahl der Produkte pro Seite.',
@@ -227,6 +230,7 @@ const I18N = {
             DesktopNotifikationDelay: 'Desktop Notification Delay (Seconds)',
             SearchBarInputDelay: 'Search Bar Input Delay (ms)',
             VariationRequestDelay: 'Delay between the requests of the variations (ms)',
+            ProductDetailsRequestDelay: 'Pause between two products of the details queue (ms)',
             IdlePeriodAfterScan: 'Idle period after a scan',
             HoursBeforeCleanup: 'Hours before cleanup',
             MaxItemsPerPage: 'Maximum items per page',
@@ -291,6 +295,8 @@ const I18N = {
             SearchBarInputDelay: 'Wait time until the search starts in milliseconds.',
             VariationRequestDelay:
                 'Wait time between two requests for the variations of a product. The real delay is random between 50 percent and 150 percent of the value. Low values load the prices faster, but Amazon can block the account. The pause between two products is not affected by this setting.',
+            ProductDetailsRequestDelay:
+                'Pause between two products, whose price details are loaded one after the other. The real pause is random between 50 percent and 150 percent of the value. It is not the delay of the background scan, that one is set with the settings for the background scan.',
             IdlePeriodAfterScan: 'Wait time until the next scan in minutes (0 = immediately).',
             HoursBeforeCleanup: 'Hours without being seen before it is removed (0 = immediately).',
             MaxItemsPerPage: 'Maximum number of products per page.',

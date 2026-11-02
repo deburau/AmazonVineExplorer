@@ -35,8 +35,10 @@ const NEW_NAMES = [
     'loadProductDetails',
     // Die Funktion, die die Details aller Varianten eines Elternprodukts laedt.
     'loadProductDetailsOfVariations',
-    // Die Funktion, die die Verzoegerung zwischen den Requests berechnet.
-    'getVariationRequestDelay'
+    // Die Funktionen, die die Verzoegerungen zwischen den Requests berechnen.
+    'getRandomizedDelay',
+    'getVariationRequestDelay',
+    'getProductDetailsRequestDelay'
 ];
 
 const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];

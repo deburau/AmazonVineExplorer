@@ -117,6 +117,8 @@ const mainFile = [
     'handleFastScanFinished',
     'getContrastColor',
     'getPageinationData',
+    'getProductDetailsRequestDelay',
+    'getRandomizedDelay',
     'getTilesFromURL',
     'getUrlParameter',
     'getVariationRequestDelay',
