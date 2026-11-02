@@ -65,59 +65,14 @@ details.
 
 ##### [2026-11-02] - Version 0.15.0.12
 
-* The prices for the price conditions of the keywords are only loaded, after the keyword of the configuration matched the description of the product. A keyword that does not match does not load any prices.
-
-##### [2026-11-02] - Version 0.15.0.11
-
-* The price conditions of the keywords load the prices independently of the setting `EnableDetailsOnFavorite`. The setting decides only, if the prices of a product that matches a keyword without a price condition are loaded.
-
-##### [2026-11-02] - Version 0.15.0.10
-
-* The prices for the price conditions of the keywords are loaded with the same function as the prices of a product that is marked as favorite. The setting `EnableDetailsOnFavorite` decides if they are loaded automatically, the user can always load them with the button "Weitere Details". Without a known price the price conditions can not be checked and the product is not notified.
-
-##### [2026-11-02] - Version 0.15.0.9
-
-* New: the keywords of the notification can contain price conditions, e.g. `kanne [data_estimated_tax_prizes >= 10] [data_estimated_tax_prizes < 20]`. The product has to match the keyword and the price conditions. A keyword that only has price conditions never matches.
-* The price conditions are checked with the prices of the product. The prices are loaded, after the keyword matched. If the price conditions do not match, the product is not notified and not marked as favorite, so that it is checked again at the next scan.
-* The operators are `=` and `==` (one of the prices is equal), `!=` and `<>` (none of the prices is equal), `<` and `<=` (the lowest price is lower), `>` and `>=` (the highest price is higher).
-* The price can use the dot or the comma as the decimal separator, so that it does not depend on the language of the user. A thousand separator is not allowed, the input is normalized if possible.
-
-##### [2026-11-02] - Version 0.15.0.8
-
-* The prices are now only stored in the list `data_estimated_tax_prizes`. A product without variations has a list with one entry. The field `data_estimated_tax_prize` is not written any more, it will be removed in a future release.
-* The tiles read the prices only from the list `data_estimated_tax_prizes`. The field `data_estimated_tax_prize` is ignored.
+* New: the products have a new column `data_estimated_tax_prizes` with the list of their prices. A product with variations has the prices of all its variations, a product without variations has a list with one entry. The field `data_estimated_tax_prize` is not written any more, it will be removed in a future release.
+* New: the tiles show the range from the lowest to the highest price of the variations, the currency is shown once at the end of the range. Products without variations show their price as before, products without a known price show no price as before.
+* New: the delay between the requests for the variations of a product is the setting `VariationRequestDelay` (default 500 milliseconds). The real delay is random between 50 percent and 150 percent of the value, so that the requests are not sent in a fixed rhythm. The setting is in the settings menu with the other numeric values. The pause between two products stays at 1500 milliseconds. A low value can lead to a temporary block of the account by Amazon, so the value can be increased if that happens.
+* New: the keywords of the notification can contain price conditions, e.g. `kanne [data_estimated_tax_prizes >= 10] [data_estimated_tax_prizes < 20]`. The product has to match the keyword and the price conditions, a keyword that only has price conditions never matches. The operators are `=` and `==` (one of the prices is equal), `!=` and `<>` (none of the prices is equal), `<` and `<=` (the lowest price is lower), `>` and `>=` (the highest price is higher). The price can use the dot or the comma as the decimal separator, so that it does not depend on the language of the user. A thousand separator is not allowed, the input is normalized if possible.
+* The prices for the price conditions are only loaded, after the keyword of the configuration matched the description of the product. They are loaded independently of the setting `EnableDetailsOnFavorite`, because the conditions can not be checked without the prices. If the price conditions do not match, the product is not notified and not marked as favorite, so that it is checked again at the next scan.
+* The notification of a keyword match is sent after the prices of the product were loaded, so that the price is known, when the notification arrives.
 * The database has a new version (6). The upgrade takes the price of the products over from `data_estimated_tax_prize` and the prices of the variations from the variations of the products, so that the prices do not have to be requested from Amazon again.
-
-##### [2026-11-02] - Version 0.15.0.7
-
-* The default of the setting `VariationRequestDelay` was corrected to 500 milliseconds (it was 550 milliseconds before).
-* The notification of a keyword match is now sent after the prices of the product were loaded. The order is: the product matches a keyword, the prices are loaded, the desktop notification and the Gotify notification are sent. The prices are only loaded for the products that are marked as favorite automatically.
-
-##### [2026-11-02] - Version 0.15.0.6
-
-* The default of the setting `VariationRequestDelay` was raised from 100 to 550 milliseconds. The real delay is still random between 50 percent and 150 percent of the value, so it is between 275 and 825 milliseconds.
-
-##### [2026-11-02] - Version 0.15.0.5
-
-* The setting `VariationRequestDelay` was moved down in the settings menu, to the other settings with a numeric value. At the top of the menu there are only the toggles.
-
-##### [2026-11-02] - Version 0.15.0.4
-
-* Fix: the new delay is only used for the requests for the variations of a product. The pause between two products of the queue of the details stays at 1500 milliseconds, so that the requests during the scan are not faster than before. The setting was renamed from `DetailsRequestDelay` to `VariationRequestDelay`.
-
-##### [2026-11-02] - Version 0.15.0.3
-
-* New: the delay between the requests for the variations of a product is now a setting (`VariationRequestDelay`). The default is 100 milliseconds, the real delay is random between 50 percent and 150 percent of the value, so that the requests are not sent in a fixed rhythm. The loading of the prices is much faster now: a product with 20 variations took about 30 seconds before, now it takes about 3 seconds. A low value can lead to a temporary block of the account by Amazon, so the value can be increased if that happens. The pause between two products is not affected by the setting.
-
-##### [2026-11-02] - Version 0.15.0.2
-
-* New: the prices of all variations of a product are stored in the database. The products have a new column `data_estimated_tax_prizes` with the list of the prices. The database has a new version (5), the existing products are migrated to it. The migration takes the prices from the variations of the products, so that they do not have to be requested from Amazon again.
-* New: the tiles of the products with variations show the range from the lowest to the highest price of the variations. The currency is shown once at the end of the range. Products without variations show their price as before, products without a known price show no price as before.
 * Fix: the upgrade of the database failed, if the database was created with an older version. The check for duplicated ASINs used the database object, which is not available during the upgrade, and it checked the IDs of the products instead of their ASINs. The check runs now inside the transaction of the upgrade.
-
-##### [2026-11-01] - Version 0.15.0.1
-
-* The development continues on the branch `dev-0.16.0`, the version was raised to prepare the next release.
 
 ##### [2026-11-01] - Version 0.15.0
 

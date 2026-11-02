@@ -123,7 +123,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 Das Release ist veröffentlicht (Merge-Commit `75bb04b`). Issue #68 ist mit dem
 Release erledigt und wurde geschlossen.
 
-### Feature: Preise der Varianten (0.15.0.2, in Arbeit auf `dev-0.16.0`)
+### Feature: Preise der Varianten (0.15.0.12, in Arbeit auf `dev-0.16.0`)
 
 * Die Produkte haben eine neue Spalte `data_estimated_tax_prizes` mit der Liste
   der Preise **aller** Varianten. Produkte ohne Varianten haben dort ein Array
@@ -145,7 +145,7 @@ Release erledigt und wurde geschlossen.
   Anzeige), `verify_details_on_favorite.js` prüft zusätzlich die gespeicherten
   Variantenpreise.
 
-### Beschleunigung der Preisdetails (0.15.0.3, in Arbeit auf `dev-0.16.0`)
+### Beschleunigung der Preisdetails (0.15.0.12, in Arbeit auf `dev-0.16.0`)
 
 * Die Verzögerung zwischen den Requests der Preisdetails war fest **1500 ms**.
   Bei einem Produkt mit 20 Varianten dauerte das Nachladen deshalb rund
@@ -164,7 +164,7 @@ Release erledigt und wurde geschlossen.
   durch Amazon führen. Der Wert ist darum bis 10.000 ms einstellbar.
 * neuer Wächter `scripts/verify/verify_request_delay.js` (11 Fälle).
 
-### Reihenfolge beim Keyword-Treffer (0.15.0.7, in Arbeit auf `dev-0.16.0`)
+### Reihenfolge beim Keyword-Treffer (0.15.0.12, in Arbeit auf `dev-0.16.0`)
 
 * Die Benachrichtigung bei einem Keyword-Treffer wird jetzt **nach** dem Laden
   der Preise gesendet: **Produkt matcht Keyword → Preise abfragen → Desktop-
@@ -178,7 +178,7 @@ Release erledigt und wurde geschlossen.
 * Das Produkt wird **vor** dem Laden der Preise gespeichert (`isNotified = 1`),
   damit es bei einem zweiten Suchlauf nicht doppelt benachrichtigt wird.
 
-### Preisbedingungen in den Keywords (0.15.0.9, in Arbeit auf `dev-0.16.0`)
+### Preisbedingungen in den Keywords (0.15.0.12, in Arbeit auf `dev-0.16.0`)
 
 * Ein Keyword kann **Preisbedingungen** enthalten:
   `kanne [data_estimated_tax_prizes >= 10] [data_estimated_tax_prizes < 20]`
