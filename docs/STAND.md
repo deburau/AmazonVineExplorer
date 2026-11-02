@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.6` |
+| Version im User-Script | `0.15.0.7` |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 9 erfolgreich (`npm run verify`) |
@@ -149,7 +149,7 @@ Release erledigt und wurde geschlossen.
   **30 Sekunden** (19 × 1,5 s + Request-Zeit), das Tile wurde erst am Ende
   aktualisiert.
 * Die Verzögerung **zwischen den Varianten** ist jetzt die Einstellung
-  **`VariationRequestDelay`** (Default **550 ms**). Der echte Abstand ist
+  **`VariationRequestDelay`** (Default **500 ms**). Der echte Abstand ist
   **zufällig zwischen 50 % und 150 %** des Werts, damit die Requests nicht in
   einem festen Rhythmus kommen. 20 Varianten brauchen damit ca. 3 s.
   Die Einstellung steht im Menü bei den anderen Zahlenwerten (oben sind nur
@@ -160,6 +160,20 @@ Release erledigt und wurde geschlossen.
 * Risiko: Ein zu kleiner Wert kann zu einer temporären Sperre des Accounts
   durch Amazon führen. Der Wert ist darum bis 10.000 ms einstellbar.
 * neuer Wächter `scripts/verify/verify_request_delay.js` (11 Fälle).
+
+### Reihenfolge beim Keyword-Treffer (0.15.0.7, in Arbeit auf `dev-0.16.0`)
+
+* Die Benachrichtigung bei einem Keyword-Treffer wird jetzt **nach** dem Laden
+  der Preise gesendet: **Produkt matcht Keyword → Preise abfragen → Desktop-
+  und/oder Gotify-Benachrichtigung**. Vorher kam die Benachrichtigung sofort,
+  die Preise wurden danach im Hintergrund geladen.
+* Die Preise werden nur für die Produkte geladen, die **automatisch als Favorit
+  markiert** werden (`EnableAutoMarkFavorite`). Ohne Auto-Favorit gibt es keine
+  Preisanfrage und die Benachrichtigung geht sofort raus.
+* `checkKeywordsForProduct()` und `searchKeywordsInProducts()` sind deshalb
+  **asynchron** geworden, `updateNewProductsBtn()` wartet auf die Suche.
+* Das Produkt wird **vor** dem Laden der Preise gespeichert (`isNotified = 1`),
+  damit es bei einem zweiten Suchlauf nicht doppelt benachrichtigt wird.
 
 ## Wichtige Dateien
 

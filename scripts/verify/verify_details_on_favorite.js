@@ -67,7 +67,7 @@ const newRequestDetails = `${newRequestDetailsBase}\n${newVariations}`;
  * Baut eine Sandbox mit einer gemockten Datenbank und der Vine API.
  * @param {object} opts Szenario-Optionen
  */
-function run(code, opts, requestDetailsCode) {
+async function run(code, opts, requestDetailsCode) {
     const log = [];
     const _store = {};
 
@@ -149,8 +149,8 @@ function run(code, opts, requestDetailsCode) {
             DebugLevel: 0,
             EnableDetailsOnFavorite: opts.detailsOnFavorite !== false,
             EnableAutoMarkFavorite: !!opts.autoFavorite,
-            EnableDesktopNotifikation: false,
-            VariationRequestDelay: 550,
+            EnableDesktopNotifikation: !!opts.desktop,
+            VariationRequestDelay: 500,
             GotifyUrl: '',
             DesktopNotifikationKeywords: opts.keywords || []
         },
@@ -178,8 +178,8 @@ function run(code, opts, requestDetailsCode) {
             return prod;
         },
         updateTileStyle: (prod) => log.push(`updateTileStyle ${prod.id}`),
-        gotifyNotification: () => {},
-        desktopNotifikation: () => {},
+        gotifyNotification: () => log.push('gotifyNotification'),
+        desktopNotifikation: () => log.push('desktopNotifikation'),
         fixProductImageUrl: (u) => u,
         unixTimeStamp: () => 1800000000,
         translate: (cat, key, fallback) => fallback,
@@ -190,6 +190,7 @@ function run(code, opts, requestDetailsCode) {
         setTimeout: (cb) => {
             return 1;
         },
+        AVE_VERSION: '1.0',
         Promise,
         Math,
         JSON,
@@ -211,7 +212,9 @@ function run(code, opts, requestDetailsCode) {
     if (opts.mode === 'keyword') {
         // Das Produkt wird von der Funktion veraendert, darum wird eine Kopie
         // verwendet. Sonst wuerde das Produkt der naechsten Szene veraendert.
-        sandbox.checkKeywordsForProduct(Object.assign({}, opts.product), opts.keywords || ['wichtig']);
+        // NOTE: Die Funktion ist asynchron, sie wartet auf die Preise, bevor sie
+        // die Benachrichtigung sendet.
+        await sandbox.checkKeywordsForProduct(Object.assign({}, opts.product), opts.keywords || ['wichtig']);
     } else {
         sandbox.favStarEventhandlerClick({}, { recommendation_id: opts.product.id });
     }
@@ -277,9 +280,12 @@ const SCENARIOS = [
     {
         name: 'Keyword-Match: Produkt wird automatisch Favorit, Details werden geladen',
         expectDetails: true,
+        // Die Benachrichtigung wird erst gesendet, nachdem die Preise geladen sind.
+        expectNotificationAfterDetails: true,
         opts: {
             mode: 'keyword',
             autoFavorite: true,
+            desktop: true,
             keywords: ['wichtig'],
             entries: [],
             product: {
@@ -410,15 +416,27 @@ const SCENARIOS = [
         }
 
         // Zwischen den Varianten wird die Verzoegerung der Einstellung
-        // verwendet (550 ms +/- 50 Prozent). Die Pause zwischen den Produkten
+        // verwendet (500 ms +/- 50 Prozent). Die Pause zwischen den Produkten
         // der Queue bleibt bei 1500 ms.
         if (_scenario.expectVariationDelay) {
             const _delays = _new.log.filter((_l) => _l.startsWith('delay ')).map((_l) => parseInt(_l.slice(6), 10));
-            const _allInRange = _delays.length > 0 && _delays.every((_d) => _d >= 275 && _d <= 825);
+            const _allInRange = _delays.length > 0 && _delays.every((_d) => _d >= 250 && _d <= 750);
             if (!_allInRange) {
                 _allOk = false;
                 _totalDiffs++;
-                console.log(`  EXPECTED the delay between the variations to be between 275 and 825 ms: ${JSON.stringify(_delays)}`);
+                console.log(`  EXPECTED the delay between the variations to be between 250 and 750 ms: ${JSON.stringify(_delays)}`);
+            }
+        }
+
+        // Die Benachrichtigung wird erst gesendet, nachdem die Preise des
+        // Produkts geladen und gespeichert sind.
+        if (_scenario.expectNotificationAfterDetails) {
+            const _detailsIndex = _new.log.findIndex((_l) => _l.startsWith('db.update') && _l.includes('tax=12.5'));
+            const _notificationIndex = _new.log.findIndex((_l) => _l.startsWith('desktopNotifikation'));
+            if (_detailsIndex < 0 || _notificationIndex < 0 || _notificationIndex < _detailsIndex) {
+                _allOk = false;
+                _totalDiffs++;
+                console.log(`  EXPECTED the notification after the prices: ${JSON.stringify(_new.log)}`);
             }
         }
 

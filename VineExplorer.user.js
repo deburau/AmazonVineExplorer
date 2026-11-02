@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.6
+// @version      0.15.0.7
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -3975,11 +3975,15 @@ function stringToRegex(s) {
 /**
  * Searches a keyword in the description of a product and sends the
  * notifications if the keyword was found.
+ *
+ * NOTE: The prices of the product are loaded before the notifications are
+ * sent, so that the price is known, when the notification arrives.
+ *
  * @param {Product} _prod The product to check
  * @param {string[]} _configKeyWords The keywords to search for
- * @returns {boolean} true if a keyword was found
+ * @returns {Promise<boolean>} true if a keyword was found
  */
-function checkKeywordsForProduct(_prod, _configKeyWords) {
+async function checkKeywordsForProduct(_prod, _configKeyWords) {
     const _descFull = _prod.description_full.toLowerCase();
 
     if (_prod.isNotified) {
@@ -4004,6 +4008,29 @@ function checkKeywordsForProduct(_prod, _configKeyWords) {
             _keyFound = _descFull.includes(_currKey);
         }
         if (!_keyFound) continue;
+
+        _prod.isNotified = true;
+        const _markedAsFavorite = SETTINGS.EnableAutoMarkFavorite;
+        if (_markedAsFavorite) {
+            _prod.isFav = 1;
+        }
+        // NOTE: The product is saved before the prices are loaded, so that it
+        // is not notified twice, if the search runs again in the meantime.
+        await database.update(_prod).catch((error) => {
+            console.error(`Could not save the notified product ${_prod.id}: ${error}`);
+        });
+
+        // The details of a product that became a favorite are loaded before the
+        // notification is sent, so that the price information is available. The
+        // requests are queued, because Amazon blocks the account temporarily if
+        // too many requests are made in a short time.
+        if (_markedAsFavorite) {
+            try {
+                await loadProductDetailsIfEnabled(_prod);
+            } catch (error) {
+                console.error(`Could not load the details of the product ${_prod.id}: ${error}`);
+            }
+        }
 
         if (SETTINGS.EnableDesktopNotifikation) {
             // NOTE: The key of the keyword is shown before the description of the
@@ -4040,19 +4067,6 @@ function checkKeywordsForProduct(_prod, _configKeyWords) {
                 );
             }
         }
-        _prod.isNotified = true;
-        const _markedAsFavorite = SETTINGS.EnableAutoMarkFavorite;
-        if (_markedAsFavorite) {
-            _prod.isFav = 1;
-        }
-        database.update(_prod).catch((error) => {
-            console.error(`Could not save the notified product ${_prod.id}: ${error}`);
-        });
-        // The details of a product that became a favorite are loaded, so that
-        // the price information is available. The requests are queued, because
-        // Amazon blocks the account temporarily if too many requests are made
-        // in a short time.
-        if (_markedAsFavorite) loadProductDetailsIfEnabled(_prod);
         return true;
     }
     return false;
@@ -4067,9 +4081,9 @@ function checkKeywordsForProduct(_prod, _configKeyWords) {
  * background scan).
  *
  * @param {Product[]} _prodArr The new entries
- * @returns {boolean} true if at least one product was notified
+ * @returns {Promise<boolean>} true if at least one product was notified
  */
-function searchKeywordsInProducts(_prodArr) {
+async function searchKeywordsInProducts(_prodArr) {
     if (
         !(SETTINGS.EnableDesktopNotifikation || SETTINGS.EnableAutoMarkFavorite || SETTINGS.GotifyUrl) ||
         !SETTINGS.DesktopNotifikationKeywords?.length
@@ -4084,7 +4098,9 @@ function searchKeywordsInProducts(_prodArr) {
 
     for (let i = 0; i < _prodArr.length; i++) {
         const _prod = _prodArr[i];
-        if (checkKeywordsForProduct(_prod, _configKeyWords)) {
+        // NOTE: The product is awaited, because the prices are loaded before
+        // its notification is sent.
+        if (await checkKeywordsForProduct(_prod, _configKeyWords)) {
             _notifyed = true;
         }
     }
@@ -4121,7 +4137,7 @@ function updateNewProductsBtn() {
     const _checkForKeywords = newProductWasAdded;
     newProductWasAdded = false;
 
-    database.getNewEntries().then((prodArr) => {
+    database.getNewEntries().then(async (prodArr) => {
         const _btnBadge = document.getElementById('ave-new-items-btn-badge');
         const _pageTitle = document.title.replace(/^[^|]*\|/, '').trim();
         const _prodArrLength = prodArr.length;
@@ -4140,7 +4156,9 @@ function updateNewProductsBtn() {
             document.title = `${_pageTitle}`;
         }
 
-        const _notifyed = _checkForKeywords ? searchKeywordsInProducts(prodArr) : false;
+        // NOTE: The search is awaited, because the notifications of the keyword
+        // matches are sent after the prices of the products were loaded.
+        const _notifyed = _checkForKeywords ? await searchKeywordsInProducts(prodArr) : false;
         notifyAboutNewProducts(_prodArrLength, _notifyed);
     });
 }
@@ -4444,7 +4462,7 @@ const PRODUCT_DETAILS_REQUEST_DELAY = 1500;
  * NOTE: Only the requests for the variations use this delay. The pause
  * between two products of the queue is PRODUCT_DETAILS_REQUEST_DELAY.
  */
-const VARIATION_REQUEST_DELAY = 550;
+const VARIATION_REQUEST_DELAY = 500;
 
 /**
  * Returns the delay between two requests for the details of the variations.

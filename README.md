@@ -63,6 +63,11 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-02] - Version 0.15.0.7
+
+* The default of the setting `VariationRequestDelay` was corrected to 500 milliseconds (it was 550 milliseconds before).
+* The notification of a keyword match is now sent after the prices of the product were loaded. The order is: the product matches a keyword, the prices are loaded, the desktop notification and the Gotify notification are sent. The prices are only loaded for the products that are marked as favorite automatically.
+
 ##### [2026-11-02] - Version 0.15.0.6
 
 * The default of the setting `VariationRequestDelay` was raised from 100 to 550 milliseconds. The real delay is still random between 50 percent and 150 percent of the value, so it is between 275 and 825 milliseconds.
