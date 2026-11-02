@@ -63,9 +63,13 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-02] - Version 0.15.0.4
+
+* Fix: the new delay is only used for the requests for the variations of a product. The pause between two products of the queue of the details stays at 1500 milliseconds, so that the requests during the scan are not faster than before. The setting was renamed from `DetailsRequestDelay` to `VariationRequestDelay`.
+
 ##### [2026-11-02] - Version 0.15.0.3
 
-* New: the delay between the requests of the price details is now a setting (`DetailsRequestDelay`). The default is 100 milliseconds, the real delay is random between 50 percent and 150 percent of the value, so that the requests are not sent in a fixed rhythm. The loading of the prices is much faster now: a product with 20 variations took about 30 seconds before, now it takes about 3 seconds. A low value can lead to a temporary block of the account by Amazon, so the value can be increased if that happens.
+* New: the delay between the requests for the variations of a product is now a setting (`VariationRequestDelay`). The default is 100 milliseconds, the real delay is random between 50 percent and 150 percent of the value, so that the requests are not sent in a fixed rhythm. The loading of the prices is much faster now: a product with 20 variations took about 30 seconds before, now it takes about 3 seconds. A low value can lead to a temporary block of the account by Amazon, so the value can be increased if that happens. The pause between two products is not affected by the setting.
 
 ##### [2026-11-02] - Version 0.15.0.2
 

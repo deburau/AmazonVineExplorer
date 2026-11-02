@@ -27,7 +27,7 @@ const NEW_NAMES = [
     // Die Funktion, die die Details aller Varianten eines Elternprodukts laedt.
     'loadProductDetailsOfVariations',
     // Die Funktion, die die Verzoegerung zwischen den Requests berechnet.
-    'getProductDetailsRequestDelay'
+    'getVariationRequestDelay'
 ];
 
 const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
@@ -150,7 +150,7 @@ function run(code, opts, requestDetailsCode) {
             EnableDetailsOnFavorite: opts.detailsOnFavorite !== false,
             EnableAutoMarkFavorite: !!opts.autoFavorite,
             EnableDesktopNotifikation: false,
-            DetailsRequestDelay: 100,
+            VariationRequestDelay: 100,
             GotifyUrl: '',
             DesktopNotifikationKeywords: opts.keywords || []
         },
@@ -183,7 +183,10 @@ function run(code, opts, requestDetailsCode) {
         fixProductImageUrl: (u) => u,
         unixTimeStamp: () => 1800000000,
         translate: (cat, key, fallback) => fallback,
-        delay: (ms) => new Promise((r) => setTimeout(r, 0)),
+        delay: (ms) => {
+            log.push(`delay ${ms}`);
+            return new Promise((r) => setTimeout(r, 0));
+        },
         setTimeout: (cb) => {
             return 1;
         },
@@ -333,6 +336,8 @@ const SCENARIOS = [
         expectPrice: 25.0,
         // Die Preise aller Varianten werden gespeichert.
         expectVariantPrices: [12.5, 25],
+        // Zwischen den Varianten wird die Verzoegerung der Einstellung verwendet.
+        expectVariationDelay: true,
         expectChildRequests: 2,
         opts: {
             mode: 'star',
@@ -401,6 +406,19 @@ const SCENARIOS = [
                 _allOk = false;
                 _totalDiffs++;
                 console.log(`  EXPECTED the prices of the variations to be stored: ${_expectedPrices}`);
+            }
+        }
+
+        // Zwischen den Varianten wird die Verzoegerung der Einstellung
+        // verwendet (100 ms +/- 50 Prozent). Die Pause zwischen den Produkten
+        // der Queue bleibt bei 1500 ms.
+        if (_scenario.expectVariationDelay) {
+            const _delays = _new.log.filter((_l) => _l.startsWith('delay ')).map((_l) => parseInt(_l.slice(6), 10));
+            const _allInRange = _delays.length > 0 && _delays.every((_d) => _d >= 50 && _d <= 150);
+            if (!_allInRange) {
+                _allOk = false;
+                _totalDiffs++;
+                console.log(`  EXPECTED the delay between the variations to be between 50 and 150 ms: ${JSON.stringify(_delays)}`);
             }
         }
 

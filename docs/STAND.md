@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.3` |
+| Version im User-Script | `0.15.0.4` |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 9 erfolgreich (`npm run verify`) |
@@ -148,13 +148,16 @@ Release erledigt und wurde geschlossen.
   Bei einem Produkt mit 20 Varianten dauerte das Nachladen deshalb rund
   **30 Sekunden** (19 × 1,5 s + Request-Zeit), das Tile wurde erst am Ende
   aktualisiert.
-* Die Verzögerung ist jetzt die Einstellung **`DetailsRequestDelay`**
-  (Default **100 ms**). Der echte Abstand ist **zufällig zwischen 50 % und
-  150 %** des Werts, damit die Requests nicht in einem festen Rhythmus kommen.
-  20 Varianten brauchen damit ca. 3 s.
+* Die Verzögerung **zwischen den Varianten** ist jetzt die Einstellung
+  **`VariationRequestDelay`** (Default **100 ms**). Der echte Abstand ist
+  **zufällig zwischen 50 % und 150 %** des Werts, damit die Requests nicht in
+  einem festen Rhythmus kommen. 20 Varianten brauchen damit ca. 3 s.
+* Die Verzögerung **zwischen den Produkten** der Queue bleibt unverändert bei
+  **1500 ms** (`PRODUCT_DETAILS_REQUEST_DELAY`). Die Requests laufen während des
+  Scans also nicht schneller als vorher.
 * Risiko: Ein zu kleiner Wert kann zu einer temporären Sperre des Accounts
   durch Amazon führen. Der Wert ist darum bis 10.000 ms einstellbar.
-* neuer Wächter `scripts/verify/verify_request_delay.js` (10 Fälle).
+* neuer Wächter `scripts/verify/verify_request_delay.js` (11 Fälle).
 
 ## Wichtige Dateien
 

@@ -31,7 +31,7 @@ const NEW_NAMES = [
     'processProductDetailsQueue',
     'hasProductDetails',
     // Die Funktion, die die Verzoegerung zwischen den Requests berechnet.
-    'getProductDetailsRequestDelay'
+    'getVariationRequestDelay'
 ];
 
 const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
@@ -95,7 +95,7 @@ function run(code, opts) {
             NewItemsNotificationThreshold: 0,
             EnableDesktopNotifikation: !!opts.desktop,
             EnableAutoMarkFavorite: !!opts.autoFavorite,
-            DetailsRequestDelay: 100,
+            VariationRequestDelay: 100,
             GotifyUrl: opts.gotify ? 'https://gotify.example.com' : '',
             DesktopNotifikationKeywords: opts.keywords || [],
             DesktopNotifikationDelay: opts.notifDelay || 0

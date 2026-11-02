@@ -4,9 +4,13 @@
  *
  * Prueft die Verzoegerung zwischen den Requests der Preisdetails.
  *
- * Die Verzoegerung ist eine Einstellung, damit die Preise schneller geladen
- * werden koennen. Sie wird um +/- 50 Prozent randomisiert, damit die Requests
- * nicht in einem festen Rhythmus gesendet werden.
+ * Es gibt zwei Verzoegerungen:
+ *   - zwischen den Produkten der Queue (PRODUCT_DETAILS_REQUEST_DELAY), sie
+ *     bleibt unveraendert bei 1500 ms, weil Amazon den Account temporaer
+ *     sperrt, wenn zu viele Requests in kurzer Zeit kommen
+ *   - zwischen den Requests fuer die Varianten eines Produkts, sie ist die
+ *     Einstellung "VariationRequestDelay" und wird um +/- 50 Prozent
+ *     randomisiert, damit die Requests nicht in einem festen Rhythmus kommen
  *
  * Das Skript prueft das aktuelle Verhalten gegen erwartete Werte. Es vergleicht
  * nicht eine alte mit einer neuen Implementierung, weil die Verzoegerung ein
@@ -37,9 +41,10 @@ const mainSrc = readSource('VineExplorer.user.js');
 // Der Quelltext, der in der Sandbox ausgefuehrt wird. Die Funktionen werden
 // aus den echten Dateien geschnitten, damit der Test die echte Implementierung
 // prueft und keinen Nachbau.
-const CODE = [extractConstants(mainSrc, ['PRODUCT_DETAILS_REQUEST_DELAY']), extractBody(mainSrc, 'getProductDetailsRequestDelay')].join(
-    '\n\n'
-);
+const CODE = [
+    extractConstants(mainSrc, ['PRODUCT_DETAILS_REQUEST_DELAY', 'VARIATION_REQUEST_DELAY']),
+    extractBody(mainSrc, 'getVariationRequestDelay')
+].join('\n\n');
 
 // Der Zufallswert und die Einstellung werden fest vorgegeben, damit die
 // Pruefung deterministisch ist.
@@ -64,12 +69,12 @@ vm.runInContext(CODE, ctx, { filename: 'request_delay.js' });
  */
 function delayWith(setting, random) {
     sandbox.__random = random;
-    sandbox.SETTINGS = setting === undefined ? {} : { DetailsRequestDelay: setting };
-    return vm.runInContext('getProductDetailsRequestDelay()', ctx);
+    sandbox.SETTINGS = setting === undefined ? {} : { VariationRequestDelay: setting };
+    return vm.runInContext('getVariationRequestDelay()', ctx);
 }
 
 /**
- * Die erwarteten Verzoegerungen.
+ * Die erwarteten Verzoegerungen der Varianten-Requests.
  */
 const CASES = [
     {
@@ -139,6 +144,16 @@ console.log('='.repeat(70));
 
 let _errors = 0;
 
+// Der Abstand zwischen den Produkten der Queue bleibt unveraendert.
+const _queueDelay = vm.runInContext('PRODUCT_DETAILS_REQUEST_DELAY', ctx);
+if (_queueDelay === 1500) {
+    console.log('  OK   Der Abstand zwischen den Produkten der Queue ist weiterhin 1500 ms');
+} else {
+    _errors++;
+    console.log('  FAIL Der Abstand zwischen den Produkten der Queue ist weiterhin 1500 ms');
+    console.log(`         erwartet: 1500  bekommen: ${_queueDelay}`);
+}
+
 for (const _case of CASES) {
     const _actual = delayWith(_case.setting, _case.random);
 
@@ -153,9 +168,10 @@ for (const _case of CASES) {
 
 console.log('');
 console.log('='.repeat(70));
+const _total = CASES.length + 1;
 if (_errors === 0) {
-    console.log(`>>> RESULT: all ${CASES.length} test cases passed`);
+    console.log(`>>> RESULT: all ${_total} test cases passed`);
     process.exit(0);
 }
-console.log(`>>> RESULT: ${_errors} of ${CASES.length} test cases failed`);
+console.log(`>>> RESULT: ${_errors} of ${_total} test cases failed`);
 process.exit(1);
