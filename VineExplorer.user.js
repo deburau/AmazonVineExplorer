@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.7
+// @version      0.15.0.8
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -1190,23 +1190,16 @@ ${newUrl}`;
 /**
  * Returns the prices of a product, that are shown on the tile.
  *
- * A product with variations has the list with the prices of all its
- * variations. A product without variations has a single price.
+ * The prices are in the list data_estimated_tax_prizes. A product with
+ * variations has the prices of all its variations, a product without
+ * variations has a list with one price.
  *
  * @param {Product} prod The product of the tile
  * @returns {number[]} The prices of the product, empty if no price is known
  */
 function getTaxPrizes(prod) {
-    if (!prod) return [];
-
-    const _variantPrizes = Array.isArray(prod.data_estimated_tax_prizes)
-        ? prod.data_estimated_tax_prizes.filter((_prize) => Number.isFinite(_prize))
-        : [];
-    if (_variantPrizes.length > 0) return _variantPrizes;
-
-    if (Number.isFinite(prod.data_estimated_tax_prize)) return [prod.data_estimated_tax_prize];
-
-    return [];
+    if (!prod || !Array.isArray(prod.data_estimated_tax_prizes)) return [];
+    return prod.data_estimated_tax_prizes.filter((_prize) => Number.isFinite(_prize));
 }
 
 /**
@@ -4490,8 +4483,7 @@ const productDetailsQueue = [];
  * Loads the details of all variations of a product with a parent ASIN.
  *
  * A product with a parent ASIN has no price of its own, the Vine API returns
- * the variations for it. The price of the product is the highest price of its
- * variations. The prices of all variations are stored in the list
+ * the variations for it. The prices of all variations are stored in the list
  * data_estimated_tax_prizes, so that the range of the prices can be shown.
  *
  * NOTE: The requests are made one after the other and not in parallel, because
@@ -4507,6 +4499,9 @@ async function loadProductDetailsOfVariations(prod) {
 
     // The prices of all variations that could be loaded.
     const _prizes = [];
+    // The currency of the most expensive variation.
+    let _highestPrize;
+    let _currency;
 
     for (let i = 0; i < _variations.length; i++) {
         const _child = _variations[i];
@@ -4531,10 +4526,11 @@ async function loadProductDetailsOfVariations(prod) {
             }
             if (typeof _child.taxValue == 'number') {
                 _prizes.push(_child.taxValue);
-                // The price of the product is the highest price of its variations.
-                if ((prod.data_estimated_tax_prize ?? 0) < _child.taxValue) {
-                    prod.data_estimated_tax_prize = _child.taxValue;
-                    prod.data_tax_currency = _child.taxCurrency;
+                // The currency of the product is the currency of its most
+                // expensive variation.
+                if (_highestPrize === undefined || _highestPrize < _child.taxValue) {
+                    _highestPrize = _child.taxValue;
+                    _currency = _child.taxCurrency;
                 }
             }
         } catch (error) {
@@ -4543,8 +4539,12 @@ async function loadProductDetailsOfVariations(prod) {
     }
 
     // The list of the prices is stored with the product, so that the range of
-    // the prices can be shown on the tile.
-    prod.data_estimated_tax_prizes = _prizes;
+    // the prices can be shown on the tile. If no price could be loaded, the
+    // old list is kept, because it still holds the prices of the last load.
+    if (_prizes.length > 0) {
+        prod.data_estimated_tax_prizes = _prizes;
+        if (_currency) prod.data_tax_currency = _currency;
+    }
 }
 
 /**
@@ -4608,7 +4608,8 @@ function hasProductDetails(prod) {
         // always there, because it comes with the list of the variations.
         return prod.data_childs.every((_child) => !_child || !_child.asin || _child.taxValue !== undefined);
     }
-    return prod.data_estimated_tax_prize !== undefined;
+    // The price of a product without variations is in the list of the prices.
+    return getTaxPrizes(prod).length > 0;
 }
 
 /**
@@ -4684,7 +4685,10 @@ async function requestProductDetails(prod) {
         prod.data_contributors = data.byLineContributors;
         prod.data_catalogSize = data.catalogSize;
         prod.data_tax_currency = data.taxCurrency;
-        prod.data_estimated_tax_prize = data.taxValue;
+        // The price is stored in the list of the prices, so that the prices of
+        // the variations and the price of a product without variations are
+        // handled the same way.
+        if (Number.isFinite(data.taxValue)) prod.data_estimated_tax_prizes = [data.taxValue];
         prod.data_limited_quantity = data.limitedQuantity;
         return prod;
     }

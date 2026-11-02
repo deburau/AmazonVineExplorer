@@ -63,6 +63,12 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-02] - Version 0.15.0.8
+
+* The prices are now only stored in the list `data_estimated_tax_prizes`. A product without variations has a list with one entry. The field `data_estimated_tax_prize` is not written any more, it will be removed in a future release.
+* The tiles read the prices only from the list `data_estimated_tax_prizes`. The field `data_estimated_tax_prize` is ignored.
+* The database has a new version (6). The upgrade takes the price of the products over from `data_estimated_tax_prize` and the prices of the variations from the variations of the products, so that the prices do not have to be requested from Amazon again.
+
 ##### [2026-11-02] - Version 0.15.0.7
 
 * The default of the setting `VariationRequestDelay` was corrected to 500 milliseconds (it was 550 milliseconds before).

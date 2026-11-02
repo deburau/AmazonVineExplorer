@@ -263,7 +263,7 @@ try {
 - The database is versioned (`DATABASE_VERSION` in `globals.js`). Every new
   field of the products needs a new version and a migration in the upgrade of
   the database (`onupgradeneeded` in `class_db_handler.js`). The migration of
-  the version 5 is `migrateProductToVersion5()`. The migration has to run
+  the version 6 is `migrateProductToVersion6()`. The migration has to run
   inside the transaction of the upgrade, otherwise the changes are not written.
 
 ```javascript

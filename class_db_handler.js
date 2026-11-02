@@ -1,4 +1,4 @@
-/* exported DB_HANDLER, migrateProductToVersion5 */
+/* exported DB_HANDLER, migrateProductToVersion6 */
 console.log('loaded db_handler.js');
 class DB_HANDLER {
     #version;
@@ -106,9 +106,10 @@ class DB_HANDLER {
                     _store.createIndex('isFav', 'isFav', { unique: false });
                 }
 
-                // The products are migrated to the version 5 of the database. They
-                // get the list with the prices of their variations.
-                const _needsMigration = event.oldVersion < 5;
+                // The products are migrated to the version 6 of the database. They
+                // get the list with the prices of the product and of its
+                // variations.
+                const _needsMigration = event.oldVersion < 6;
 
                 // The index of the ASIN can only be unique, if there are no
                 // duplicated ASINs in the database.
@@ -149,7 +150,7 @@ class DB_HANDLER {
             const _cursor = event.target.result;
             if (_cursor) {
                 if (checkDuplicates && _cursor.value && _cursor.value.data_asin) _asins.push(_cursor.value.data_asin);
-                if (migrate) _cursor.update(migrateProductToVersion5(_cursor.value));
+                if (migrate) _cursor.update(migrateProductToVersion6(_cursor.value));
                 _cursor.continue();
             } else if (checkDuplicates) {
                 const _uniqueAsins = new Set(_asins);
@@ -499,8 +500,8 @@ class DB_HANDLER {
                 let _addRequest;
                 for (const data of datas) {
                     // NOTE: The products of an old backup do not have the list of
-                    // the prices of their variations, so they are migrated too.
-                    _addRequest = _store.add(migrateProductToVersion5(data));
+                    // the prices, so they are migrated too.
+                    _addRequest = _store.add(migrateProductToVersion6(data));
                     _addRequest.onerror = (event) => {
                         reject(`DB_HANDLER.import().add(): ${event.target.error.name}`);
                     };
@@ -547,26 +548,38 @@ class DB_HANDLER {
 }
 
 /**
- * Migrates a product of the database to the version 5.
+ * Migrates a product of the database to the version 6.
  *
- * The version 5 of the database has the list with the prices of the variations
- * of a product. The prices are taken from the variations of the product,
- * because they are stored there already. The products do not have to be
+ * The version 6 of the database has the list with the prices of a product
+ * (data_estimated_tax_prizes). The price of the product is in
+ * data_estimated_tax_prize, the prices of the variations are in the variations
+ * of the product. Both are taken over, so that the prices do not have to be
  * requested from Amazon again after the migration.
  *
  * @param {object} prod The product from the database
- * @returns {object} The product with the list of the prices of the variations
+ * @returns {object} The product with the list of the prices
  */
-function migrateProductToVersion5(prod) {
+function migrateProductToVersion6(prod) {
     if (!prod || typeof prod != 'object') return prod;
-    // The product was already migrated.
-    if (Array.isArray(prod.data_estimated_tax_prizes)) return prod;
 
-    const _prizes = [];
+    const _prices = Array.isArray(prod.data_estimated_tax_prizes)
+        ? prod.data_estimated_tax_prizes.filter((_prize) => Number.isFinite(_prize))
+        : [];
+
+    // The price of the product. It is the only price that is known for the
+    // products without variations.
+    if (Number.isFinite(prod.data_estimated_tax_prize) && !_prices.includes(prod.data_estimated_tax_prize)) {
+        _prices.push(prod.data_estimated_tax_prize);
+    }
+
+    // The prices of the variations.
     const _variations = Array.isArray(prod.data_childs) ? prod.data_childs : [];
     for (const _variation of _variations) {
-        if (_variation && Number.isFinite(_variation.taxValue)) _prizes.push(_variation.taxValue);
+        if (_variation && Number.isFinite(_variation.taxValue) && !_prices.includes(_variation.taxValue)) {
+            _prices.push(_variation.taxValue);
+        }
     }
-    prod.data_estimated_tax_prizes = _prizes;
+
+    prod.data_estimated_tax_prizes = _prices;
     return prod;
 }

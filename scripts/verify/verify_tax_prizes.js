@@ -43,7 +43,7 @@ const mainSrc = readSource('VineExplorer.user.js');
 // aus den echten Dateien geschnitten, damit der Test die echte Implementierung
 // prueft und keinen Nachbau.
 const CODE = [
-    extractBody(dbSrc, 'migrateProductToVersion5'),
+    extractBody(dbSrc, 'migrateProductToVersion6'),
     extractBody(mainSrc, 'getTaxPrizes'),
     extractBody(mainSrc, 'formatTaxPrize')
 ].join('\n\n');
@@ -68,7 +68,7 @@ sandbox.globalThis = sandbox;
 const ctx = vm.createContext(sandbox);
 vm.runInContext(CODE, ctx, { filename: 'tax_prizes.js' });
 
-const migrateProductToVersion5 = vm.runInContext('migrateProductToVersion5', ctx);
+const migrateProductToVersion6 = vm.runInContext('migrateProductToVersion6', ctx);
 const getTaxPrizes = vm.runInContext('getTaxPrizes', ctx);
 const formatTaxPrize = vm.runInContext('formatTaxPrize', ctx);
 
@@ -77,15 +77,20 @@ const formatTaxPrize = vm.runInContext('formatTaxPrize', ctx);
  */
 const MIGRATION_CASES = [
     {
-        label: 'Produkt ohne Varianten bekommt eine leere Liste',
+        label: 'Produkt ohne Preis bekommt eine leere Liste',
         product: { id: 'p1', data_asin: 'ASIN1' },
         expected: []
     },
     {
+        label: 'Der Preis des Produkts wird in die Liste uebernommen',
+        product: { id: 'p2', data_asin: 'ASIN2', data_estimated_tax_prize: 12.5 },
+        expected: [12.5]
+    },
+    {
         label: 'Produkt mit Varianten bekommt die Preise aller Varianten',
         product: {
-            id: 'p2',
-            data_asin: 'ASIN2',
+            id: 'p3',
+            data_asin: 'ASIN3',
             data_childs: [
                 { asin: 'CHILD1', taxValue: 12.5 },
                 { asin: 'CHILD2', taxValue: 25 }
@@ -94,22 +99,35 @@ const MIGRATION_CASES = [
         expected: [12.5, 25]
     },
     {
+        label: 'Der Preis des Produkts und die Preise der Varianten werden uebernommen',
+        product: {
+            id: 'p4',
+            data_asin: 'ASIN4',
+            data_estimated_tax_prize: 25,
+            data_childs: [
+                { asin: 'CHILD1', taxValue: 12.5 },
+                { asin: 'CHILD2', taxValue: 25 }
+            ]
+        },
+        expected: [25, 12.5]
+    },
+    {
         label: 'Varianten ohne Preis werden ignoriert',
         product: {
-            id: 'p3',
-            data_asin: 'ASIN3',
+            id: 'p5',
+            data_asin: 'ASIN5',
             data_childs: [{ asin: 'CHILD1' }, { asin: 'CHILD2', taxValue: 25 }]
         },
         expected: [25]
     },
     {
         label: 'Ein bereits migriertes Produkt bleibt unveraendert',
-        product: { id: 'p4', data_asin: 'ASIN4', data_estimated_tax_prizes: [7.7] },
+        product: { id: 'p6', data_asin: 'ASIN6', data_estimated_tax_prizes: [7.7] },
         expected: [7.7]
     },
     {
         label: 'Ein Produkt ohne Varianten in der Datenbank bleibt gueltig',
-        product: { id: 'p5', data_asin: 'ASIN5', data_childs: [] },
+        product: { id: 'p7', data_asin: 'ASIN7', data_childs: [] },
         expected: []
     }
 ];
@@ -126,15 +144,14 @@ const DISPLAY_CASES = [
         expected: '--.--'
     },
     {
-        label: 'Nur der Preis des Produkts ist bekannt: der Preis wird gezeigt',
-        product: { data_estimated_tax_prize: 12.5, data_tax_currency: 'EUR' },
+        label: 'Die Liste mit einem Preis: der Preis wird gezeigt',
+        product: { data_estimated_tax_prizes: [12.5], data_tax_currency: 'EUR' },
         expectedPrizes: [12.5],
         expected: '12.50 €'
     },
     {
         label: 'Die Preise der Varianten sind bekannt: der Bereich wird gezeigt',
         product: {
-            data_estimated_tax_prize: 25,
             data_estimated_tax_prizes: [25, 12.5],
             data_tax_currency: 'EUR'
         },
@@ -144,7 +161,6 @@ const DISPLAY_CASES = [
     {
         label: 'Alle Varianten haben den gleichen Preis: der Bereich wird immer gezeigt',
         product: {
-            data_estimated_tax_prize: 12.5,
             data_estimated_tax_prizes: [12.5, 12.5],
             data_tax_currency: 'EUR'
         },
@@ -155,29 +171,25 @@ const DISPLAY_CASES = [
         label: 'Eine andere Waehrung: es wird kein Waehrungszeichen gezeigt',
         // NOTE: Der Leerzeichen am Ende ist das bisherige Verhalten, es ist im
         // Text nicht zu sehen.
-        product: { data_estimated_tax_prize: 12.5, data_tax_currency: 'USD' },
+        product: { data_estimated_tax_prizes: [12.5], data_tax_currency: 'USD' },
         expectedPrizes: [12.5],
         expected: '12.50 '
     },
     {
-        label: 'Die Preise der Varianten haben Vorrang vor dem Preis des Produkts',
-        product: {
-            data_estimated_tax_prize: 99,
-            data_estimated_tax_prizes: [10, 20],
-            data_tax_currency: 'EUR'
-        },
-        expectedPrizes: [10, 20],
-        expected: '10.00 - 20.00 €'
+        label: 'Der Preis des Produkts wird nicht mehr benutzt',
+        product: { data_estimated_tax_prize: 99, data_tax_currency: 'EUR' },
+        expectedPrizes: [],
+        expected: '--.--'
     },
     {
-        label: 'Eine leere Liste der Varianten: der Preis des Produkts wird gezeigt',
+        label: 'Eine leere Liste: es wird kein Preis angezeigt',
         product: {
             data_estimated_tax_prize: 12.5,
             data_estimated_tax_prizes: [],
             data_tax_currency: 'EUR'
         },
-        expectedPrizes: [12.5],
-        expected: '12.50 €'
+        expectedPrizes: [],
+        expected: '--.--'
     }
 ];
 
@@ -187,7 +199,7 @@ console.log('='.repeat(70));
 let _errors = 0;
 
 for (const _case of MIGRATION_CASES) {
-    const _result = migrateProductToVersion5(JSON.parse(JSON.stringify(_case.product)));
+    const _result = migrateProductToVersion6(JSON.parse(JSON.stringify(_case.product)));
     const _actual = Array.isArray(_result.data_estimated_tax_prizes) ? _result.data_estimated_tax_prizes : [];
 
     if (JSON.stringify(_actual) === JSON.stringify(_case.expected)) {

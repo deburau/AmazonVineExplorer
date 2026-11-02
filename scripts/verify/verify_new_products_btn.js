@@ -30,6 +30,8 @@ const NEW_NAMES = [
     'requestProductDetailsQueued',
     'processProductDetailsQueue',
     'hasProductDetails',
+    // Die Funktion, die die Preise des Produkts liefert.
+    'getTaxPrizes',
     // Die Funktion, die die Verzoegerung zwischen den Requests berechnet.
     'getVariationRequestDelay'
 ];
@@ -111,7 +113,7 @@ function run(code, opts) {
         fixProductImageUrl: (u) => u,
         requestProductDetails: async (prod) => {
             log.push(`requestProductDetails ${prod.id}`);
-            prod.data_estimated_tax_prize = 12.5;
+            prod.data_estimated_tax_prizes = [12.5];
             return prod;
         },
         delay: (ms) => new Promise((r) => setTimeout(r, 0)),

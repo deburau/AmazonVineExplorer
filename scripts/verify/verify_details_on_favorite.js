@@ -24,6 +24,8 @@ const NEW_NAMES = [
     'requestProductDetailsQueued',
     'processProductDetailsQueue',
     'hasProductDetails',
+    // Die Funktion, die die Preise des Produkts liefert.
+    'getTaxPrizes',
     // Die Funktion, die die Details aller Varianten eines Elternprodukts laedt.
     'loadProductDetailsOfVariations',
     // Die Funktion, die die Verzoegerung zwischen den Requests berechnet.
@@ -86,9 +88,7 @@ async function run(code, opts, requestDetailsCode) {
             return Promise.resolve(_found ? _clone(_found) : undefined);
         },
         update(entry) {
-            log.push(
-                `db.update ${entry.id} isFav=${entry.isFav} tax=${entry.data_estimated_tax_prize} prices=${JSON.stringify(entry.data_estimated_tax_prizes)}`
-            );
+            log.push(`db.update ${entry.id} isFav=${entry.isFav} prices=${JSON.stringify(entry.data_estimated_tax_prizes)}`);
             const _idx = _entries.findIndex((e) => e.id === entry.id);
             if (_idx >= 0) _entries[_idx] = Object.assign({}, entry);
             return Promise.resolve(true);
@@ -166,13 +166,13 @@ async function run(code, opts, requestDetailsCode) {
                     const _childRes = await _apiCall(`/vine/api/recommendations/${prod.id}/item/${prod.data_childs[0].asin}`);
                     const _childData = await _childRes.json();
                     prod.data_tax_currency = _childData.result.taxCurrency;
-                    prod.data_estimated_tax_prize = _childData.result.taxValue;
+                    prod.data_estimated_tax_prizes = [_childData.result.taxValue];
                 }
                 return prod;
             }
             const _res = await _apiCall(`/vine/api/recommendations/${prod.id}/item/${prod.data_asin}`);
             const _data = await _res.json();
-            prod.data_estimated_tax_prize = _data.result.taxValue;
+            prod.data_estimated_tax_prizes = [_data.result.taxValue];
             prod.data_tax_currency = _data.result.taxCurrency;
             prod.data_feature_bullets = _data.result.featureBullets;
             return prod;
@@ -263,7 +263,7 @@ const SCENARIOS = [
                     isFav: 1,
                     isNotified: 0,
                     data_asin: 'ASIN1',
-                    data_estimated_tax_prize: 9.9
+                    data_estimated_tax_prizes: [9.9]
                 }
             ],
             product: {
@@ -273,7 +273,7 @@ const SCENARIOS = [
                 isFav: 1,
                 isNotified: 0,
                 data_asin: 'ASIN1',
-                data_estimated_tax_prize: 9.9
+                data_estimated_tax_prizes: [9.9]
             }
         }
     },
@@ -391,7 +391,9 @@ const SCENARIOS = [
         const _expectedPrice = _scenario.expectPrice !== undefined ? _scenario.expectPrice : 12.5;
         // Die Zahl wird ohne Nachkommastellen im Log geschrieben (25 statt 25.0).
         const _expectedTax = String(_expectedPrice).replace(/\.0$/, '');
-        const _hasTax = _new.log.some((_l) => _l.startsWith('db.update') && _l.includes(`tax=${_expectedTax}`));
+        // Bei einem Elternprodukt stehen die Preise aller Varianten in der Liste.
+        const _expectedPrices = _scenario.expectVariantPrices ? JSON.stringify(_scenario.expectVariantPrices) : `[${_expectedTax}]`;
+        const _hasTax = _new.log.some((_l) => _l.startsWith('db.update') && _l.includes(`prices=${_expectedPrices}`));
 
         if (_expected && (!_hasApiCall || !_hasTax)) {
             _allOk = false;
@@ -431,7 +433,7 @@ const SCENARIOS = [
         // Die Benachrichtigung wird erst gesendet, nachdem die Preise des
         // Produkts geladen und gespeichert sind.
         if (_scenario.expectNotificationAfterDetails) {
-            const _detailsIndex = _new.log.findIndex((_l) => _l.startsWith('db.update') && _l.includes('tax=12.5'));
+            const _detailsIndex = _new.log.findIndex((_l) => _l.startsWith('db.update') && _l.includes('prices=[12.5]'));
             const _notificationIndex = _new.log.findIndex((_l) => _l.startsWith('desktopNotifikation'));
             if (_detailsIndex < 0 || _notificationIndex < 0 || _notificationIndex < _detailsIndex) {
                 _allOk = false;

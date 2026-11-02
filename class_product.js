@@ -15,9 +15,11 @@ class Product {
     data_is_featured;
     data_childs;
     data_estimated_tax;
+    // NOTE: The field is not written any more. The prices are in
+    // data_estimated_tax_prizes. It will be removed in a future release.
     data_estimated_tax_prize;
-    // The prices of all variations of the product. It is empty for products
-    // without variations.
+    // The prices of the product. It is empty for products without a known
+    // price and has one entry for a product without variations.
     data_estimated_tax_prizes = [];
     data_tax_currency;
     data_contributors;
