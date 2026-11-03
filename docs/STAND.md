@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.38` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.39` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -216,7 +216,10 @@ Release erledigt und wurde geschlossen.
   `{prod, categoryText}`). Ein Produkt, das schon in der DB ist und später auf
   einer Kategorieseite gesehen wird (z. B. durch den Turbo-Scan), wird **einmal**
   nachgeprüft (`categoryCheckedProducts` + `hasCategoryCondition()`), sonst
-  würde eine Kategoriesuche nie greifen. Die **Suche** (Suchleiste) kann
+  würde eine Kategoriesuche nie greifen. Der Turbo-Scan kennt die Nummern seiner
+  Kategorie und gibt die **Namen** an den Scanner (`getCategoryTextById()`, aus
+  dem Kategorie-Cache): bei einer Unterkategorie `"Haupt > Unter"`, damit beide
+  Namen matchen (`backGroundTileScanner(url, cb, { categoryText })`). Die **Suche** (Suchleiste) kann
   Kategorien nicht prüfen (`searchProducts()` warnt und liefert nichts).
 * Die **Suche** (Suchleiste) kann dieselben **Preisbedingungen** benutzen wie die
   Keywords (`searchProducts()` in der Hauptdatei): `kaffee [price >= 10]`, aber

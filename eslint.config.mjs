@@ -122,6 +122,7 @@ const mainFile = [
     'hasCategoryCondition',
     'hasSelectedSubCategory',
     'getCategoryId',
+    'getCategoryTextById',
     'getContrastColor',
     'getFastScanIntervalSeconds',
     'getFastScanState',

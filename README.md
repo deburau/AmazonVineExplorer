@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.39
+
+* When the turbo scan loads a sub category, the name of the sub category is checked (together with the name of its main category) by a search for a category. `[category~kaffee]` therefore matches the products of the sub category "Getränke, Kaffee & Tee" of the category "Lebensmittel & Getränke".
+
 ##### [2026-11-03] - Version 0.15.0.38
 
 * New: the keywords of the notification can search for the category of a product: `[category~getränke]` matches every product of a category whose name contains "getränke". At least one keyword or one category is needed, so a price can be searched together with a category: `[price=0] [category~getränke]` notifies about all products with the price 0 of the category "Lebensmittel & Getränke".

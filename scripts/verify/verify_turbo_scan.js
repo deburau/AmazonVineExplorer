@@ -50,6 +50,7 @@ const CODE = [
     extractBody(mainSrc, 'parseTurboScanCategory'),
     extractBody(mainSrc, 'getTurboScanIndex'),
     extractBody(mainSrc, 'isTurboScanDue'),
+    extractBody(mainSrc, 'getCategoryTextById'),
     extractBody(mainSrc, 'scanStepTurbo')
 ].join('\n\n');
 
@@ -81,10 +82,20 @@ function createSandbox(opts = {}) {
         },
         aveGetVineBaseUrl: () => 'https://www.amazon.de/vine/vine-items',
         updateBackgroundScanScreenText: (text) => _log.push(`text: ${text}`),
-        backGroundTileScanner: (url, cb) => {
+        backGroundTileScanner: (url, cb, options) => {
             _log.push(`scan ${url}`);
+            if (options) _log.push(`options ${JSON.stringify(options)}`);
             cb(0);
         },
+        // Die Liste der Kategorien wird nachgebaut (siehe verify_category_tree.js).
+        getVineCategoryParents: async () => [
+            { name: 'Lebensmittel & Getränke', count: 34, pn: '340846031', cn: '' },
+            { name: 'Garten', count: 1249, pn: '10925031', cn: '' }
+        ],
+        getVineCategoryChildren: async (pn) =>
+            pn === '10925031'
+                ? [{ name: 'Gartendeko', count: 238, pn: '10925031', cn: '87837030' }]
+                : [{ name: 'Getränke, Kaffee & Tee', count: 1, pn: '340846031', cn: '1070243030' }],
         Promise,
         Number,
         Math,
@@ -105,6 +116,7 @@ function createSandbox(opts = {}) {
 }
 
 let _errors = 0;
+let _checks = 0;
 
 /**
  * Prueft einen Wert und gibt das Ergebnis aus.
@@ -113,6 +125,7 @@ let _errors = 0;
  * @param {string} label Die Bezeichnung der Pruefung
  */
 function check(expected, actual, label) {
+    _checks++;
     if (JSON.stringify(expected) === JSON.stringify(actual)) {
         console.log(`  OK   ${label}`);
         return;
@@ -218,6 +231,11 @@ check(0, vm.runInContext('getTurboScanIndex()', _wrongIndex._ctx), 'Ein Index au
         'Die erste Seite der Kategorie mit der Nummer der Hauptkategorie'
     );
     check(
+        ['options {"categoryText":"Garten"}'],
+        _one._log.filter((l) => l.startsWith('options ')),
+        'Der Scanner bekommt den Namen der Hauptkategorie'
+    );
+    check(
         ['set AVE_TURBO_SCAN_CATEGORY_INDEX=0', `set AVE_TURBO_SCAN_LAST_TIME=${NOW}`],
         _one._log.filter((l) => l.startsWith('set ')),
         'Nach dem einzigen Schritt der Liste ist die Runde fertig'
@@ -253,10 +271,27 @@ check(0, vm.runInContext('getTurboScanIndex()', _wrongIndex._ctx), 'Ein Index au
         _sub._log.filter((l) => l.startsWith('text: ')),
         'Der Text der Anzeige nennt die Kategorie und die Anzahl'
     );
+    // NOTE: Bei einer Unterkategorie stehen beide Namen in der Kategorie, damit
+    // eine Suche nach der Haupt- und nach der Unterkategorie matcht.
+    check(
+        ['options {"categoryText":"Garten > Gartendeko"}'],
+        _sub._log.filter((l) => l.startsWith('options ')),
+        'Der Scanner bekommt den Namen der Haupt- und der Unterkategorie'
+    );
+
+    // Eine Unterkategorie einer anderen Hauptkategorie.
+    const _subCategory = createSandbox({ enabled: true, categories: ['340846031/1070243030'], interval: 30 });
+    await vm.runInContext('scanStepTurbo()', _subCategory._ctx);
+    check(
+        ['options {"categoryText":"Lebensmittel & Getränke > Getränke, Kaffee & Tee"}'],
+        _subCategory._log.filter((l) => l.startsWith('options ')),
+        'Der Name der Unterkategorie passt zur Kategorie der Einstellung'
+    );
 
     console.log('');
     console.log('='.repeat(70));
-    const _total = _intervalCases.length + 3 + _dueCases.length + 1 + 6;
+    // NOTE: Die Anzahl der Pruefungen wird gezaehlt, damit sie nicht gepflegt werden muss.
+    const _total = _checks;
     if (_errors === 0) {
         console.log(`>>> RESULT: all ${_total} test cases passed`);
         process.exit(0);

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.38
+// @version      0.15.0.39
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -47,7 +47,8 @@
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
    createProductSite, createSettingsCategoriesElement, createSettingsCategoryRow,
    createSettingsKeywordsTableElement, createSettingsMenuElement, findSettingsCategoryCheckbox,
-   getCategoryId, hasSelectedSubCategory, isCategorySelected, renderSettingsCategories,
+   getCategoryId, getCategoryTextById, hasSelectedSubCategory, isCategorySelected,
+   renderSettingsCategories,
    setCategorySelected, toggleSettingsCategoryChildren, updateSettingsCategoryChildren,
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
@@ -4018,6 +4019,38 @@ function getTurboScanCategories() {
 }
 
 /**
+ * Returns the names of a category of the settings.
+ *
+ * The names come from the list of the categories (see getVineCategoryParents()
+ * and getVineCategoryChildren()). The name of the main category is always part of
+ * it, so that a search for the main category matches as well.
+ *
+ * NOTE: The list is stored for a day, so this does not load a page for every
+ * step. An empty result is returned when the category is not in the list, e.g.
+ * because the list could not be loaded.
+ *
+ * @param {string} id The id of the category ("10925031" or "10925031/87837030")
+ * @returns {Promise<string>} "main" or "main > sub" or an empty string
+ */
+async function getCategoryTextById(id) {
+    const _category = parseTurboScanCategory(id);
+
+    try {
+        const _parents = await getVineCategoryParents();
+        const _parent = _parents.find((entry) => entry.pn === _category.pn);
+        if (!_parent) return '';
+        if (!_category.cn) return _parent.name;
+
+        const _children = await getVineCategoryChildren(_category.pn);
+        const _child = _children.find((entry) => entry.cn === _category.cn);
+        return _child ? `${_parent.name} > ${_child.name}` : _parent.name;
+    } catch (error) {
+        console.error(`getCategoryTextById(): the name of ${id} could not be read: ${error}`);
+        return '';
+    }
+}
+
+/**
  * Splits the id of a category into its numbers.
  *
  * @param {string} id The id of the category ("10925031" or "10925031/87837030")
@@ -4086,14 +4119,21 @@ async function scanStepTurbo() {
     }
 
     const _url = `${_baseUrl}?queue=all_items&pn=${_category.pn}&cn=${_category.cn}&page=1`;
+    // NOTE: The names of the category are given to the scanner, so that a search
+    // for the category can match the name of the sub category as well.
+    const _categoryText = await getCategoryTextById(_categories[_index]);
     updateBackgroundScanScreenText(`Turbo Scanner: ${_index + 1} / ${_categories.length}`);
-    if (SETTINGS.DebugLevel > 1) console.log(`scanStepTurbo(): loading ${_url}`);
+    if (SETTINGS.DebugLevel > 1) console.log(`scanStepTurbo(): loading ${_url} (${_categoryText})`);
 
     await new Promise((resolve) => {
-        backGroundTileScanner(_url, (newCount) => {
-            if (SETTINGS.DebugLevel > 1) console.log(`scanStepTurbo(): the page of ${_category.pn} has ${newCount} new products`);
-            resolve();
-        });
+        backGroundTileScanner(
+            _url,
+            (newCount) => {
+                if (SETTINGS.DebugLevel > 1) console.log(`scanStepTurbo(): the page of ${_category.pn} has ${newCount} new products`);
+                resolve();
+            },
+            { categoryText: _categoryText }
+        );
     });
 
     // NOTE: A round is complete when the position is back at the first category.
@@ -4661,8 +4701,11 @@ function removeScanIframe(iframe) {
  * @param {string} url The URL of the page
  * @param {function} cb The function that is called with the number of the new
  *                       products
+ * @param {object} [options] The options of the scan. "categoryText" names the
+ *                           category of the page (the turbo scan knows it, the
+ *                           background scan reads it from the side bar)
  */
-function backGroundTileScanner(url, cb) {
+function backGroundTileScanner(url, cb, options = {}) {
     if (SETTINGS.DebugLevel > 10) console.log(`Called backgroundTileScanner(${url})`);
     const _iconLoading = addLoadingSymbol();
 
@@ -4725,7 +4768,9 @@ function backGroundTileScanner(url, cb) {
         clearInterval(_loopDelay);
 
         if (_tilesLength > 0) {
-            const pageCategoryText = getPageCategoryText(_liveDoc);
+            // The caller can name the category (the turbo scan knows it), otherwise
+            // it is read from the side bar of the scanned page.
+            const pageCategoryText = options.categoryText || getPageCategoryText(_liveDoc);
             let _newCount = 0;
             let _returned = 0;
             const _tilesProm = [];
