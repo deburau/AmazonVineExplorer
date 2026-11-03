@@ -1,8 +1,12 @@
 # Umbau: eine Schleife für alle Scans
 
-> **Stand 2026-11-02: geplant, nicht implementiert.** Die Entscheidungen des
-> Maintainers sind unten festgehalten. Diese Datei hält den Plan, die Risiken und
-> die Verifikationsstrategie fest, damit nichts verloren geht.
+> **Stand 2026-11-02: Schritt 1 und 2 sind umgesetzt.** Die Schleife läuft,
+> verhält sich aber noch genau wie die alte Kette (durch `verify_scan.js`
+> bestätigt: alle 7 Szenarien sind identisch). Turbo, Fast-Entkopplung und
+> Cleanup-Schritt folgen (Schritte 3–6).
+>
+> **Rückfallpunkt:** Tag `pre-scan-loop` = Commit `aa68425` (Stand vor dem
+> Umbau, auf `origin` gepusht).
 
 ## Zielstruktur
 
@@ -164,12 +168,17 @@ Vorgehen deshalb in zwei Klassen:
 
 ## Umsetzungsschritte (je ein Commit, je eine Verifikation)
 
-1. **Vorbereitung ohne Verhaltensänderung:** `getScanDelay()` (Zufall) und die
+1. ~~**Vorbereitung ohne Verhaltensänderung:** `getScanDelay()` (Zufall) und die
    „soll laufen?"-Tests als reine Funktionen herausziehen, `prepareFastScan()`
-   darauf umbauen. Baseline bleibt gültig.
-2. **Die Schleife einführen:** `scanLoop()` mit Verzögerung vorne, Prioritäten
+   darauf umbauen. Baseline bleibt gültig.~~ **erledigt** (`getScanDelay()`,
+   `getFastScanState()`, `startFastScan()`, `prepareFastScan()` nutzt sie).
+2. ~~**Die Schleife einführen:** `scanLoop()` mit Verzögerung vorne, Prioritäten
    und `try`/`catch`, aber **nur** mit BG + Fast + Cleanup (wie heute, ohne
-   Turbo). `verify_scan.js` auf die neue Form umschreiben (Klassen 1 und 2).
+   Turbo).~~ **erledigt** (`scanLoop()` + `scanStepBackground()`,
+   `ScanLoopGeneration` gegen doppelt gestartete Schleifen, `scanStepDone` als
+   Rückmeldung der Schritte, `try`/`catch` in der Schleife). `verify_scan.js`
+   treibt jetzt beide Versionen an (gemockter `delay` + Microtask-Drain) und
+   vergleicht weiterhin Schritt für Schritt: **alle 7 Szenarien sind identisch**.
 3. **Fast-Scan entkoppeln:** eigener Zähler `AVE_FAST_SCAN_PAGE`, die
    Rückstellung entfernen. Verifikation: die BG-Position ändert sich während
    eines Fast-Scans nicht mehr.

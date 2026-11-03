@@ -21,7 +21,12 @@ const NEW_NAMES = [
     'aveGetVineBaseUrl',
     'initBackgroundScanStorage',
     'getBackgroundScanStageZeroSites',
-    'backgroundScanLoop',
+    // Die Schleife heisst in der neuen Version scanLoop/scanStepBackground.
+    'scanLoop',
+    'scanStepBackground',
+    'getScanDelay',
+    'getFastScanState',
+    'startFastScan',
     'prepareFastScan',
     'prepareScanIteration',
     'scanStageZero',
@@ -44,9 +49,14 @@ const { old: oldCode, new: newCode } = prepare('verify_scan.js', OLD_NAMES, NEW_
  * @param {string} code Der Quelltext der Scan-Implementierung
  * @param {boolean} fastScan true, wenn der Fast-Scan aktiv sein soll
  */
-function runScenario(code, initial) {
+async function runScenario(code, initial) {
     const log = [];
     const store = new Map();
+
+    // Der Loop der neuen Version wartet mit einem Promise. Er wird ueber den
+    // gemockten setTimeout der Sandbox angetrieben, danach muessen die
+    // Microtasks laufen, damit der Loop bis zur naechsten Wartestelle kommt.
+    const tick = () => new Promise((resolve) => setImmediate(resolve));
 
     const localStorage = {
         getItem(key) {
@@ -96,6 +106,9 @@ function runScenario(code, initial) {
         AVE_VERSION: 'test',
         AVE_IS_THIS_SESSION_MASTER: true,
         BackGroundScanIsRunning: false,
+        // Die Variablen der neuen Schleife (die alte Version kennt sie nicht).
+        ScanLoopGeneration: 0,
+        scanStepDone: null,
         backGroundScanTimeout: null,
         lastScanPaginationData: null,
         getCountry: () => 'DE',
@@ -116,6 +129,7 @@ function runScenario(code, initial) {
             return ++timerId;
         },
         clearTimeout: () => {},
+        delay: (ms) => new Promise((resolve) => queue.push(resolve)),
         setInterval: (cb, ms) => {
             // Der echte Interval feuert erst nach der Zuweisung der Variable,
             // deshalb wird der Callback hier in die Queue gelegt.
@@ -142,6 +156,7 @@ function runScenario(code, initial) {
     store.set('AVE_LAST_BACKGROUND_SCAN_STAGE', '0');
     store.set('AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT', '0');
     store.set('AVE_NEW_COUNT', '0');
+    store.set('AVE_CLEANUP_LAST_TIME', '0');
 
     for (const [key, value] of Object.entries(initial || {})) {
         store.set(key, String(value));
@@ -156,12 +171,14 @@ function runScenario(code, initial) {
         if (!queue.length) break;
         const cb = queue.shift();
         cb();
+        await tick();
         steps.push(log.splice(0).join(' | '));
 
         // Der Scan der gerade gestarteten Seite meldet sich jetzt zurück.
         if (pendingScans.length) {
             const scanCb = pendingScans.shift();
             scanCb(3);
+            await tick();
             steps.push(log.splice(0).join(' | '));
         }
     }
@@ -264,34 +281,38 @@ const SCENARIOS = [
     }
 ];
 
-for (const scenario of SCENARIOS) {
-    const label = scenario.label;
-    const oldSteps = runScenario(oldCode, scenario.initial);
-    const newSteps = runScenario(newCode, scenario.initial);
+const _main = async () => {
+    for (const scenario of SCENARIOS) {
+        const label = scenario.label;
+        const oldSteps = await runScenario(oldCode, scenario.initial);
+        const newSteps = await runScenario(newCode, scenario.initial);
 
-    console.log('\n=== ' + label + ' ===');
-    console.log('Schritte alt: ' + oldSteps.length + ', neu: ' + newSteps.length);
+        console.log('\n=== ' + label + ' ===');
+        console.log('Schritte alt: ' + oldSteps.length + ', neu: ' + newSteps.length);
 
-    const max = Math.max(oldSteps.length, newSteps.length);
-    for (let i = 0; i < max; i++) {
-        const o = oldSteps[i] || '(keine)';
-        const n = newSteps[i] || '(keine)';
-        if (norm(o) === norm(n)) {
-            console.log('  Schritt ' + i + ': identisch');
-        } else {
-            failures++;
-            console.log('  Schritt ' + i + ': ABWEICHUNG');
-            console.log('    alt: ' + o);
-            console.log('    neu: ' + n);
+        const max = Math.max(oldSteps.length, newSteps.length);
+        for (let i = 0; i < max; i++) {
+            const o = oldSteps[i] || '(keine)';
+            const n = newSteps[i] || '(keine)';
+            if (norm(o) === norm(n)) {
+                console.log('  Schritt ' + i + ': identisch');
+            } else {
+                failures++;
+                console.log('  Schritt ' + i + ': ABWEICHUNG');
+                console.log('    alt: ' + o);
+                console.log('    neu: ' + n);
+            }
         }
     }
-}
 
-console.log('\nAbgedeckte Scan-Aufrufe (Szenario 1, neue Version):');
-const _cover = runScenario(newCode, SCENARIOS[0].initial).join('\n');
-const _urls = [...new Set(_cover.match(/backGroundTileScanner \S+/g) || [])];
-_urls.forEach((_u) => console.log('  ' + _u));
-console.log('  -> gesetzte Stages: ' + [...new Set(_cover.match(/set AVE_BACKGROUND_SCAN_STAGE=\d/g) || [])].join(', '));
-console.log('  -> cleanUpDatabase aufgerufen: ' + _cover.includes('cleanUpDatabase'));
+    console.log('\nAbgedeckte Scan-Aufrufe (Szenario 1, neue Version):');
+    const _cover = (await runScenario(newCode, SCENARIOS[0].initial)).join('\n');
+    const _urls = [...new Set(_cover.match(/backGroundTileScanner \S+/g) || [])];
+    _urls.forEach((_u) => console.log('  ' + _u));
+    console.log('  -> gesetzte Stages: ' + [...new Set(_cover.match(/set AVE_BACKGROUND_SCAN_STAGE=\d/g) || [])].join(', '));
+    console.log('  -> cleanUpDatabase aufgerufen: ' + _cover.includes('cleanUpDatabase'));
 
-finish(failures === 0, failures);
+    finish(failures === 0, failures);
+};
+
+_main();

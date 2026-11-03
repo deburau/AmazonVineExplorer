@@ -40,6 +40,7 @@
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
    backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct, cleanUpDatabase,
+   scanLoop, scanStepBackground,
    colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
    createProductSite, createSettingsKeywordsTableElement, createSettingsMenuElement,
@@ -90,6 +91,21 @@ let searchInputTimeout;
 let backGroundScanTimeout;
 
 let BackGroundScanIsRunning = false;
+
+/**
+ * The generation of the scan loop. Every start of the loop counts it up, so
+ * that a loop that is still waiting stops, when a new loop was started.
+ * @type {number}
+ */
+let ScanLoopGeneration = 0;
+
+/**
+ * The function that tells the scan loop that the current step is done. It is
+ * set while a step is running, because the steps that load a page are
+ * callback based.
+ * @type {function|null}
+ */
+let scanStepDone = null;
 
 /**
  * The pagination data of the last page that was scanned in the background.
@@ -3195,9 +3211,8 @@ function initBackgroundScan() {
             _state.stageZeroSites = getBackgroundScanStageZeroSites();
             _state.pageMax = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX')) || 0;
 
-            backGroundScanTimeout = setTimeout(() => {
-                backgroundScanLoop(_baseUrl, _state);
-            }, SETTINGS.BackGroundScanDelayPerPage);
+            // The loop waits itself before every step, so it is started directly.
+            scanLoop(_baseUrl, _state);
         }
     }, 250); //scan every 250ms
 }
@@ -3234,53 +3249,120 @@ function getBackgroundScanStageZeroSites() {
 }
 
 /**
- * One iteration of the background scan loop.
+ * The endless loop of the scans.
  *
- * The iteration only decides what has to be scanned, the scanning itself is
- * done by backGroundTileScanner(). The next iteration is started by
- * backgroundScanFinished(), as soon as the page was scanned.
+ * Every iteration waits the configured time and then makes exactly one step.
+ * The steps are ordered by their priority. An exception of one step does not
+ * stop the loop, the next iteration is made instead.
+ *
+ * NOTE: The loop stops when BackGroundScanIsRunning is set to false (e.g. when
+ * the master role is lost) or when the generation changed (e.g. when the scan
+ * was restarted after an import of the database).
  *
  * @param {string} baseUrl The base url of the Vine pages
  * @param {BackgroundScanState} state The state of the scan
  */
-function backgroundScanLoop(baseUrl, state) {
-    const startTime = performance.now(); // Get the Starttime to calculate the speed
+async function scanLoop(baseUrl, state) {
+    const _generation = ++ScanLoopGeneration;
+    if (SETTINGS.DebugLevel > 10) console.log(`scanLoop(): started with the generation ${_generation}`);
+
+    while (BackGroundScanIsRunning && _generation === ScanLoopGeneration) {
+        await delay(getScanDelay());
+
+        if (!BackGroundScanIsRunning || _generation !== ScanLoopGeneration) break;
+
+        try {
+            await scanStepBackground(baseUrl, state);
+        } catch (error) {
+            // NOTE: The loop has to continue, whatever a step does.
+            const _reason = error?.message || error || 'unknown error';
+            console.error(`scanLoop(): the step failed: ${_reason}`);
+        }
+    }
+
+    if (SETTINGS.DebugLevel > 10) console.log(`scanLoop(): stopped (generation ${_generation})`);
+}
+
+/**
+ * One step of the scan loop: one page of the stage that is due.
+ *
+ * The step only decides what has to be scanned, the scanning itself is done by
+ * backGroundTileScanner(). The step is done when backgroundScanFinished() is
+ * called, which happens after the page was scanned or directly for the stages
+ * that do not load a page.
+ *
+ * @param {string} baseUrl The base url of the Vine pages
+ * @param {BackgroundScanState} state The state of the scan
+ */
+async function scanStepBackground(baseUrl, state) {
+    const _startTime = performance.now(); // Get the Starttime to calculate the speed
 
     if (state.loopIsWorking) return;
     state.loopIsWorking = true;
 
+    // NOTE: A stage that is not known would stop the loop, because the step
+    // would never be finished. The scan is set back to its beginning instead.
+    if (state.stage < 0 || state.stage > 4) {
+        console.error(`scanStepBackground(): the stage ${state.stage} is not known, the scan is restarted`);
+        state.stage = 0;
+        state.subStage = 0;
+        state.loopIsWorking = false;
+        return;
+    }
+
     prepareFastScan();
 
-    const _iteration = prepareScanIteration(state, startTime);
+    const _iteration = prepareScanIteration(state, _startTime);
 
-    switch (state.stage) {
-        case 0:
-            scanStageZero(baseUrl, state, _iteration);
-            break;
-        case 1:
-            scanStageEncore(baseUrl, state, _iteration);
-            break;
-        case 2:
-            scanStageSkip(baseUrl, state, _iteration);
-            break;
-        case 3:
-            scanStageCleanup(baseUrl, state, _iteration);
-            break;
-        case 4:
-            scanStageIdle(baseUrl, state, _iteration);
-            break;
-    }
+    await new Promise((resolve) => {
+        scanStepDone = resolve;
+
+        switch (state.stage) {
+            case 0:
+                scanStageZero(baseUrl, state, _iteration);
+                break;
+            case 1:
+                scanStageEncore(baseUrl, state, _iteration);
+                break;
+            case 2:
+                scanStageSkip(baseUrl, state, _iteration);
+                break;
+            case 3:
+                scanStageCleanup(baseUrl, state, _iteration);
+                break;
+            case 4:
+                scanStageIdle(baseUrl, state, _iteration);
+                break;
+        }
+    });
+
+    scanStepDone = null;
 }
 
 /**
- * Decides if a fast scan should be started.
+ * Returns the waiting time between two pages of the scan.
+ *
+ * @returns {number} The waiting time in milliseconds
+ */
+function getScanDelay() {
+    return SETTINGS.BackGroundScanDelayPerPage + Math.round(Math.random() * SETTINGS.BackGroundScannerRandomness);
+}
+
+/**
+ * Reads the state of the fast scan from the local storage.
  *
  * A fast scan is a shortened version of the background scan. It is only started
  * if the last scan is long enough ago and the scan is at the beginning, so that
  * a possible product drop is found early.
+ *
+ * NOTE: The reads have to stay in this order, because the sequence of the local
+ * storage accesses is part of the behaviour of the scan.
+ *
+ * @returns {{running: boolean, due: boolean}} true if a fast scan is already
+ *                                   running and true if it has to be started
  */
-function prepareFastScan() {
-    if (localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true') return;
+function getFastScanState() {
+    if (localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true') return { running: true, due: false };
 
     const _backgroundScanStage = localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') || -1;
     const _backgroundScanPageMax = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX') || -1;
@@ -3295,25 +3377,46 @@ function prepareFastScan() {
     //   is not at the very beginning and if it did not just start with the encore
     //   queue. The conditions are combined into one expression, because every
     //   single one of them would set the same flag.
-    const _startFastScan =
+    const _due =
         !(_fastTimeWaitingSec < _fastTimeIntervalSec) &&
         !(_backgroundScanStage <= 0) &&
         !(_backgroundScanPageMax <= 0) &&
         !(_backgroundScanStage == 1 && _backgroundScanPageCurrent <= 0) &&
         !(_backgroundScanStage == 1 && _backgroundScanPageCurrent < _backgroundScanPageMax / 20);
 
-    if (_startFastScan) {
-        if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): starting fast scan');
-        localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', true);
-        localStorage.setItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS', '-1:-1:-1:-1');
-        localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT', localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT'));
-        localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_STAGE', localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE'));
-        localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', 0);
-        localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', 0);
-        localStorage.setItem('AVE_NEW_COUNT', 0);
-    } else {
-        localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
-    }
+    return { running: false, due: _due };
+}
+
+/**
+ * Starts a fast scan.
+ *
+ * The position of the background scan is remembered, so that it can be restored
+ * after the fast scan stopped, and the scan is set to its beginning.
+ *
+ * NOTE: The writes have to stay in this order, because the sequence of the local
+ * storage accesses is part of the behaviour of the scan.
+ */
+function startFastScan() {
+    if (SETTINGS.DebugLevel > 10) console.log('scanLoop(): starting fast scan');
+    localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', true);
+    localStorage.setItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS', '-1:-1:-1:-1');
+    localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT', localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT'));
+    localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_STAGE', localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE'));
+    localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', 0);
+    localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', 0);
+    localStorage.setItem('AVE_NEW_COUNT', 0);
+}
+
+/**
+ * Decides if a fast scan is started and starts it.
+ */
+function prepareFastScan() {
+    const _state = getFastScanState();
+    // A running fast scan is not started again and must not be switched off.
+    if (_state.running) return;
+
+    if (_state.due) startFastScan();
+    else localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
 }
 
 /**
@@ -3619,13 +3722,14 @@ function backgroundScanFinished(baseUrl, state, iteration, newCount) {
         handleFastScanFinished(newCount);
     }
 
-    const _delay = SETTINGS.BackGroundScanDelayPerPage + Math.round(Math.random() * SETTINGS.BackGroundScannerRandomness);
     const _timeElapsed = performance.now() - iteration.startTime;
-    if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): Scantime: ', _timeElapsed, ' Delay: ', _delay);
+    if (SETTINGS.DebugLevel > 10) console.log('scanLoop(): Scantime: ', _timeElapsed);
 
-    backGroundScanTimeout = setTimeout(() => {
-        backgroundScanLoop(baseUrl, state);
-    }, _delay);
+    // NOTE: The waiting time is applied by the loop before the next step, so the
+    // step only has to tell the loop that it is done.
+    const _done = scanStepDone;
+    scanStepDone = null;
+    if (_done) _done();
 }
 
 /**

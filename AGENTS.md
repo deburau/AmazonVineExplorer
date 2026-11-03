@@ -386,7 +386,11 @@ state that has to survive the single iterations of the scan loop is kept in a
 | `initBackgroundScan()` | Starts the scan and the pagination wait loop |
 | `initBackgroundScanStorage()` | Writes the initial values to the local storage |
 | `getBackgroundScanStageZeroSites()` | The queues of the first stage |
-| `backgroundScanLoop()` | One iteration of the loop, it selects the stage |
+| `scanLoop()` | The endless loop: it waits and then makes one step |
+| `scanStepBackground()` | One step: one page of the stage that is due |
+| `getScanDelay()` | The waiting time between two pages |
+| `getFastScanState()` | Reads if a fast scan is running or has to be started |
+| `startFastScan()` | Remembers the position and sets the scan to its beginning |
 | `prepareFastScan()` | Decides if a fast scan is started |
 | `prepareScanIteration()` | Determines the stage and the sub stage |
 | `scanStageZero()` … `scanStageIdle()` | The five stages of the scan |
