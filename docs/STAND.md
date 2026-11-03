@@ -227,6 +227,9 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   2 Kategorien = 240 Seiten/h = **+17 %**.
 * Alle Messwerte, die Kategorie-Struktur (`pn`/`cn`, Sidebar-DOM) und die
   Begründung, warum der Fast-Scan das nicht leisten kann: **`docs/TURBO-SCAN.md`**.
+* **Geplanter Umbau der Steuerung:** eine einzige Schleife mit Prioritäten
+  (Turbo → Fast → BG → Cleanup, Verzögerung vorne) – Plan, Risiken und die
+  Verifikationsstrategie stehen in **`docs/SCAN-LOOP.md`**.
 
 ## Wichtige Dateien
 
@@ -241,6 +244,7 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
 | `scripts/verify/lib/verify_helpers.js` | Gemeinsame Helfer der Skripte |
 | `.unotes/` | Lokale Testskripte (nicht versioniert) |
 | `docs/TURBO-SCAN.md` | Konzept des Turbo-Scans (Messwerte, Entscheidungen, offene Punkte) |
+| `docs/SCAN-LOOP.md` | Plan für die eine Schleife mit Prioritäten (Turbo/Fast/BG/Cleanup) |
 | `AGENTS.md` | Arbeitsregeln für AI-Sessions |
 | `HANDOVER.md` | Umzug auf ein anderes System |
 
