@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.26` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.27` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -235,6 +235,15 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   2 Kategorien = 240 Seiten/h = **+17 %**.
 * Alle Messwerte, die Kategorie-Struktur (`pn`/`cn`, Sidebar-DOM) und die
   Begründung, warum der Fast-Scan das nicht leisten kann: **`docs/TURBO-SCAN.md`**.
+* **Stand der Umsetzung:** Eigene Kategorie-Einstellung `TurboScanCategories`
+  mit Checkboxen (Unterkategorien werden beim Aufklappen geladen, bereits
+  gewählte Hauptkategorien öffnen sich von selbst), `EnableTurboScan` und
+  `TurboScanIntervalSeconds` stehen in den Einstellungen. Das Lesen der
+  Kategorien: `getVineCategoryParents()` / `getVineCategoryChildren()` (Cache in
+  `AVE_CATEGORY_CACHE`, Wächter `verify_category_tree.js`, Auswahl-Wächter
+  `verify_settings_categories.js`). **Der Turbo-Scan selbst fehlt noch** – die
+  Einstellungen haben bis dahin keine Wirkung, darum gibt es noch keinen
+  Changelog-Eintrag.
 * **Umbau der Steuerung:** eine einzige Schleife mit Prioritäten
   (Turbo → Fast → BG → Cleanup, Verzögerung vorne) – Plan, Risiken und die
   Verifikationsstrategie stehen in **`docs/SCAN-LOOP.md`**. **Schritte 1 und 2

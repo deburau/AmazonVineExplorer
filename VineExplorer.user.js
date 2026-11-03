@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.26
+// @version      0.15.0.27
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -44,7 +44,10 @@
    scanLoop, scanStepBackground,
    colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
-   createProductSite, createSettingsKeywordsTableElement, createSettingsMenuElement,
+   createProductSite, createSettingsCategoriesElement, createSettingsCategoryRow,
+   createSettingsKeywordsTableElement, createSettingsMenuElement,
+   getCategoryId, hasSelectedSubCategory, isCategorySelected, renderSettingsCategories,
+   setCategorySelected, toggleSettingsCategoryChildren,
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, formatTaxPrize, getContrastColor, getFastScanState,
@@ -2002,6 +2005,47 @@ const AVE_SETTINGS_CSS = `
   color: red;
 }
 
+/* The list of the categories (turbo scan) */
+.ave-category-list {
+  display: none;
+  width: 320px;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid rgba(128, 128, 128, .5);
+  border-radius: 4px;
+  padding: 4px;
+  background-color: white;
+  color: black;
+  font-size: 13px;
+}
+
+.ave-category-row {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.ave-category-row label {
+  cursor: pointer;
+}
+
+.ave-category-toggle {
+  display: inline-block;
+  width: 18px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ave-category-children {
+  margin-left: 18px;
+}
+
+.ave-category-error {
+  width: 320px;
+  color: rgb(255, 0, 0);
+}
+
 /* Add this attribute to the element that needs a tooltip */
 [data-ave-tooltip] {
   position: relative;
@@ -2688,9 +2732,213 @@ function createSettingsMenuElement(dat) {
         case 'keywords':
             createSettingsKeywordsElement(dat, _elem, _labelName, _labelDescription, _inputPlaceholder);
             break;
+        case 'categories':
+            createSettingsCategoriesElement(dat, _elem, _labelName, _labelDescription);
+            break;
     }
 
     return _elem;
+}
+
+/**
+ * Creates a settings item with the list of the categories.
+ *
+ * The categories are read from the Vine pages (see getVineCategoryParents()) and
+ * shown as checkboxes. The sub categories of a main category are loaded and shown
+ * when the arrow of the main category is clicked, because Amazon shows them only
+ * on the page of the main category.
+ *
+ * NOTE: Only the numbers of the selected categories are stored, the names are
+ * read again for the display.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {Element} _elem The element of the setting
+ * @param {string} _labelName The name of the setting
+ * @param {string} _labelDescription The description of the setting
+ */
+function createSettingsCategoriesElement(dat, _elem, _labelName, _labelDescription) {
+    const _elem_item_left = createSettingsItemLeft();
+
+    const _error = document.createElement('div');
+    _error.classList.add('ave-category-error');
+    _error.style.display = 'none';
+    _error.innerText = translate('settings', 'categoriesError', 'Die Kategorien konnten nicht geladen werden.');
+
+    const _list = document.createElement('div');
+    _list.classList.add('ave-category-list');
+    _list.innerText = translate('settings', 'categoriesLoading', 'Kategorien werden geladen ...');
+
+    _elem_item_left.appendChild(_list);
+    _elem_item_left.appendChild(_error);
+    _elem.appendChild(_elem_item_left);
+    _elem.appendChild(createSettingsItemRight(_labelName, _labelDescription));
+
+    // The list is built after the element was created, because the pages of the
+    // categories have to be read for it.
+    renderSettingsCategories(dat, _list)
+        .then(() => {
+            _list.style.display = _list.children.length > 0 ? 'block' : 'none';
+            _error.style.display = _list.children.length > 0 ? 'none' : 'block';
+        })
+        .catch((error) => {
+            console.error(`createSettingsCategoriesElement(): could not build the list: ${error}`);
+            _list.style.display = 'none';
+            _error.style.display = 'block';
+        });
+}
+
+/**
+ * Builds the list of the categories for the settings.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {Element} listElement The element that holds the list
+ * @returns {Promise<void>} Resolves when the list is complete
+ */
+async function renderSettingsCategories(dat, listElement) {
+    const _parents = await getVineCategoryParents();
+    listElement.innerHTML = '';
+
+    for (const _parent of _parents) {
+        const _item = createSettingsCategoryRow(dat, _parent, false);
+        listElement.appendChild(_item.row);
+        listElement.appendChild(_item.children);
+
+        // A main category with a selected sub category is opened right away, so
+        // that the user sees the selected categories at once.
+        if (hasSelectedSubCategory(dat, _parent.pn)) await toggleSettingsCategoryChildren(dat, _item, _parent);
+    }
+}
+
+/**
+ * Creates one row of the list of the categories.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {object} category The category (name, number of products and ids)
+ * @param {boolean} isSubCategory true for a sub category
+ * @returns {{row: Element, toggle: Element, children: Element}} The elements of the row
+ */
+function createSettingsCategoryRow(dat, category, isSubCategory) {
+    const _row = document.createElement('div');
+    _row.classList.add('ave-category-row');
+
+    const _toggle = document.createElement('span');
+    _toggle.classList.add('ave-category-toggle');
+
+    let _children = null;
+    if (!isSubCategory) {
+        // The element that holds the sub categories of this main category.
+        _children = document.createElement('div');
+        _children.classList.add('ave-category-children');
+        _children.style.display = 'none';
+        _toggle.innerText = '▸';
+        _toggle.addEventListener('click', () => {
+            toggleSettingsCategoryChildren(dat, { toggle: _toggle, children: _children }, category).catch((error) => {
+                console.error(`createSettingsCategoryRow(): the sub categories could not be loaded: ${error}`);
+            });
+        });
+    }
+    _row.appendChild(_toggle);
+
+    const _label = document.createElement('label');
+    const _checkbox = document.createElement('input');
+    _checkbox.type = 'checkbox';
+    _checkbox.value = getCategoryId(category);
+    _checkbox.checked = isCategorySelected(dat, getCategoryId(category));
+    _checkbox.addEventListener('change', () => {
+        setCategorySelected(dat, getCategoryId(category), _checkbox.checked);
+    });
+    _label.appendChild(_checkbox);
+
+    const _text = document.createElement('span');
+    _text.innerText = category.count === null ? category.name : `${category.name} (${category.count})`;
+    _label.appendChild(_text);
+    _row.appendChild(_label);
+
+    return { row: _row, toggle: _toggle, children: _children };
+}
+
+/**
+ * Opens or closes the sub categories of a main category.
+ *
+ * The sub categories are loaded when they are opened the first time, because
+ * Amazon shows them only on the page of the main category.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {object} item The elements of the row (toggle and children)
+ * @param {object} category The main category
+ * @returns {Promise<void>} Resolves when the sub categories are shown or hidden
+ */
+async function toggleSettingsCategoryChildren(dat, item, category) {
+    if (item.children.style.display === 'block') {
+        item.children.style.display = 'none';
+        item.toggle.innerText = '▸';
+        return;
+    }
+
+    if (item.children.children.length === 0) {
+        const _subCategories = await getVineCategoryChildren(category.pn);
+        for (const _subCategory of _subCategories) {
+            item.children.appendChild(createSettingsCategoryRow(dat, _subCategory, true).row);
+        }
+    }
+
+    item.children.style.display = 'block';
+    item.toggle.innerText = '▾';
+}
+
+/**
+ * Returns the id of a category, which is the value that is stored.
+ *
+ * @param {object} category The category
+ * @returns {string} "pn" for a main category and "pn/cn" for a sub category
+ */
+function getCategoryId(category) {
+    return category.cn ? `${category.pn}/${category.cn}` : category.pn;
+}
+
+/**
+ * Checks if a category is selected in the settings.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {string} id The id of the category
+ * @returns {boolean} true if it is selected
+ */
+function isCategorySelected(dat, id) {
+    return Array.isArray(SETTINGS[dat.key]) && SETTINGS[dat.key].includes(id);
+}
+
+/**
+ * Checks if a sub category of a main category is selected in the settings.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {string} pn The number of the main category
+ * @returns {boolean} true if one of its sub categories is selected
+ */
+function hasSelectedSubCategory(dat, pn) {
+    if (!Array.isArray(SETTINGS[dat.key])) return false;
+    return SETTINGS[dat.key].some((entry) => entry.startsWith(`${pn}/`));
+}
+
+/**
+ * Adds a category to the selected categories or removes it.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {string} id The id of the category
+ * @param {boolean} selected true to add the category, false to remove it
+ */
+function setCategorySelected(dat, id, selected) {
+    const _selected = Array.isArray(SETTINGS[dat.key]) ? SETTINGS[dat.key] : [];
+
+    if (selected) {
+        if (!_selected.includes(id)) _selected.push(id);
+    } else {
+        SETTINGS[dat.key] = _selected.filter((entry) => entry !== id);
+        SETTINGS.save();
+        return;
+    }
+
+    SETTINGS[dat.key] = _selected;
+    SETTINGS.save();
 }
 
 /**

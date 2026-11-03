@@ -63,6 +63,10 @@ const I18N = {
             BackGroundScanDelayPerPage: 'Background Scan Min. Delay pro Seite (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness pro Seite (ms)',
             FastScanIntervalSeconds: 'Fast-Scan-Takt (Sek.)',
+            TITLE_TURBO: 'Turbo-Scan',
+            EnableTurboScan: 'Turbo-Scan aktivieren',
+            TurboScanIntervalSeconds: 'Turbo-Scan Takt (Sek.)',
+            TurboScanCategories: 'Kategorien für den Turbo-Scan',
             DesktopNotifikationDelay: 'Desktop-Benachrichtigung Delay (Sek.)',
             SearchBarInputDelay: 'Suchleiste Verzögerung (ms)',
             VariationRequestDelay: 'Verzögerung zwischen den Requests der Varianten (ms)',
@@ -130,6 +134,13 @@ const I18N = {
             BackGroundScannerRandomness: 'Max. zufällige Wartezeit pro Seite in Millisekunden.',
             FastScanIntervalSeconds:
                 'Mindestzeit zwischen zwei Fast-Scans. Der Fast-Scan prüft die ersten Seiten, um einen Produkt-Drop früh zu erkennen. Die Zeit zählt ab dem Ende des letzten Fast-Scans und ändert die Wartezeit pro Seite des Background Scans nicht.',
+            TITLE_TURBO: 'Turbo-Scan',
+            EnableTurboScan:
+                'Prüft die erste Seite der ausgewählten Kategorien immer wieder, damit neue Produkte dieser Kategorien innerhalb einer Minute gefunden werden.',
+            TurboScanIntervalSeconds:
+                'Zeit zwischen zwei Durchläufen des Turbo-Scans. Pro Durchlauf wird jede Kategorie einmal geladen, der Wert muss also größer sein als die Anzahl der Kategorien.',
+            TurboScanCategories:
+                'Die Kategorien, die der Turbo-Scan beobachtet. Mit dem Pfeil lässt sich eine Kategorie öffnen, um eine Unterkategorie auszuwählen. Gespeichert werden nur die Nummern.',
             DesktopNotifikationDelay: 'Min. Zeit zwischen Benachrichtigungen in Sekunden (0 = aus).',
             SearchBarInputDelay: 'Wartezeit bis zur Suche in Millisekunden.',
             VariationRequestDelay:
@@ -234,6 +245,10 @@ const I18N = {
             BackGroundScanDelayPerPage: 'Background Scan Per Page Min Delay (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness per Page (ms)',
             FastScanIntervalSeconds: 'Fast scan interval (Seconds)',
+            TITLE_TURBO: 'Turbo scan',
+            EnableTurboScan: 'Enable the turbo scan',
+            TurboScanIntervalSeconds: 'Turbo scan interval (Seconds)',
+            TurboScanCategories: 'Categories of the turbo scan',
             DesktopNotifikationDelay: 'Desktop Notification Delay (Seconds)',
             SearchBarInputDelay: 'Search Bar Input Delay (ms)',
             VariationRequestDelay: 'Delay between the requests of the variations (ms)',
@@ -301,6 +316,13 @@ const I18N = {
             BackGroundScannerRandomness: 'Maximum random wait time per page in milliseconds.',
             FastScanIntervalSeconds:
                 'Minimum time between two fast scans. A fast scan looks at the first pages, so that a possible product drop is found early. The time is counted from the end of the last fast scan and does not change the delay per page of the background scan.',
+            TITLE_TURBO: 'Turbo scan',
+            EnableTurboScan:
+                'Looks at the first page of the selected categories again and again, so that new products of those categories are found within a minute.',
+            TurboScanIntervalSeconds:
+                'The time between two rounds of the turbo scan. Every category is loaded once in a round, so the value has to be larger than the number of the categories.',
+            TurboScanCategories:
+                'The categories that are watched by the turbo scan. Open a category with the arrow to select one of its sub categories. Only the numbers of the categories are stored.',
             DesktopNotifikationDelay: 'Minimum time between notifications in seconds (0 = off).',
             SearchBarInputDelay: 'Wait time until the search starts in milliseconds.',
             VariationRequestDelay:

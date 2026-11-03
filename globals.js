@@ -539,6 +539,30 @@ SETTINGS_USERCONFIG_DEFINES.push({
     description:
         'The minimum time between two fast scans. A fast scan looks at the first pages of the product list, so that a possible product drop is found early. The waiting time is counted from the end of the last fast scan, so it does not change the delay per page of the background scan.'
 });
+SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Turbo scan', description: '', key: 'TITLE_TURBO' });
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableTurboScan',
+    type: 'bool',
+    name: 'Enable the turbo scan',
+    description:
+        'Looks at the first page of the selected categories again and again, so that new products of those categories are found within a minute.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'TurboScanIntervalSeconds',
+    type: 'number',
+    min: 10,
+    max: 3600,
+    name: 'Turbo scan interval (Seconds)',
+    description:
+        'The time between two rounds of the turbo scan. Every category is loaded once in a round, so the value has to be larger than the number of the categories.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'TurboScanCategories',
+    type: 'categories',
+    name: 'Categories of the turbo scan',
+    description:
+        'The categories that are watched by the turbo scan. Open a category with the arrow to select one of its sub categories. Only the numbers of the categories are stored.'
+});
 SETTINGS_USERCONFIG_DEFINES.push({
     key: 'DesktopNotifikationDelay',
     type: 'number',
@@ -790,6 +814,9 @@ class SETTINGS_DEFAULT {
     BackGroundScanDelayPerPage = 6000;
     BackGroundScannerRandomness = 6000;
     FastScanIntervalSeconds = 300;
+    EnableTurboScan = false;
+    TurboScanIntervalSeconds = 30;
+    TurboScanCategories = [];
     DesktopNotifikationDelay = 60;
     SearchBarInputDelay = 500;
     IdlePeriodAfterScan = 180;
