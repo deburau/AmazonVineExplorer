@@ -122,7 +122,7 @@ const I18N = {
             EnableBtnMarkAllAsSeen: 'Zeigt den Button „Alle als gesehen markieren“ an.',
             ShowFirstSeen: 'Zeigt das Datum des ersten statt des letzten Auftretens.',
             DesktopNotifikationKeywords:
-                'Keywords für Benachrichtigung und Auto-Favorit. Mehrere Wörter müssen alle vorkommen, die Reihenfolge ist egal. Preisbedingungen wie [price >= 10] laden den Preis jedes Treffers – ein unspezifisches Keyword wie "black [price>50]" kann zu einer Sperre durch Amazon führen, darum lieber mehrere Wörter angeben.',
+                'Keywords für Benachrichtigung und Auto-Favorit. Mehrere Wörter müssen alle vorkommen, die Reihenfolge ist egal. Preisbedingungen wie [price >= 10] laden den Preis jedes Treffers – ein unspezifisches Keyword wie "schwarz [price>50]" kann zu einer Sperre durch Amazon führen, darum lieber mehrere Wörter angeben.',
             GotifyUrl: 'Adresse des Gotify-Servers, z. B. https://gotify.example.com',
             GotifyToken: 'Authentifizierungs-Token der Gotify-Anwendung.',
             BackGroundScanDelayPerPage: 'Min. Wartezeit pro Seite in Millisekunden.',
