@@ -5,8 +5,9 @@
  * Prueft die Suche nach Produkten in der Datenbank.
  *
  * Die Suche kann die Preisbedingungen der Keywords benutzen, z.B.
- * "kaffee [price >= 10]". Anders als bei einem Keyword ist der Text nicht
- * Pflicht: "[price < 5]" sucht nach dem Preis allein.
+ * "kaffee price>=10". Anders als bei einem Keyword ist der Text nicht
+ * Pflicht: "price<5" sucht nach dem Preis allein. Die Bedingungen stehen ohne
+ * Klammern, ein Text in Klammern ist Text.
  *
  * Geprueft werden:
  *   - die Suche nach Text (wie bisher, alle Woerter muessen vorkommen)
@@ -14,6 +15,7 @@
  *   - die Suche nur nach dem Preis
  *   - Produkte ohne bekannten Preis werden ignoriert
  *   - eine ungueltige Preisbedingung liefert kein Ergebnis
+ *   - Klammern sind Text und keine Bedingung
  *
  * Das Skript prueft das aktuelle Verhalten gegen erwartete Werte. Es vergleicht
  * nicht eine alte mit einer neuen Implementierung, weil die Preissuche ein
@@ -108,6 +110,8 @@ async function search(queryText) {
 }
 
 let _errors = 0;
+// NOTE: Die Anzahl der Pruefungen wird gezaehlt, damit sie nicht gepflegt werden muss.
+let _checks = 0;
 
 /**
  * Prueft das Ergebnis einer Suche.
@@ -116,6 +120,7 @@ let _errors = 0;
  * @param {string} label Die Bezeichnung der Pruefung
  */
 async function check(queryText, expected, label) {
+    _checks++;
     const _result = await search(queryText);
     if (JSON.stringify(_result.ids) === JSON.stringify(expected)) {
         console.log(`  OK   ${label}`);
@@ -134,22 +139,23 @@ async function check(queryText, expected, label) {
     await check('kaffee bohnen', ['p4'], 'Die Suche nach zwei Woertern (alle muessen vorkommen)');
     await check('tee', ['p5', 'p6'], 'Die Suche nach einem anderen Wort');
 
-    await check('kaffee [price >= 10]', ['p1', 'p2'], 'Text und eine Preisbedingung');
-    await check('kaffee [price < 10]', ['p4'], 'Text und eine Preisbedingung nach oben');
-    await check('kaffee [price >= 10] [price < 20]', ['p1'], 'Text und zwei Preisbedingungen');
+    await check('kaffee price>=10', ['p1', 'p2'], 'Text und eine Preisbedingung');
+    await check('kaffee price < 10', ['p4'], 'Text und eine Preisbedingung mit Leerzeichen');
+    await check('kaffee price>=10 price<20', ['p1'], 'Text und zwei Preisbedingungen');
 
-    await check('[price < 10]', ['p4'], 'Nur nach dem Preis suchen');
-    await check('[price >= 40]', ['p5'], 'Nur nach einem hohen Preis suchen');
-    await check('[price >= 0]', ['p1', 'p2', 'p4', 'p5'], 'Ein Preis, der immer passt: nur Produkte mit Preis');
-    await check('[price <= 100]', ['p1', 'p2', 'p4', 'p5'], 'Ein Preis, der immer passt (kleiner oder gleich)');
-    await check('[price != 12.5]', ['p2', 'p4', 'p5'], 'Ein Preis, der nicht gleich ist');
+    await check('price<10', ['p4'], 'Nur nach dem Preis suchen');
+    await check('price >= 40', ['p5'], 'Nur nach einem hohen Preis suchen');
+    await check('price>=0', ['p1', 'p2', 'p4', 'p5'], 'Ein Preis, der immer passt: nur Produkte mit Preis');
+    await check('price<=100', ['p1', 'p2', 'p4', 'p5'], 'Ein Preis, der immer passt (kleiner oder gleich)');
+    await check('price != 12.5', ['p2', 'p4', 'p5'], 'Ein Preis, der nicht gleich ist');
 
     // NOTE: Produkte ohne bekannten Preis koennen keine Preisbedingung erfuellen.
-    await check('[price >= 0] teekanne', ['p5'], 'Ein Produkt ohne Preis ist nicht im Ergebnis');
+    await check('price>=0 teekanne', ['p5'], 'Ein Produkt ohne Preis ist nicht im Ergebnis');
     await check('', ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'], 'Eine leere Suche findet alle Produkte');
 
-    const _invalid = await search('[price > abc]');
-    await check('[price > abc]', [], 'Eine ungueltige Preisbedingung liefert kein Ergebnis');
+    const _invalid = await search('price > abc');
+    await check('price > abc', [], 'Eine ungueltige Preisbedingung liefert kein Ergebnis');
+    _checks++;
     if (_invalid.warnings.length === 0) {
         _errors++;
         console.log('  FAIL Eine ungueltige Preisbedingung wird gemeldet');
@@ -157,12 +163,25 @@ async function check(queryText, expected, label) {
         console.log('  OK   Eine ungueltige Preisbedingung wird gemeldet');
     }
 
-    // Ein Text in eckigen Klammern, der keine Preisbedingung ist, bleibt Text.
+    // Die Klammern sind kein Teil der Syntax mehr: der Text wird gesucht.
     await check('[kaffee]', [], 'Ein Text in Klammern ist kein Treffer, wenn er nicht im Text steht');
+    await check('[price=0]', [], 'Eine Bedingung in Klammern ist Text und keine Bedingung');
+    await check('[price>=0]', [], 'Auch eine Preisbedingung in Klammern sucht nur den Text');
+
+    // Die Kategorie ist nicht in der Datenbank, die Suche kann sie nicht pruefen.
+    const _category = await search('kaffee category~getränke');
+    await check('kaffee category~getränke', [], 'Eine Kategoriebedingung liefert kein Ergebnis');
+    _checks++;
+    if (_category.warnings.length === 0) {
+        _errors++;
+        console.log('  FAIL Eine Kategoriebedingung wird gemeldet');
+    } else {
+        console.log('  OK   Eine Kategoriebedingung wird gemeldet');
+    }
 
     console.log('');
     console.log('='.repeat(70));
-    const _total = 16;
+    const _total = _checks;
     if (_errors === 0) {
         console.log(`>>> RESULT: all ${_total} test cases passed`);
         process.exit(0);

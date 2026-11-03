@@ -27,7 +27,7 @@ der Rest auch nach einer Verdichtung des Chats nicht verloren geht.
   `data_estimated_tax_prices`, die Tiles zeigen den Bereich vom kleinsten bis
   zum größten Preis. Die vorhandenen Preise bleiben beim Upgrade erhalten.
 * **Preisbedingungen in den Keywords**: Ein Keyword kann Bedingungen enthalten,
-  z. B. `toaster [price >= 10] [price < 20]`. Die Preise werden erst geladen,
+  z. B. `toaster price>=10 price<20`. Die Preise werden erst geladen,
   wenn das Keyword gematcht hat.
 * **Schnellere Preisdetails**: Die Wartezeit zwischen den Varianten-Requests
   (`VariationRequestDelay`, Default 500 ms) und zwischen den Produkten der

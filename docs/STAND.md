@@ -204,9 +204,17 @@ Release erledigt und wurde geschlossen.
   **nicht** als Favorit markiert – es wird beim nächsten Scan erneut geprüft.
 * Neue Funktionen: `normalizePriceInput()`, `parsePriceCondition()`,
   `parseKeywordConfig()`, `matchPriceConditions()`, `loadProductDetails()`.
-* Wächter `scripts/verify/verify_keyword_conditions.js` (70 Fälle: Preise,
-  Kategorien, das Parsen und die Vergleiche).
-* **Kategoriebedingungen** in den Keywords (`[category~getränke]`):
+* Bedingungen stehen **ohne Klammern** und sind immer ein **eigenes Wort**
+  (`price>=10`, `price >= 10`, `price<5`, `category~getränke`). Die Leerzeichen
+  um den Operator sind optional (ein Tokenizer liest 1–3 Wörter,
+  `parseKeywordConfig()`), `[price=0]` ist dagegen **Text** (die Klammern sind
+  auf einer deutschen Tastatur AltGr-Kombinationen und waren in einer
+  Remote-Sitzung nicht tippbar). Der Name einer Kategorie ist **ein** Wort
+  (`category~kaffee tee` → Kategorie "kaffee" + Text "tee").
+* Wächter `scripts/verify/verify_keyword_conditions.js` (75 Fälle: Preise,
+  Kategorien, das Parsen und die Vergleiche, Klammern als Text),
+  `verify_search.js` (20 Fälle).
+* **Kategoriebedingungen** in den Keywords (`category~getränke`):
   `parseCategoryCondition()` + `matchCategoryConditions()` (Teilstring, klein
   geschrieben, alle Bedingungen müssen passen). Es muss ein **Keyword oder eine
   Kategorie** angegeben sein (nur Preis bleibt ungültig). Die Kategorie eines

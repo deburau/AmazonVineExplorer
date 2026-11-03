@@ -5,9 +5,13 @@
  * Prueft die Bedingungen der Keywords (Preis und Kategorie).
  *
  * Ein Keyword kann Preisbedingungen enthalten, z. B.
- * "toaster [price >= 10] [price < 20]", und Kategoriebedingungen, z. B.
- * "[category~getraenke]". Ein Text oder eine Kategorie muss angegeben sein, nur
+ * "toaster price>=10 price<20", und Kategoriebedingungen, z. B.
+ * "category~getraenke". Ein Text oder eine Kategorie muss angegeben sein, nur
  * Preisbedingungen koennen nie matchen.
+ *
+ * NOTE: Die Bedingungen stehen ohne Klammern und sind immer ein eigenes Wort,
+ * damit die Klammern (AltGr) nicht getippt werden muessen. "[price=0]" ist
+ * daher Text und keine Bedingung (siehe die Faelle unten).
  *
  * Geprueft werden:
  *   - die Normalisierung der Preise aus der Benutzereingabe (normalizePriceInput())
@@ -188,12 +192,22 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Ein Keyword mit einer Preisbedingung',
-        input: 'toaster [price >= 10]',
+        input: 'toaster price >= 10',
         expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
     },
     {
+        label: 'Eine Preisbedingung ohne Leerzeichen',
+        input: 'toaster price>=10',
+        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
+    },
+    {
+        label: 'Ein Komma als Dezimaltrennzeichen',
+        input: 'kaffee price>=10,50',
+        expected: { keyword: 'kaffee', conditions: [{ op: '>=', price: 10.5 }], categories: [], valid: true }
+    },
+    {
         label: 'Ein Keyword mit zwei Preisbedingungen',
-        input: 'toaster [price >= 10] [price < 20]',
+        input: 'toaster price >= 10 price < 20',
         expected: {
             keyword: 'toaster',
             conditions: [
@@ -206,40 +220,40 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Eine Preisbedingung ohne Keyword',
-        input: '[price >= 10]',
+        input: 'price >= 10',
         expected: { keyword: '', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
     },
     {
         // Die Bedingung steht in der Mitte: die Leerzeichen drumherum muessen
         // mitverschwinden, sonst sucht das Script nach "toaster   white".
         label: 'Eine Bedingung zwischen zwei Woertern',
-        input: 'toaster [price > 100] white',
+        input: 'toaster price > 100 white',
         expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], categories: [], valid: true }
     },
     {
         label: 'Eine Bedingung am Anfang',
-        input: '[price > 100] toaster white',
+        input: 'price > 100 toaster white',
         expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], categories: [], valid: true }
     },
     {
         label: 'Eine Bedingung am Ende',
-        input: 'toaster white [price > 100]',
+        input: 'toaster white price > 100',
         expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], categories: [], valid: true }
     },
     {
         label: 'Ein Keyword mit einer Kategoriebedingung',
-        input: 'kaffee [category~getraenke]',
+        input: 'kaffee category~getraenke',
         expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'getraenke' }], valid: true }
     },
     {
         // Der Ausdruck der Anforderung: ein Preis ohne Keyword, nur mit Kategorie.
         label: 'Nur Bedingungen ohne Keyword',
-        input: '[price=0] [category~getränke]',
+        input: 'price=0 category~getränke',
         expected: { keyword: '', conditions: [{ op: '=', price: 0 }], categories: [{ text: 'getränke' }], valid: true }
     },
     {
         label: 'Zwei Kategoriebedingungen',
-        input: '[category~lebensmittel] [category~tee]',
+        input: 'category~lebensmittel category~tee',
         expected: {
             keyword: '',
             conditions: [],
@@ -249,13 +263,13 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Eine kaputte Preisbedingung macht das Keyword ungueltig',
-        input: 'toaster [price > abc]',
-        expected: { keyword: 'toaster [price > abc]', conditions: [], categories: [], valid: false }
+        input: 'toaster price > abc',
+        expected: { keyword: 'toaster price > abc', conditions: [], categories: [], valid: false }
     },
     {
         label: 'Eine kaputte Kategoriebedingung macht das Keyword ungueltig',
-        input: 'kaffee [category ohne tilde]',
-        expected: { keyword: 'kaffee [category ohne tilde]', conditions: [], categories: [], valid: false }
+        input: 'kaffee category~',
+        expected: { keyword: 'kaffee category~', conditions: [], categories: [], valid: false }
     },
     {
         label: 'Ein Keyword mit dem Wort price, aber ohne Bedingung',
@@ -268,9 +282,35 @@ const KEYWORD_CASES = [
         expected: { keyword: 'category', conditions: [], categories: [], valid: true }
     },
     {
-        label: 'Eine Bedingung mit dem alten Feldnamen ist ungueltig',
-        input: 'toaster [data_estimated_tax_prices >= 10]',
-        expected: { keyword: 'toaster [data_estimated_tax_prices >= 10]', conditions: [], categories: [], valid: false }
+        // Die Klammern sind kein Teil der Syntax mehr: der Text wird gesucht.
+        label: 'Klammern sind Text und keine Bedingung',
+        input: '[price=0]',
+        expected: { keyword: '[price=0]', conditions: [], categories: [], valid: true }
+    },
+    {
+        label: 'Auch eine Kategoriebedingung in Klammern ist Text',
+        input: 'kaffee [category~getränke]',
+        expected: {
+            keyword: 'kaffee [category~getränke]',
+            conditions: [],
+            categories: [],
+            valid: true
+        }
+    },
+    {
+        label: 'Nur die englischen Feldnamen sind Bedingungen',
+        input: 'kaffee preis>=10',
+        expected: { keyword: 'kaffee preis>=10', conditions: [], categories: [], valid: true }
+    },
+    {
+        label: 'Ein anderer Feldname ist keine Bedingung',
+        input: 'toaster data_estimated_tax_prices >= 10',
+        expected: {
+            keyword: 'toaster data_estimated_tax_prices >= 10',
+            conditions: [],
+            categories: [],
+            valid: true
+        }
     }
 ];
 

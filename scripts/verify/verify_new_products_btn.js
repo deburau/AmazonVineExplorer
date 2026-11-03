@@ -319,7 +319,7 @@ const SCENARIOS = [
         expectNotification: true,
         opts: {
             desktop: true,
-            keywords: ['[category~getränke]'],
+            keywords: ['category~getränke'],
             categoryText: 'Lebensmittel & Getränke',
             entries: [
                 {
@@ -350,7 +350,7 @@ const SCENARIOS = [
         expectNoNotification: true,
         opts: {
             desktop: true,
-            keywords: ['[category~getränke]'],
+            keywords: ['category~getränke'],
             categoryText: 'Garten',
             entries: [
                 {

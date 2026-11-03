@@ -63,6 +63,12 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.40
+
+* The conditions of the keywords and of the search are written **without square brackets** now: `price>=10`, `price<5`, `price=12.50`, `category~getränke`. The spaces around the operator are optional, so `price >= 10` works as well. The brackets are hard to type in a remote session (on a German keyboard they are on AltGr) and they are not needed.
+* A condition has to be a word of its own. `[price=0]` is a normal text now and searches for the text "[price=0]" - until now the brackets were part of the syntax. A keyword that names a field without a readable condition, e.g. `price > abc`, does not match (as before).
+* The name of a category is a single word: `category~kaffee` searches for the category "kaffee", `category~kaffee tee` searches for the category "kaffee" and for the text "tee".
+
 ##### [2026-11-03] - Version 0.15.0.39
 
 * When the turbo scan loads a sub category, the name of the sub category is checked (together with the name of its main category) by a search for a category. `[category~kaffee]` therefore matches the products of the sub category "Getränke, Kaffee & Tee" of the category "Lebensmittel & Getränke".

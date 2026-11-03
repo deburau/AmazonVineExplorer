@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.39
+// @version      0.15.0.40
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -5015,12 +5015,13 @@ function normalizePriceInput(value) {
 /**
  * Parses a price condition of the keyword configuration.
  *
- * The format of a condition is "[price <operator> <value>]". The operator can
+ * The format of a condition is "price <operator> <value>", the spaces are
+ * optional, e.g. "price>=10" and "price >= 10" are the same. The operator can
  * be "=" or "==" (one of the prices is equal), "!=" or "<>" (none of the prices
  * is equal), "<" or "<=" (the lowest price is lower), ">" or ">=" (the highest
  * price is higher).
  *
- * @param {string} text The content of the brackets
+ * @param {string} text The text of the condition
  * @returns {object|null} The condition, or null if it is not valid
  */
 function parsePriceCondition(text) {
@@ -5035,50 +5036,83 @@ function parsePriceCondition(text) {
  * Parses the keyword of the configuration.
  *
  * A keyword can contain price conditions, e.g.
- * "toaster [price >= 10] [price < 20]".
- * The text without the conditions is the keyword itself, the conditions are
- * checked against the prices of the product.
+ * "toaster price >= 10 price < 20", and searches for a category, e.g.
+ * "kaffee category~getränke". The text without the conditions is the keyword
+ * itself, the conditions are checked against the prices and the category of the
+ * product.
+ *
+ * NOTE: A condition has to be a word of its own, the space between the name of
+ * the field and the value is optional. Brackets are part of the text, so
+ * "[price=0]" searches for that text and it is not a condition. The brackets are
+ * hard to type in a remote session (AltGr) and they are not needed. The name of a
+ * category is one word, so "category~kaffee tee" searches for the category
+ * "kaffee" and for the text "tee".
  *
  * @param {string} config The keyword of the configuration
- * @returns {{keyword: string, conditions: object[], valid: boolean}} The parsed keyword
+ * @returns {{keyword: string, conditions: object[], categories: object[], valid: boolean}} The parsed keyword
  */
 function parseKeywordConfig(config) {
     const _text = String(config ?? '');
     const _result = { keyword: _text, conditions: [], categories: [], valid: true };
 
     // NOTE: Only a keyword with a condition is parsed. The keywords can be
-    // regular expressions and they can contain brackets themselves.
+    // regular expressions and they can contain the name of a field.
     const _lowerText = _text.toLowerCase();
     if (!_lowerText.includes('price') && !_lowerText.includes('category')) return _result;
 
+    // NOTE: A condition is a word of its own, the spaces around the operator are
+    // optional ("price>=10" and "price >= 10" are the same). A condition of up to
+    // three words is read, because of those spaces. The words that are no
+    // condition stay in the keyword, so that a keyword like
+    // "toaster price > 100 white" keeps the text "toaster white" without extra
+    // spaces. The brackets are part of the text, so "[price=0]" is no condition.
     const _conditions = [];
     const _categories = [];
-    _result.keyword = _text
-        // NOTE: The spaces around a condition are removed together with it, so
-        // that a keyword like "toaster [price > 100] white" keeps the text
-        // "toaster white" and not "toaster   white".
-        .replace(/\s*\[([^\]]*)\]\s*/g, (_match, _content) => {
-            const _condition = parsePriceCondition(_content);
-            if (_condition) {
-                _conditions.push(_condition);
-                return ' ';
-            }
+    const _keywordWords = [];
+    const _words = _text.split(/\s+/).filter((word) => word.length > 0);
 
-            const _category = parseCategoryCondition(_content);
-            if (_category) {
-                _categories.push(_category);
-                return ' ';
-            }
+    /**
+     * Reads a condition from the words of the keyword.
+     * @param {number} index The position of the first word
+     * @returns {{count: number, condition: object|null, category: object|null}|null} The condition and its number of words
+     */
+    const _readCondition = (index) => {
+        for (let count = 1; count <= 3 && index + count <= _words.length; count++) {
+            const _condition = parsePriceCondition(_words.slice(index, index + count).join(' '));
+            if (_condition) return { count, condition: _condition, category: null };
+        }
 
-            // The bracket does not contain a valid condition. If it names one of
-            // the fields, the keyword is broken and it does not match.
-            if (/price|category/i.test(_content)) {
-                _result.valid = false;
-                console.warn(`The condition "${_content}" is not valid.`);
-            }
-            return _match;
-        })
-        .trim();
+        // The name of a category is one word ("category~kaffee") or the operator
+        // is written with spaces ("category ~ kaffee").
+        for (const count of [1, 3]) {
+            if (index + count > _words.length) continue;
+            const _category = parseCategoryCondition(_words.slice(index, index + count).join(' '));
+            if (_category) return { count, condition: null, category: _category };
+        }
+        return null;
+    };
+
+    for (let i = 0; i < _words.length; i++) {
+        const _found = _readCondition(i);
+        if (!_found) {
+            _keywordWords.push(_words[i]);
+            continue;
+        }
+        if (_found.condition) _conditions.push(_found.condition);
+        if (_found.category) _categories.push(_found.category);
+        i += _found.count - 1;
+    }
+
+    const _keyword = _keywordWords.join(' ');
+
+    // NOTE: A word that names a field and cannot be read as a condition makes the
+    // keyword invalid, so that a typo does not silently search for a text.
+    if (/(^|\s)price\s*(<=|>=|==|!=|<>|=|<|>)/i.test(_keyword) || /(^|\s)category\s*~/i.test(_keyword)) {
+        _result.valid = false;
+        console.warn(`The condition of the keyword "${_text}" is not valid.`);
+    }
+
+    _result.keyword = _keyword;
     _result.conditions = _conditions;
     _result.categories = _categories;
     return _result;
@@ -5087,10 +5121,11 @@ function parseKeywordConfig(config) {
 /**
  * Parses a category condition of the keyword configuration.
  *
- * The format of a condition is "[category~text]". The condition is fulfilled
- * when the text occurs in the name of the category of the product.
+ * The format of a condition is "category~text", the spaces are optional. The
+ * condition is fulfilled when the text occurs in the name of the category of the
+ * product.
  *
- * @param {string} text The content of the brackets
+ * @param {string} text The text of the condition
  * @returns {object|null} The condition, or null if it is not valid
  */
 function parseCategoryCondition(text) {
@@ -6211,8 +6246,8 @@ function initNavigationButtons() {
  * Searches the products of the database.
  *
  * The search text can contain the same price conditions as the keywords of the
- * notification, e.g. "kaffee [price >= 10]". Unlike a keyword, a price can be
- * searched without a text: "[price < 5]" shows all products that are cheaper
+ * notification, e.g. "kaffee price>=10". Unlike a keyword, a price can be
+ * searched without a text: "price<5" shows all products that are cheaper
  * than 5.
  *
  * NOTE: A product whose price is not known can not match a price condition, so it
@@ -6224,7 +6259,14 @@ function initNavigationButtons() {
 async function searchProducts(queryText) {
     const _entry = parseKeywordConfig(String(queryText ?? '').trim());
     if (!_entry.valid) {
-        console.warn(`searchProducts(): the search "${queryText}" has a price condition that is not valid.`);
+        console.warn(`searchProducts(): the search "${queryText}" has a condition that is not valid.`);
+        return [];
+    }
+
+    // NOTE: The category of a product is not stored in the database, so the search
+    // can not check a condition for the category.
+    if (_entry.categories.length > 0) {
+        console.warn(`searchProducts(): the search "${queryText}" can not check the category of a product.`);
         return [];
     }
 

@@ -323,7 +323,7 @@ const SCENARIOS = [
             mode: 'keyword',
             autoFavorite: true,
             desktop: true,
-            keywords: ['wichtig [price >= 10]'],
+            keywords: ['wichtig price>=10'],
             entries: [],
             product: {
                 id: 'p1',
@@ -344,7 +344,7 @@ const SCENARIOS = [
             mode: 'keyword',
             autoFavorite: true,
             desktop: true,
-            keywords: ['wichtig [price >= 10]'],
+            keywords: ['wichtig price>=10'],
             entries: [],
             product: {
                 id: 'p1',
@@ -366,7 +366,7 @@ const SCENARIOS = [
             mode: 'keyword',
             autoFavorite: true,
             desktop: true,
-            keywords: ['wichtig [price >= 20]'],
+            keywords: ['wichtig price>=20'],
             entries: [],
             product: {
                 id: 'p1',
@@ -389,7 +389,7 @@ const SCENARIOS = [
             autoFavorite: true,
             desktop: true,
             detailsOnFavorite: false,
-            keywords: ['wichtig [price >= 10]'],
+            keywords: ['wichtig price>=10'],
             entries: [],
             product: {
                 id: 'p1',
