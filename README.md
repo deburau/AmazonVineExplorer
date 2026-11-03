@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.24
+
+* The tooltip of the keyword setting warns about unspecific keywords: a keyword with a price condition loads the price of every match, so an unspecific keyword like `black [price>50]` can get the account blocked by Amazon.
+
 ##### [2026-11-03] - Version 0.15.0.23
 
 * **Warning:** a keyword with a price condition loads the price of **every** product whose text matches the keyword. If the keyword is not specific, that are a lot of products and therefore a lot of requests to Amazon, and Amazon blocks the account temporarily if too many requests are made in a short time. An example is `black [price>50]`: the word "black" occurs in a very large number of product titles, so the price of hundreds of products is requested one after the other. A blocked account does not only stop the price details, it also affects the other requests of the script, e.g. the pages of the scan. Use a keyword that is as specific as possible - a keyword with several words only matches if all of them occur in the description (a regular expression works as well) - and watch the messages in the console, the script logs every request as `AVE: Loading the details of ...`.
