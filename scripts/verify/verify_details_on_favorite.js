@@ -469,6 +469,116 @@ const SCENARIOS = [
     }
 ];
 
+/**
+ * Prueft, ob die Details eines Produkts geladen und gespeichert wurden.
+ *
+ * Im Keyword-Modus liegt das Produkt nicht in der Datenbank, darum wird der Log
+ * geprueft: Nach dem Laden der Details wird das Produkt mit dem Preis
+ * gespeichert. Bei einem Elternprodukt ist der Preis der hoechste der
+ * Varianten, die Zahl steht ohne Nachkommastellen im Log (25 statt 25.0).
+ *
+ * @param {object} scenario Das Szenario mit den Erwartungen
+ * @param {object} newRun Der Lauf der neuen Implementierung
+ * @returns {string[]} Die Beschreibungen der Abweichungen
+ */
+function findDetailProblems(scenario, newRun) {
+    const _problems = [];
+    const _hasApiCall = newRun.log.some((l) => l.startsWith('api '));
+
+    const _expectedPrice = scenario.expectPrice !== undefined ? scenario.expectPrice : 12.5;
+    const _expectedTax = String(_expectedPrice).replace(/\.0$/, '');
+    const _expectedPrices = scenario.expectVariantPrices ? JSON.stringify(scenario.expectVariantPrices) : `[${_expectedTax}]`;
+    const _hasTax = newRun.log.some((l) => l.startsWith('db.update') && l.includes(`prices=${_expectedPrices}`));
+
+    if (scenario.expectDetails && (!_hasApiCall || !_hasTax)) {
+        _problems.push(`EXPECTED the details to be loaded, but api=${_hasApiCall} tax=${_hasTax}`);
+    }
+    if (!scenario.expectDetails && _hasApiCall) {
+        _problems.push('EXPECTED no request, but the API was called');
+    }
+    // Bei einem Elternprodukt werden die Preise aller Varianten gespeichert.
+    if (scenario.expectVariantPrices && !_hasTax) {
+        _problems.push(`EXPECTED the prices of the variations to be stored: ${_expectedPrices}`);
+    }
+
+    return _problems;
+}
+
+/**
+ * Prueft die Zeitpunkte im Log: die Verzoegerung zwischen den Varianten, die
+ * Reihenfolge von Preis und Benachrichtigung und die unterbliebene
+ * Benachrichtigung.
+ *
+ * @param {object} scenario Das Szenario mit den Erwartungen
+ * @param {object} newRun Der Lauf der neuen Implementierung
+ * @returns {string[]} Die Beschreibungen der Abweichungen
+ */
+function findTimingProblems(scenario, newRun) {
+    const _problems = [];
+
+    // Zwischen den Varianten wird die Verzoegerung der Einstellung verwendet
+    // (500 ms +/- 50 Prozent).
+    if (scenario.expectVariationDelay) {
+        const _delays = newRun.log.filter((l) => l.startsWith('delay ')).map((l) => parseInt(l.slice(6), 10));
+        const _allInRange = _delays.length > 0 && _delays.every((d) => d >= 250 && d <= 750);
+        if (!_allInRange) {
+            _problems.push(`EXPECTED the delay between the variations to be between 250 and 750 ms: ${JSON.stringify(_delays)}`);
+        }
+    }
+
+    // Die Benachrichtigung wird erst gesendet, nachdem die Preise des Produkts
+    // geladen und gespeichert sind.
+    if (scenario.expectNotificationAfterDetails) {
+        const _detailsIndex = newRun.log.findIndex((l) => l.startsWith('db.update') && l.includes('prices=[12.5]'));
+        const _notificationIndex = newRun.log.findIndex((l) => l.startsWith('desktopNotifikation'));
+        if (_detailsIndex < 0 || _notificationIndex < 0 || _notificationIndex < _detailsIndex) {
+            _problems.push(`EXPECTED the notification after the prices: ${JSON.stringify(newRun.log)}`);
+        }
+    }
+
+    // Wenn die Preisbedingung nicht passt, wird das Produkt nicht benachrichtigt
+    // und nicht als gesehen markiert.
+    if (scenario.expectNoNotification) {
+        const _hasNotification = newRun.log.some((l) => l.startsWith('desktopNotifikation'));
+        const _isNotified = newRun.log.some((l) => l.startsWith('db.update') && l.includes('isNotified=true'));
+        if (_hasNotification || _isNotified) {
+            _problems.push(`EXPECTED no notification, but: ${JSON.stringify(newRun.log)}`);
+        }
+    }
+
+    return _problems;
+}
+
+/**
+ * Vergleicht den Zustand der Produkte der beiden Laeufe.
+ *
+ * @param {object} oldRun Der Lauf der alten Implementierung
+ * @param {object} newRun Der Lauf der neuen Implementierung
+ * @returns {string[]} Die Beschreibungen der Abweichungen
+ */
+function findStateProblems(oldRun, newRun) {
+    const _oldFav = JSON.stringify(oldRun.entries.map((e) => e.isFav));
+    const _newFav = JSON.stringify(newRun.entries.map((e) => e.isFav));
+    if (_oldFav === _newFav) return [];
+
+    return [`state old: ${JSON.stringify(oldRun.entries)}`, `state new: ${JSON.stringify(newRun.entries)}`];
+}
+
+/**
+ * Prueft einen Lauf gegen die Erwartungen des Szenarios.
+ *
+ * Das Skript prueft das neue Verhalten, nicht die Gleichheit mit der alten
+ * Version. Die Erwartung steht in jedem Szenario.
+ *
+ * @param {object} scenario Das Szenario mit den Erwartungen
+ * @param {object} oldRun Der Lauf der alten Implementierung
+ * @param {object} newRun Der Lauf der neuen Implementierung
+ * @returns {string[]} Die Beschreibungen der Abweichungen
+ */
+function findProblems(scenario, oldRun, newRun) {
+    return [...findDetailProblems(scenario, newRun), ...findTimingProblems(scenario, newRun), ...findStateProblems(oldRun, newRun)];
+}
+
 (async () => {
     let _allOk = true;
     let _totalDiffs = 0;
@@ -478,90 +588,14 @@ const SCENARIOS = [
         const _old = await run(oldCode, _scenario.opts, oldRequestDetails);
         const _new = await run(newCode, _scenario.opts, newRequestDetails);
 
-        // Das Skript prueft das neue Verhalten, nicht die Gleichheit mit der
-        // alten Version. Die Erwartung steht in jedem Szenario.
-        const _expected = _scenario.expectDetails;
-        const _hasApiCall = _new.log.some((_l) => _l.startsWith('api '));
-        // Im Keyword-Modus liegt das Produkt nicht in der Datenbank, darum
-        // wird der Log geprueft: Nach dem Laden der Details wird das Produkt
-        // mit dem Preis gespeichert.
-        // Bei einem Elternprodukt ist der Preis der hoechste der Varianten.
-        const _expectedPrice = _scenario.expectPrice !== undefined ? _scenario.expectPrice : 12.5;
-        // Die Zahl wird ohne Nachkommastellen im Log geschrieben (25 statt 25.0).
-        const _expectedTax = String(_expectedPrice).replace(/\.0$/, '');
-        // Bei einem Elternprodukt stehen die Preise aller Varianten in der Liste.
-        const _expectedPrices = _scenario.expectVariantPrices ? JSON.stringify(_scenario.expectVariantPrices) : `[${_expectedTax}]`;
-        const _hasTax = _new.log.some((_l) => _l.startsWith('db.update') && _l.includes(`prices=${_expectedPrices}`));
+        const _problems = findProblems(_scenario, _old, _new);
+        for (const _problem of _problems) console.log(`  ${_problem}`);
 
-        if (_expected && (!_hasApiCall || !_hasTax)) {
-            _allOk = false;
-            _totalDiffs++;
-            console.log(`  EXPECTED the details to be loaded, but api=${_hasApiCall} tax=${_hasTax}`);
-        }
-        if (!_expected && _hasApiCall) {
-            _allOk = false;
-            _totalDiffs++;
-            console.log(`  EXPECTED no request, but the API was called`);
-        }
-
-        // Bei einem Elternprodukt werden die Preise aller Varianten gespeichert.
-        if (_scenario.expectVariantPrices) {
-            const _expectedPrices = JSON.stringify(_scenario.expectVariantPrices);
-            const _hasPrices = _new.log.some((_l) => _l.startsWith('db.update') && _l.includes(`prices=${_expectedPrices}`));
-            if (!_hasPrices) {
-                _allOk = false;
-                _totalDiffs++;
-                console.log(`  EXPECTED the prices of the variations to be stored: ${_expectedPrices}`);
-            }
-        }
-
-        // Zwischen den Varianten wird die Verzoegerung der Einstellung
-        // verwendet (500 ms +/- 50 Prozent). Die Pause zwischen den Produkten
-        // der Queue bleibt bei 1500 ms.
-        if (_scenario.expectVariationDelay) {
-            const _delays = _new.log.filter((_l) => _l.startsWith('delay ')).map((_l) => parseInt(_l.slice(6), 10));
-            const _allInRange = _delays.length > 0 && _delays.every((_d) => _d >= 250 && _d <= 750);
-            if (!_allInRange) {
-                _allOk = false;
-                _totalDiffs++;
-                console.log(`  EXPECTED the delay between the variations to be between 250 and 750 ms: ${JSON.stringify(_delays)}`);
-            }
-        }
-
-        // Die Benachrichtigung wird erst gesendet, nachdem die Preise des
-        // Produkts geladen und gespeichert sind.
-        if (_scenario.expectNotificationAfterDetails) {
-            const _detailsIndex = _new.log.findIndex((_l) => _l.startsWith('db.update') && _l.includes('prices=[12.5]'));
-            const _notificationIndex = _new.log.findIndex((_l) => _l.startsWith('desktopNotifikation'));
-            if (_detailsIndex < 0 || _notificationIndex < 0 || _notificationIndex < _detailsIndex) {
-                _allOk = false;
-                _totalDiffs++;
-                console.log(`  EXPECTED the notification after the prices: ${JSON.stringify(_new.log)}`);
-            }
-        }
-
-        // Wenn die Preisbedingung nicht passt, wird das Produkt nicht
-        // benachrichtigt und nicht als gesehen markiert.
-        if (_scenario.expectNoNotification) {
-            const _hasNotification = _new.log.some((_l) => _l.startsWith('desktopNotifikation'));
-            const _isNotified = _new.log.some((_l) => _l.startsWith('db.update') && _l.includes('isNotified=true'));
-            if (_hasNotification || _isNotified) {
-                _allOk = false;
-                _totalDiffs++;
-                console.log(`  EXPECTED no notification, but: ${JSON.stringify(_new.log)}`);
-            }
-        }
-
-        // Der Stern und der Status der Produkte muessen immer uebereinstimmen.
-        if (JSON.stringify(_old.entries.map((_e) => _e.isFav)) !== JSON.stringify(_new.entries.map((_e) => _e.isFav))) {
-            _allOk = false;
-            _totalDiffs++;
-            console.log(`  state old: ${JSON.stringify(_old.entries)}`);
-            console.log(`  state new: ${JSON.stringify(_new.entries)}`);
-        }
-
-        if (_allOk) {
+        if (_problems.length === 0) {
             console.log(`  ${_scenario.name}: ok`);
+        } else {
+            _allOk = false;
+            _totalDiffs += _problems.length;
         }
     }
 
