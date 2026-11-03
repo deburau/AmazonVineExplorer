@@ -21,6 +21,7 @@ const OLD_NAMES = ['updateNewProductsBtn'];
 const NEW_NAMES = [
     'updateNewProductsBtn',
     'notifyAboutUnseenItems',
+    'addProductToKeywordSearch',
     'searchKeywordsInProducts',
     'checkKeywordsForProduct',
     'notifyAboutNewProducts',
@@ -114,6 +115,9 @@ function run(code, opts) {
         database,
         AUTO_SCAN_IS_RUNNING: false,
         newProductWasAdded: opts.newProductWasAdded !== false,
+        // Die Produkte, die seit dem letzten Lauf hinzugekommen sind. Nur sie
+        // werden gegen die Keywords geprueft (addProductToKeywordSearch()).
+        productsToCheckForKeywords: (opts.newProducts || []).map((e) => Object.assign({}, e)),
         oldCountOfNewItems: opts.oldCount || 0,
         lastDesktopNotifikationTimestamp: opts.lastNotifTs || 0,
         AVE_VERSION: '1.0',
@@ -191,10 +195,73 @@ const SCENARIOS = [
         }
     },
     {
+        name: 'Nur neue Produkte werden geprueft: das Produkt wurde gerade hinzugefuegt',
+        opts: {
+            desktop: true,
+            keywords: ['wichtig'],
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
+        name: 'Produkte, die schon in der Datenbank sind, werden nicht geprueft',
+        // Das Produkt liegt in der Datenbank und passt zum Keyword, es kam aber
+        // nicht gerade hinzu. Es darf keine Benachrichtigung geben - sonst
+        // wuerde die Suche nach jeder Scan-Seite erneut laufen und die Details
+        // erneut anfragen (Sperre durch Amazon).
+        expectNoNotification: true,
+        opts: {
+            desktop: true,
+            keywords: ['wichtig'],
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
         name: 'Keyword-Treffer mit Desktop-Notification',
         opts: {
             desktop: true,
             keywords: ['wichtig'],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
             entries: [
                 {
                     id: 'p1',
@@ -222,6 +289,18 @@ const SCENARIOS = [
         opts: {
             autoFavorite: true,
             keywords: ['wichtig'],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img',
+                    link: '/dp/ASIN1'
+                }
+            ],
             entries: [
                 {
                     id: 'p1',
@@ -241,6 +320,17 @@ const SCENARIOS = [
         opts: {
             desktop: true,
             keywords: ['/wicht.*produkt/i'],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein wichtiges Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
             entries: [
                 {
                     id: 'p1',
@@ -259,6 +349,17 @@ const SCENARIOS = [
         opts: {
             desktop: true,
             keywords: ['wichtig'],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 1,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
             entries: [
                 {
                     id: 'p1',
@@ -298,11 +399,21 @@ const SCENARIOS = [
         if (_old.title !== _new.title) _diffs.push('title');
 
         // Ohne Auto-Favorit werden keine Details geladen, mit Auto-Favorit
-        // dagegen schon.
+        // dagegen schon. Die Details duerfen nur bei einem Keyword-Treffer
+        // geladen werden.
         const _hasDetails = _new.log.some((_l) => _l.startsWith('requestProductDetails'));
-        const _expectDetails = !!_scenario.opts.autoFavorite && !!_scenario.opts.keywords?.length;
+        const _expectDetails = !!_scenario.opts.autoFavorite && !!_scenario.opts.newProducts?.length;
         if (_hasDetails !== _expectDetails) {
             _diffs.push(_expectDetails ? 'details missing' : 'unexpected details');
+        }
+
+        // Ein Produkt, das nicht gerade hinzugekommen ist, darf keine
+        // Keyword-Benachrichtigung ausloesen.
+        if (_scenario.expectNoNotification) {
+            const _hasNotification = _new.log.some((_l) => _l.startsWith('desktop:') || _l.startsWith('gotify:'));
+            if (_hasNotification) {
+                _diffs.push('unexpected notification');
+            }
         }
 
         if (_diffs.length === 0) {

@@ -63,9 +63,9 @@ details.
 
 ## Changelog Deburau
 
-##### [2026-11-03] - Version 0.15.0.19
+##### [2026-11-03] - Version 0.15.0.20
 
-* Fix: the price details of a product are requested at most once now. Before, a product whose price Amazon did not return was requested again on every search for the keywords, which runs after every scanned page. That could make the requests run without a break and Amazon blocked the account for a while. The marker is stored with the product, so a reload does not start the requests again.
+* Fix: the search for the keywords only checks the products that were just added to the database now. Before, it checked all new products after every scanned page, so the price details of a product were requested again and again, which made Amazon block the account for a while. Every product is checked once, so its details are requested at most once.
 
 ##### [2026-11-03] - Version 0.15.0.18
 

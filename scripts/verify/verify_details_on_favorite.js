@@ -331,53 +331,6 @@ const SCENARIOS = [
         }
     },
     {
-        name: 'Preisbedingung passt nicht: die Details werden bei einem zweiten Suchlauf nicht erneut angefragt',
-        expectDetails: true,
-        // Zwei Durchlaeufe ueber dasselbe Produkt: der zweite darf keinen
-        // weiteren API-Aufruf machen (detailsRequested). Das ist der Fall, der
-        // die Sperre von Amazon ausgeloest hat: die Suche laeuft nach jeder
-        // Scan-Seite und das Produkt bleibt ohne isNotified.
-        expectApiCalls: 1,
-        opts: {
-            runs: 2,
-            mode: 'keyword',
-            autoFavorite: true,
-            desktop: true,
-            // Die Bedingung passt nicht, also bleibt isNotified false.
-            keywords: ['wichtig [price >= 20]'],
-            entries: [],
-            product: {
-                id: 'p1',
-                description_full: 'Ein WICHTIGES Produkt',
-                isNew: 1,
-                isFav: 0,
-                isNotified: 0,
-                data_asin: 'ASIN1'
-            }
-        }
-    },
-    {
-        name: 'Ein Produkt, dessen Details schon angefragt wurden, wird nicht erneut angefragt',
-        expectDetails: false,
-        expectApiCalls: 0,
-        opts: {
-            mode: 'keyword',
-            autoFavorite: true,
-            desktop: true,
-            keywords: ['wichtig'],
-            entries: [],
-            product: {
-                id: 'p1',
-                description_full: 'Ein WICHTIGES Produkt',
-                isNew: 1,
-                isFav: 0,
-                isNotified: 0,
-                data_asin: 'ASIN1',
-                detailsRequested: true
-            }
-        }
-    },
-    {
         name: 'Keyword-Match mit Preisbedingung: das Keyword passt nicht, die Preise werden nicht geladen',
         expectDetails: false,
         // Die Preise werden nur nach einem erfolgreichen Keyword-Match geladen.
@@ -599,23 +552,6 @@ function findTimingProblems(scenario, newRun) {
 /**
  * Vergleicht den Zustand der Produkte der beiden Laeufe.
  *
- * @param {object} scenario Das Szenario mit den Erwartungen
- * @param {object} newRun Der Lauf der neuen Implementierung
- * @returns {string[]} Die Beschreibungen der Abweichungen
- */
-function findRequestProblems(scenario, newRun) {
-    if (scenario.expectApiCalls === undefined) return [];
-
-    // Die Details eines Produkts werden nur einmal angefragt (detailsRequested).
-    const _apiCalls = newRun.log.filter((l) => l.startsWith('api ')).length;
-    if (_apiCalls === scenario.expectApiCalls) return [];
-
-    return [`EXPECTED ${scenario.expectApiCalls} API calls, but there were ${_apiCalls}`];
-}
-
-/**
- * Vergleicht den Zustand der Produkte der beiden Laeufe.
- *
  * @param {object} oldRun Der Lauf der alten Implementierung
  * @param {object} newRun Der Lauf der neuen Implementierung
  * @returns {string[]} Die Beschreibungen der Abweichungen
@@ -640,12 +576,7 @@ function findStateProblems(oldRun, newRun) {
  * @returns {string[]} Die Beschreibungen der Abweichungen
  */
 function findProblems(scenario, oldRun, newRun) {
-    return [
-        ...findDetailProblems(scenario, newRun),
-        ...findTimingProblems(scenario, newRun),
-        ...findRequestProblems(scenario, newRun),
-        ...findStateProblems(oldRun, newRun)
-    ];
+    return [...findDetailProblems(scenario, newRun), ...findTimingProblems(scenario, newRun), ...findStateProblems(oldRun, newRun)];
 }
 
 (async () => {

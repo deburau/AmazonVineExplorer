@@ -79,16 +79,12 @@ const MIGRATION_CASES = [
     {
         label: 'Produkt ohne Preis bekommt eine leere Liste',
         product: { id: 'p1', data_asin: 'ASIN1' },
-        expected: [],
-        // Ohne Preis bleibt der Merker falsch, das Produkt wird einmal angefragt.
-        expectedRequested: false
+        expected: []
     },
     {
         label: 'Der Preis des Produkts wird in die Liste uebernommen',
         product: { id: 'p2', data_asin: 'ASIN2', data_estimated_tax_prize: 12.5 },
-        expected: [12.5],
-        // Mit Preis gilt der Request als erledigt, er wird nicht wiederholt.
-        expectedRequested: true
+        expected: [12.5]
     },
     {
         label: 'Produkt mit Varianten bekommt die Preise aller Varianten',
@@ -125,17 +121,14 @@ const MIGRATION_CASES = [
         expected: [25]
     },
     {
-        label: 'Ein bereits migriertes Produkt behaelt seine Liste',
+        label: 'Ein bereits migriertes Produkt bleibt unveraendert',
         product: { id: 'p6', data_asin: 'ASIN6', data_estimated_tax_prices: [7.7] },
-        expected: [7.7],
-        // Der Merker fehlte in dieser Liste, er wird nachgetragen.
-        expectedRequested: true
+        expected: [7.7]
     },
     {
         label: 'Ein Produkt ohne Varianten in der Datenbank bleibt gueltig',
         product: { id: 'p7', data_asin: 'ASIN7', data_childs: [] },
-        expected: [],
-        expectedRequested: false
+        expected: []
     }
 ];
 
@@ -212,10 +205,6 @@ for (const _case of MIGRATION_CASES) {
     const _problems = [];
     if (JSON.stringify(_actual) !== JSON.stringify(_case.expected)) {
         _problems.push(`erwartet: ${JSON.stringify(_case.expected)}  bekommen: ${JSON.stringify(_actual)}`);
-    }
-    // Der Merker detailsRequested verhindert eine zweite Anfrage der Details.
-    if (_case.expectedRequested !== undefined && !!_result.detailsRequested !== _case.expectedRequested) {
-        _problems.push(`detailsRequested erwartet: ${_case.expectedRequested}  bekommen: ${!!_result.detailsRequested}`);
     }
 
     if (_problems.length === 0) {

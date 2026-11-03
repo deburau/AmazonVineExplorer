@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.19
+// @version      0.15.0.20
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -39,7 +39,8 @@
 /* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
-   backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct, cleanUpDatabase,
+   addProductToKeywordSearch, backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct,
+   cleanUpDatabase,
    scanLoop, scanStepBackground,
    colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
@@ -92,6 +93,21 @@ let searchInputTimeout;
 let backGroundScanTimeout;
 
 let BackGroundScanIsRunning = false;
+
+/**
+ * The products that were added to the database and still have to be checked
+ * against the keywords of the settings.
+ *
+ * NOTE: Every product is added to this list only once, when it is added to the
+ * database. So every product is checked at most once in its life, and the
+ * details (the prices) are therefore requested at most once as well. Without
+ * this the search ran over all new entries after every scanned page and asked
+ * Amazon for the details of the same products again and again, which blocked the
+ * account of the user.
+ *
+ * @type {Product[]}
+ */
+const productsToCheckForKeywords = [];
 
 /**
  * The generation of the scan loop. Every start of the loop counts it up, so
@@ -3913,6 +3929,7 @@ function backGroundTileScanner(url, cb) {
                             console.log(`BACKGROUNDSCAN => Got TileData Back: Tile ${_returned}/${_tilesLength} =>`, prod);
                         if (!prod.gotFromDB) {
                             ++_newCount;
+                            addProductToKeywordSearch(prod);
                             // NOTE: database.add() is fire-and-forget on purpose. Awaiting it
                             //   would delay the scan unnecessarily. Failed writes are caught by
                             //   .catch() and logged. _newCount may be slightly off if a write
@@ -4381,14 +4398,28 @@ async function checkKeywordsForProduct(_prod, _configKeyWords) {
 }
 
 /**
- * Searches the keywords in the new products and sends the notifications.
+ * Remembers a product for the search of the keywords.
  *
- * NOTE: The search is expensive, because every new product is checked against
- * every keyword. It is only done if a new product was added and not after every
- * update of an existing product (e.g. after every timestamp update of the
- * background scan).
+ * The product is checked once, as soon as the search runs. It is called at the
+ * two places that add a product to the database (the tile of the page and the
+ * page of the background scan).
  *
- * @param {Product[]} _prodArr The new entries
+ * @param {Product} prod The product that was added to the database
+ */
+function addProductToKeywordSearch(prod) {
+    if (!prod) return;
+    productsToCheckForKeywords.push(prod);
+}
+
+/**
+ * Searches the keywords in the given products and sends the notifications.
+ *
+ * NOTE: The search is expensive, because every product is checked against every
+ * keyword. It only receives the products that were just added to the database
+ * (see addProductToKeywordSearch()), so that no product is checked twice and the
+ * details of a product are requested at most once.
+ *
+ * @param {Product[]} _prodArr The products to check
  * @returns {Promise<boolean>} true if at least one product was notified
  */
 async function searchKeywordsInProducts(_prodArr) {
@@ -4438,12 +4469,14 @@ function notifyAboutNewProducts(_prodArrLength, _notifyed) {
 function updateNewProductsBtn() {
     if (SETTINGS.DebugLevel > 1) console.log('Called updateNewProductsBtn()');
 
-    // The search for the keywords is expensive, because every new product is
-    // checked against every keyword. It is only done if a new product was added
-    // and not after every update of an existing product (e.g. after every
-    // timestamp update of the background scan).
+    // The search for the keywords is expensive, because every product is checked
+    // against every keyword. It is only done if a product was really added and
+    // not after every update of an existing product (e.g. after every timestamp
+    // update of the background scan). The products that were added since the last
+    // search are taken out of the list, so that no product is checked twice.
     const _checkForKeywords = newProductWasAdded;
     newProductWasAdded = false;
+    const _productsToCheck = productsToCheckForKeywords.splice(0);
 
     database.getNewEntries().then(async (prodArr) => {
         const _btnBadge = document.getElementById('ave-new-items-btn-badge');
@@ -4466,7 +4499,7 @@ function updateNewProductsBtn() {
 
         // NOTE: The search is awaited, because the notifications of the keyword
         // matches are sent after the prices of the products were loaded.
-        const _notifyed = _checkForKeywords ? await searchKeywordsInProducts(prodArr) : false;
+        const _notifyed = _checkForKeywords ? await searchKeywordsInProducts(_productsToCheck) : false;
         notifyAboutNewProducts(_prodArrLength, _notifyed);
     });
 }
@@ -4705,6 +4738,7 @@ function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeVal
 function addStyleToTile(_currTile, _product) {
     if (!_product.gotFromDB) {
         // We have a new one ==> Save it to our Database ;)
+        addProductToKeywordSearch(_product);
         // NOTE: The promise is not awaited, so a failed write has to be caught here.
         // The write fails e.g. if a product with the same ASIN is already in the database.
         database.add(_product).catch((error) => {
@@ -4963,14 +4997,10 @@ function hasProductDetails(prod) {
  * switched off. The setting decides only, if the prices of a product that is
  * marked as favorite are loaded.
  *
- * NOTE: The details of every product are requested at most **once**. The request
- * is remembered in the product (detailsRequested), so that a product is not
- * requested again on every search for the keywords. Without this the account can
- * be blocked by Amazon, because the search runs after every scanned page.
- *
- * NOTE: The marker is set before the request, so that a request that fails is
- * not repeated. The assumption is that Amazon does not change a product that was
- * published already.
+ * NOTE: The details are only requested after a keyword match and a product is
+ * only checked against the keywords once, when it is added to the database (see
+ * addProductToKeywordSearch()). So the details of a product are requested at
+ * most once.
  *
  * @param {Product} prod The product to load the details for
  * @returns {Promise<void>} Resolves when the details were loaded and stored
@@ -4982,20 +5012,6 @@ async function loadProductDetails(prod) {
         if (SETTINGS.DebugLevel > 1) console.info(`AVE: The details of ${prod.id} are already loaded.`);
         return;
     }
-    // The details were already requested and the request failed or the product
-    // has no price. It is not requested a second time.
-    if (prod.detailsRequested) {
-        if (SETTINGS.DebugLevel > 1) console.info(`AVE: The details of ${prod.id} were already requested.`);
-        return;
-    }
-
-    prod.detailsRequested = true;
-    // NOTE: The marker is stored before the request, so that it is kept even if
-    // the request fails. The request itself saves the details with the marker.
-    database.update(prod).catch((error) => {
-        console.error(`loadProductDetails(): could not save the product ${prod.id}: ${error}`);
-    });
-
     console.info(`AVE: Loading the details of ${prod.id} ...`);
     await requestProductDetailsQueued(prod);
     console.info(`AVE: The details of ${prod.id} were loaded.`);

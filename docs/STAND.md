@@ -252,13 +252,16 @@ oft der Pfad lief.
   wird es **bei jedem Suchlauf erneut** angefragt → Rückschleife + Dauerlast.
 * **Nicht** die Ursache: die neue Schleife (`verify_scan.js` zeigt die identische
   Schrittfolge) und der neue Fast-Scan-Takt (läuft seltener als vorher).
-* **Umgesetzt (0.15.0.19):** Die Details eines Produkts werden **höchstens
-  einmal** angefragt (Merker `detailsRequested` im Produkt, gesetzt **vor** dem
-  Request). Die Migration der DB-Version 5 setzt den Merker für Produkte, die
-  schon Preise haben. Damit ist der stärkste Hebel aus der Analyse drin.
-* Analyse, die restlichen Vorschläge (Notbremse, Queue-Limit, Suche nur über
-  ungeprüfte Produkte, leises Log, Suche drosseln) und Meßhinweise stehen in
-  **`docs/ANALYSE-DETAILS-REQUESTS.md`**.
+* **Umgesetzt (0.15.0.20):** Der Keyword-Match läuft nur noch für Produkte, die
+  **gerade neu** in die Datenbank kamen (`addProductToKeywordSearch()` an den
+  beiden `database.add()`-Stellen, `productsToCheckForKeywords` wird von
+  `updateNewProductsBtn()` an die Suche übergeben). Jedes Produkt wird also
+  **einmal** geprüft – und da die Details nur nach einem Keyword-Match geholt
+  werden, werden sie **höchstens einmal pro Produkt** angefragt.
+  **Keine DB-Änderung nötig** (ein zwischenzeitlicher Merker im Produkt wurde
+  wieder entfernt).
+* Analyse, die restlichen Vorschläge (Notbremse, Queue-Limit, leises Log, Suche
+  drosseln) und Meßhinweise stehen in **`docs/ANALYSE-DETAILS-REQUESTS.md`**.
 
 ## Wichtige Dateien
 

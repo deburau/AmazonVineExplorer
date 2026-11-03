@@ -77,6 +77,7 @@ const mainFile = [
     'addDBLoadingSymbol',
     'addLeftSideButtons',
     'addLoadingSymbol',
+    'addProductToKeywordSearch',
     'addStyleToTile',
     'addTileEventhandlers',
     'appendInfiniteScrollTiles',

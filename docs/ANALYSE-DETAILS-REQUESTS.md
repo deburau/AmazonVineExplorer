@@ -59,7 +59,7 @@ Auftreten der Sperre nicht von selbst aufhörte.
 
 | # | Maßnahme | Wirkung | Aufwand |
 |---|---|---|---|
-| 1 | ~~**Versuchs-Merker je Produkt**: kein zweiter Request für dasselbe Produkt innerhalb z. B. 30 min~~ **ERLEDIGT in 0.15.0.19:** Merker `detailsRequested` im Produkt (persistent), die Details werden **höchstens einmal** angefragt – auch nach einem Reload nicht erneut. Die Migration der DB-Version 5 setzt den Merker bei Produkten, die schon Preise haben. | durchbricht die Rückschleife aus Punkt 3 – **wichtigster Hebel**, umgesetzt | klein |
+| 1 | ~~Versuchs-Merker je Produkt~~ **ERLEDIGT in 0.15.0.20, anders als geplant:** Der Keyword-Match läuft nur noch für Produkte, die **gerade neu** in die Datenbank kamen (`addProductToKeywordSearch()` + `productsToCheckForKeywords`). Jedes Produkt wird einmal geprüft, und da die Details nur nach einem Keyword-Match geholt werden, werden sie höchstens einmal pro Produkt angefragt. **Keine DB-Änderung** – ein zwischenzeitlicher Merker im Produkt (`detailsRequested`) wurde auf Wunsch des Maintainers wieder entfernt. | durchbricht die Rückschleife aus Punkt 3 – **wichtigster Hebel**, umgesetzt | klein |
 | 2 | **Notbremse**: nach N Fehlern in Folge die Queue leeren und die Details für X Minuten pausieren | verhindert, dass eine Sperre eskaliert | klein |
 | 3 | **Queue begrenzen** (z. B. max. 50 offene Einträge, weitere verwerfen) | kein unbegrenzter Rückstau, begrenzter Speicher | klein |
 | 4 | **Suche nur über noch nicht geprüfte Produkte** (Merker im Speicher) | viel weniger CPU und Aufrufe; ändert die Suchsemantik (ein dauerhaft preisloses Produkt wird nicht mehr automatisch nachgeprüft) | mittel |
@@ -70,21 +70,24 @@ Empfehlung des vorbereitenden Agents: **1 + 2 + 3 + 5** als ein Commit
 (Absicherung, keine Semantikänderung), danach 4 und 6 als zweiter Schritt mit
 eigener Verifikation.
 
-**Stand:** Maßnahme **1** ist umgesetzt (0.15.0.19, in der stärkeren Variante
-„höchstens einmal, dauerhaft"). Die Maßnahmen 2, 3, 4, 5 und 6 sind weiterhin
-offen.
+**Stand:** Maßnahme **1** ist umgesetzt (0.15.0.20), allerdings **an der Suche**
+statt über einen Merker im Produkt – die Details sind damit ohne DB-Änderung auf
+höchstens einen Request pro Produkt begrenzt. Die Maßnahmen 2, 3, 5 und 6 sind
+weiterhin offen, Maßnahme 4 („Suche nur über ungeprüfte Produkte") ist damit
+erledigt, sogar in der strengeren Form „nur die neu hinzugekommenen Produkte".
 
 ## Verifikation der umgesetzten Maßnahme
 
-* `verify_details_on_favorite.js`, neues Szenario „Preisbedingung passt nicht:
-die Details werden bei einem zweiten Suchlauf nicht erneut angefragt" – zwei
-Durchläufe über dasselbe Produkt, es darf genau **ein** API-Aufruf passieren.
-* Dazu das Szenario „Ein Produkt, dessen Details schon angefragt wurden, wird
-nicht erneut angefragt".
-* `verify_tax_prizes.js` prüft bei der Migration, dass Produkte mit Preisen den
-Merker `detailsRequested` bekommen und Produkte ohne Preise nicht.
-* Gegenprobe: mit abgeschaltetem Merker meldet die Verifikation genau diese
-beiden Fälle als Abweichung.
+* `verify_new_products_btn.js`, neues Paar von Szenarien:
+  * „Nur neue Produkte werden geprüft: das Produkt wurde gerade hinzugefügt" →
+    Benachrichtigung, ein Detail-Request.
+  * „Produkte, die schon in der Datenbank sind, werden nicht geprüft" → **keine**
+    Benachrichtigung und **kein** Detail-Request, obwohl das Produkt zum Keyword
+    passt und in der Liste der neuen Einträge steht.
+* Gegenprobe: mit der alten Suche (`searchKeywordsInProducts(prodArr)` statt der
+  Liste der neuen Produkte) meldet die Verifikation „unexpected notification".
+* `verify_details_on_favorite.js` bleibt unverändert gültig (die Suche ruft
+  `checkKeywordsForProduct` weiterhin nur bei einem Treffer auf).
 
 ## Sofortmaßnahmen für den Benutzer
 
