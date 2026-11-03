@@ -149,6 +149,23 @@ const KEYWORD_CASES = [
         expected: { keyword: '', conditions: [{ op: '>=', price: 10 }], valid: true }
     },
     {
+        // Die Bedingung steht in der Mitte: die Leerzeichen drumherum muessen
+        // mitverschwinden, sonst sucht das Script nach "toaster   white".
+        label: 'Eine Bedingung zwischen zwei Woertern',
+        input: 'toaster [price > 100] white',
+        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], valid: true }
+    },
+    {
+        label: 'Eine Bedingung am Anfang',
+        input: '[price > 100] toaster white',
+        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], valid: true }
+    },
+    {
+        label: 'Eine Bedingung am Ende',
+        input: 'toaster white [price > 100]',
+        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], valid: true }
+    },
+    {
         label: 'Eine kaputte Preisbedingung macht das Keyword ungueltig',
         input: 'toaster [price > abc]',
         expected: { keyword: 'toaster [price > abc]', conditions: [], valid: false }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.20
+// @version      0.15.0.21
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -4197,7 +4197,10 @@ function parseKeywordConfig(config) {
 
     const _conditions = [];
     _result.keyword = _text
-        .replace(/\[([^\]]*)\]/g, (_match, _content) => {
+        // NOTE: The spaces around a condition are removed together with it, so
+        // that a keyword like "toaster [price > 100] white" keeps the text
+        // "toaster white" and not "toaster   white".
+        .replace(/\s*\[([^\]]*)\]\s*/g, (_match, _content) => {
             const _condition = parsePriceCondition(_content);
             if (_condition) {
                 _conditions.push(_condition);
