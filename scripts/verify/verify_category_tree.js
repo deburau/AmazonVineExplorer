@@ -12,8 +12,11 @@
  *   - parseCategoryNodes(): Name, Anzahl und Nummern aus einem Knoten
  *   - die Selektoren, mit denen die Knoten gesucht werden
  *   - parseCategoryTree(): Haupt- und Unterkategorien einer Seite
- *   - getVineCategoryTree(): der Baum aus den Seiten, aus dem Speicher und der
- *     Rueckfall auf den Speicher, wenn die Seiten nicht lesbar sind
+ *   - getVineCategoryParents(): die Hauptkategorien aus der Seite und aus dem
+ *     Speicher (mit dem Rueckfall auf den Speicher)
+ *   - getVineCategoryChildren(): die Unterkategorien einer Hauptkategorie
+ *     (sie werden traege geladen, damit nicht beim Oeffnen der Einstellungen
+ *     alle 24 Seiten geholt werden)
  *
  * NOTE: Das HTML wird nicht geparst (das Projekt hat keinen HTML-Parser als
  * Abhaengigkeit). Die Knoten sind nachgebaut, sie verhalten sich aber wie die
@@ -44,13 +47,15 @@ function readSource(name) {
 const mainSrc = readSource('VineExplorer.user.js');
 
 const CODE = [
-    extractConstants(mainSrc, ['CATEGORY_TREE_REQUEST_DELAY', 'CATEGORY_TREE_MAX_AGE_SECONDS']),
+    extractConstants(mainSrc, ['CATEGORY_CACHE_MAX_AGE_SECONDS']),
     extractBody(mainSrc, 'parseCategoryNodes'),
     extractBody(mainSrc, 'parseCategoryTree'),
-    extractBody(mainSrc, 'getVineCategoryTree'),
+    extractBody(mainSrc, 'getVineCategoryParents'),
+    extractBody(mainSrc, 'getVineCategoryChildren'),
     extractBody(mainSrc, 'fetchCategoryPage'),
-    extractBody(mainSrc, 'readStoredCategoryTree'),
-    extractBody(mainSrc, 'writeStoredCategoryTree')
+    extractBody(mainSrc, 'readCategoryCache'),
+    extractBody(mainSrc, 'writeCategoryCache'),
+    extractBody(mainSrc, 'isCategoryCacheFresh')
 ].join('\n\n');
 
 /**
@@ -221,47 +226,63 @@ check(
     'Der Baum einer Seite enthaelt beide Listen'
 );
 
-// --- getVineCategoryTree() ---
+// --- getVineCategoryParents() und getVineCategoryChildren() ---
 (async () => {
-    const _getTree = vm.runInContext('getVineCategoryTree', _ctx);
+    const _getParents = vm.runInContext('getVineCategoryParents', _ctx);
+    const _getChildren = vm.runInContext('getVineCategoryChildren', _ctx);
 
-    const _tree = await _getTree();
+    const _parents = await _getParents();
     check(
         [
-            { name: 'Küche, Haushalt & Wohnen', count: 13602, pn: '3167641', children: ['Basteln, Malen & Handarbeiten'] },
-            { name: 'Garten', count: 1249, pn: '10925031', children: ['Gartendeko', 'Gartenarbeit'] }
+            { name: 'Küche, Haushalt & Wohnen', count: 13602, pn: '3167641' },
+            { name: 'Garten', count: 1249, pn: '10925031' }
         ],
-        _tree.map((p) => ({ name: p.name, count: p.count, pn: p.pn, children: p.children.map((c) => c.name) })),
-        'Der Baum aus den Seiten'
+        _parents.map((p) => ({ name: p.name, count: p.count, pn: p.pn })),
+        'Die Hauptkategorien aus der Seite'
     );
 
     check(
-        [
-            'https://www.amazon.de/vine/vine-items?queue=all_items&pn=&cn=&page=1',
-            'https://www.amazon.de/vine/vine-items?queue=all_items&pn=3167641&cn=&page=1',
-            'https://www.amazon.de/vine/vine-items?queue=all_items&pn=10925031&cn=&page=1'
-        ],
+        ['https://www.amazon.de/vine/vine-items?queue=all_items&pn=&cn=&page=1'],
         _sandbox._requests,
-        'Ein Request fuer die Hauptkategorien und einer je Hauptkategorie'
+        'Fuer die Hauptkategorien ist ein einziger Request noetig'
     );
-
-    check(true, _sandbox._store.has('AVE_CATEGORY_TREE'), 'Der Baum wird im local storage abgelegt');
+    check(true, _sandbox._store.has('AVE_CATEGORY_CACHE'), 'Die Kategorien werden im local storage abgelegt');
 
     const _requestsBefore = _sandbox._requests.length;
-    await _getTree();
-    check(_requestsBefore, _sandbox._requests.length, 'Ein zweiter Aufruf benutzt den gespeicherten Baum');
+    await _getParents();
+    check(_requestsBefore, _sandbox._requests.length, 'Ein zweiter Aufruf benutzt den gespeicherten Stand');
 
-    // Ohne lesbare Seiten wird der gespeicherte Baum benutzt.
+    // Die Unterkategorien werden erst geladen, wenn sie gebraucht werden.
+    const _children = await _getChildren('10925031');
+    check(
+        ['Gartendeko', 'Gartenarbeit'],
+        _children.map((c) => c.name),
+        'Die Unterkategorien einer Hauptkategorie'
+    );
+    check(
+        ['https://www.amazon.de/vine/vine-items?queue=all_items&pn=10925031&cn=&page=1'],
+        _sandbox._requests.slice(_requestsBefore),
+        'Fuer eine Hauptkategorie ist ein Request noetig'
+    );
+
+    // Die Unterkategorien stehen nach dem Laden im Speicher.
+    const _requestsBeforeChildren = _sandbox._requests.length;
+    await _getChildren('10925031');
+    check(_requestsBeforeChildren, _sandbox._requests.length, 'Ein zweiter Aufruf benutzt die gespeicherten Unterkategorien');
+
+    // Ohne lesbare Seiten werden die gespeicherten Kategorien benutzt.
     const _failing = createSandbox({ failRequests: true });
-    _failing._store.set('AVE_CATEGORY_TREE', _sandbox._store.get('AVE_CATEGORY_TREE'));
-    const _fallback = await vm.runInContext('getVineCategoryTree', _failing._ctx)();
-    check(2, _fallback.length, 'Ohne lesbare Seiten wird der gespeicherte Baum benutzt');
+    _failing._store.set('AVE_CATEGORY_CACHE', _sandbox._store.get('AVE_CATEGORY_CACHE'));
+    const _fallbackParents = await vm.runInContext('getVineCategoryParents', _failing._ctx)();
+    check(2, _fallbackParents.length, 'Ohne lesbare Seiten werden die gespeicherten Hauptkategorien benutzt');
+    const _fallbackChildren = await vm.runInContext('getVineCategoryChildren', _failing._ctx)('10925031');
+    check(2, _fallbackChildren.length, 'Ohne lesbare Seiten werden die gespeicherten Unterkategorien benutzt');
 
     // Ohne lesbare Seiten und ohne Speicher gibt es einen Fehler.
     const _failing2 = createSandbox({ failRequests: true });
     let _threw = false;
     try {
-        await vm.runInContext('getVineCategoryTree', _failing2._ctx)();
+        await vm.runInContext('getVineCategoryParents', _failing2._ctx)();
     } catch {
         _threw = true;
     }

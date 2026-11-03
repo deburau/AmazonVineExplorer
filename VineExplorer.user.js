@@ -51,7 +51,8 @@
    getFastScanIntervalSeconds, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
    getScanDelay, getTaxPrices,
    getTilesFromURL, getUrlParameter, getVariationRequestDelay, gotifyNotification,
-   getVineCategoryTree, parseCategoryNodes, parseCategoryTree, restartBackgroundScan,
+   getVineCategoryChildren, getVineCategoryParents, parseCategoryNodes, parseCategoryTree,
+   restartBackgroundScan,
    startFastScan,
    handleFastScanFinished, handleInfiniteScroll, importDatabase, init, initBackgroundScan,
    initNavigationButtons,
@@ -3356,18 +3357,14 @@ async function scanLoop(baseUrl, state) {
 }
 
 /**
- * The delay between two requests for the list of the categories in milliseconds.
- *
- * NOTE: The list is loaded from the Vine pages. The requests are made one after
- * the other, because Amazon blocks the account temporarily if too many requests
- * are made in a short time.
- */
-const CATEGORY_TREE_REQUEST_DELAY = 750;
-
-/**
  * The time in seconds after which the list of the categories is read again.
+ *
+ * NOTE: The list of the categories is loaded from the Vine pages. The sub
+ * categories of a main category are only on its own page, so they are loaded
+ * when they are needed (see getVineCategoryChildren()). The result is kept in
+ * the local storage, so that the requests are only made once a day.
  */
-const CATEGORY_TREE_MAX_AGE_SECONDS = 24 * 60 * 60;
+const CATEGORY_CACHE_MAX_AGE_SECONDS = 24 * 60 * 60;
 
 /**
  * Reads the category nodes of a page.
@@ -3426,47 +3423,70 @@ function parseCategoryTree(doc) {
 }
 
 /**
- * Returns the list of the categories of the Vine pages.
+ * Returns the main categories of the Vine pages.
  *
- * The list is read from the pages: the first page of "all items" holds all main
- * categories, the page of a main category holds its sub categories. That is one
- * request per main category.
- *
+ * They are read from the first page of "all items", which shows all of them.
  * The result is kept in the local storage, so that it does not have to be loaded
- * again for every opening of the settings. The stored list is used when it is
- * younger than CATEGORY_TREE_MAX_AGE_SECONDS, and it is used as well when the
- * pages cannot be read (e.g. on a page that does not show the categories).
+ * again for every opening of the settings (see CATEGORY_CACHE_MAX_AGE_SECONDS).
+ * The stored list is used as well when the page cannot be read (e.g. on a page of
+ * AVE, which removes the categories from the side bar).
  *
  * @param {boolean} [forceReload] true to read the list again in every case
- * @returns {Promise<object[]>} The main categories with their sub categories
+ * @returns {Promise<object[]>} The main categories
  */
-async function getVineCategoryTree(forceReload = false) {
-    const _stored = readStoredCategoryTree();
-    if (!forceReload && _stored && Date.now() - _stored.ts < CATEGORY_TREE_MAX_AGE_SECONDS * 1000) return _stored.tree;
+async function getVineCategoryParents(forceReload = false) {
+    const _cached = readCategoryCache().parents;
+    if (!forceReload && _cached && isCategoryCacheFresh(_cached)) return _cached.list;
 
     try {
         const _baseUrl = aveGetVineBaseUrl();
         if (!_baseUrl) throw new Error('no Vine URL found');
 
-        const _firstPage = parseCategoryTree(await fetchCategoryPage(`${_baseUrl}?queue=all_items&pn=&cn=&page=1`));
-        const _tree = [];
-        for (const _parent of _firstPage.parents) {
-            // The sub categories of a main category are only on its own page.
-            if (_tree.length > 0) await delay(getRandomizedDelay(CATEGORY_TREE_REQUEST_DELAY));
-            const _page = parseCategoryTree(await fetchCategoryPage(`${_baseUrl}?queue=all_items&pn=${_parent.pn}&cn=&page=1`));
-            _tree.push({ name: _parent.name, count: _parent.count, pn: _parent.pn, children: _page.children });
-        }
+        const _doc = await fetchCategoryPage(`${_baseUrl}?queue=all_items&pn=&cn=&page=1`);
+        const _parents = parseCategoryTree(_doc).parents;
+        if (_parents.length === 0) throw new Error('the page did not contain any category');
 
-        if (_tree.length === 0) throw new Error('the pages did not contain any category');
-        writeStoredCategoryTree(_tree);
-        return _tree;
+        writeCategoryCache('parents', _parents);
+        return _parents;
     } catch (error) {
-        // NOTE: The pages are not always readable (e.g. on a page of AVE, which
-        // removes the categories from the side bar). The stored list is used then.
         const _reason = error?.message || error || 'unknown error';
-        if (_stored) {
-            console.warn(`getVineCategoryTree(): the categories could not be read (${_reason}), the stored list is used`);
-            return _stored.tree;
+        if (_cached) {
+            console.warn(`getVineCategoryParents(): the categories could not be read (${_reason}), the stored list is used`);
+            return _cached.list;
+        }
+        throw error;
+    }
+}
+
+/**
+ * Returns the sub categories of one main category.
+ *
+ * Amazon shows the sub categories only on the page of the main category, so this
+ * needs one request. The result is kept in the local storage, so that a category
+ * that was opened once is available at once when the settings are opened again.
+ *
+ * @param {string} pn The number of the main category
+ * @param {boolean} [forceReload] true to read the list again in every case
+ * @returns {Promise<object[]>} The sub categories
+ */
+async function getVineCategoryChildren(pn, forceReload = false) {
+    const _cached = readCategoryCache().children[pn];
+    if (!forceReload && _cached && isCategoryCacheFresh(_cached)) return _cached.list;
+
+    try {
+        const _baseUrl = aveGetVineBaseUrl();
+        if (!_baseUrl) throw new Error('no Vine URL found');
+
+        const _doc = await fetchCategoryPage(`${_baseUrl}?queue=all_items&pn=${pn}&cn=&page=1`);
+        const _children = parseCategoryTree(_doc).children;
+
+        writeCategoryCache(`children.${pn}`, _children);
+        return _children;
+    } catch (error) {
+        const _reason = error?.message || error || 'unknown error';
+        if (_cached) {
+            console.warn(`getVineCategoryChildren(): the categories of ${pn} could not be read (${_reason}), the stored list is used`);
+            return _cached.list;
         }
         throw error;
     }
@@ -3485,32 +3505,57 @@ async function fetchCategoryPage(url) {
 }
 
 /**
- * Reads the stored list of the categories.
+ * Reads the stored categories.
  *
- * @returns {{ts: number, tree: object[]}|null} The stored list or null
+ * The main categories and the sub categories of every main category that was
+ * loaded once are stored with the time they were read.
+ *
+ * @returns {{parents: object|null, children: object}} The stored categories
  */
-function readStoredCategoryTree() {
+function readCategoryCache() {
+    const _empty = { parents: null, children: {} };
     try {
-        const _stored = JSON.parse(localStorage.getItem('AVE_CATEGORY_TREE') || 'null');
-        if (!_stored || !Array.isArray(_stored.tree)) return null;
-        return _stored;
+        const _stored = JSON.parse(localStorage.getItem('AVE_CATEGORY_CACHE') || 'null');
+        if (!_stored || typeof _stored !== 'object') return _empty;
+        return {
+            parents: _stored.parents && Array.isArray(_stored.parents.list) ? _stored.parents : null,
+            children: _stored.children && typeof _stored.children === 'object' ? _stored.children : {}
+        };
     } catch (error) {
-        console.error(`readStoredCategoryTree(): the stored list could not be read: ${error}`);
-        return null;
+        console.error(`readCategoryCache(): the stored categories could not be read: ${error}`);
+        return _empty;
     }
 }
 
 /**
- * Stores the list of the categories.
+ * Stores a part of the categories.
  *
- * @param {object[]} tree The main categories with their sub categories
+ * @param {string} path "parents" for the main categories, "children.<pn>" for
+ *                      the sub categories of a main category
+ * @param {object[]} list The categories
  */
-function writeStoredCategoryTree(tree) {
+function writeCategoryCache(path, list) {
     try {
-        localStorage.setItem('AVE_CATEGORY_TREE', JSON.stringify({ ts: Date.now(), tree: tree }));
+        const _stored = readCategoryCache();
+        const _entry = { ts: Date.now(), list: list };
+
+        if (path === 'parents') _stored.parents = _entry;
+        else _stored.children[path.replace('children.', '')] = _entry;
+
+        localStorage.setItem('AVE_CATEGORY_CACHE', JSON.stringify(_stored));
     } catch (error) {
-        console.error(`writeStoredCategoryTree(): the list could not be stored: ${error}`);
+        console.error(`writeCategoryCache(): the categories could not be stored: ${error}`);
     }
+}
+
+/**
+ * Checks if a stored list of categories is young enough to be used.
+ *
+ * @param {{ts: number}} entry The stored list
+ * @returns {boolean} true if it can be used
+ */
+function isCategoryCacheFresh(entry) {
+    return Date.now() - entry.ts < CATEGORY_CACHE_MAX_AGE_SECONDS * 1000;
 }
 
 /**
