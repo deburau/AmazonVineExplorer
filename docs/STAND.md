@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.32` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.34` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -247,6 +247,10 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   Wächter `verify_category_tree.js` (24 Fälle) und
   `verify_settings_categories.js` (27 Fälle).
 * **Turbo-Scan ist umgesetzt** (0.15.0.32):
+  **Kein Seiten-Hash:** Ein Zwischenstand (0.15.0.33) hat das Parsen der Tiles
+  übersprungen, wenn ein Hash der Produkt-Ids gleich blieb. Das war **nicht** die
+  Ursache der Langsamkeit (die Pause zwischen den Seiten ist es) und wurde
+  wieder entfernt (0.15.0.34).
   `isTurboScanDue()` (Einstellung an + Kategorien vorhanden + Wartezeit bzw.
   laufende Runde) und `scanStepTurbo()` (eine Kategorie-Seite pro Schritt,
   `?queue=all_items&pn=<pn>&cn=<cn>&page=1`, Rotationszähler
