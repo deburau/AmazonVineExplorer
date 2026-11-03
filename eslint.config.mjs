@@ -183,6 +183,7 @@ const mainFile = [
     'scanStageSkip',
     'scanStageZero',
     'searchKeywordsInProducts',
+    'searchProducts',
     'shareEventHandlerClick',
     'scanLoop',
     'scanStepBackground',

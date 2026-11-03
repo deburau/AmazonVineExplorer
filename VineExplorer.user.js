@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.36
+// @version      0.15.0.37
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -67,7 +67,7 @@
    markAllCurrentDatabaseProductsAsSeen, markAllCurrentSiteProductsAsSeen,
    notifyAboutNewProducts, notifyAboutProductDrop, notifyAboutUnseenItems, parseTileData,
    populateSettingsContainer, readFile, reloadPageWithSubpageTarget, requestProductDetails,
-   rgbToHex, rgbaToHex, searchKeywordsInProducts, shareEventHandlerClick,
+   rgbToHex, rgbaToHex, searchKeywordsInProducts, searchProducts, shareEventHandlerClick,
    shouldStopFastScan, showBackgroundScanScreen, sort_by_key,
    stickElementToTopScrollEVhandler, stopBackgroundScan, stopFastScan,
    stringToRegex, timeAgo, translate, updateBackgroundScanScreenText,
@@ -5997,6 +5997,39 @@ function initNavigationButtons() {
 /**
  * Adds the search bar for the products to the navigation of Amazon.
  */
+/**
+ * Searches the products of the database.
+ *
+ * The search text can contain the same price conditions as the keywords of the
+ * notification, e.g. "kaffee [price >= 10]". Unlike a keyword, a price can be
+ * searched without a text: "[price < 5]" shows all products that are cheaper
+ * than 5.
+ *
+ * NOTE: A product whose price is not known can not match a price condition, so it
+ * is not part of the result (matchPriceConditions() returns false for it).
+ *
+ * @param {string} queryText The text of the search (lower case)
+ * @returns {Promise<Product[]>} The products that match the search
+ */
+async function searchProducts(queryText) {
+    const _entry = parseKeywordConfig(String(queryText ?? '').trim());
+    if (!_entry.valid) {
+        console.warn(`searchProducts(): the search "${queryText}" has a price condition that is not valid.`);
+        return [];
+    }
+
+    const _words = _entry.keyword.split(/\s+/).filter((word) => word.length > 0);
+    // NOTE: getAll() is used when the search has no text at all, because query()
+    // is meant for a text search.
+    const _products = _words.length > 0 ? await database.query(_words) : await database.getAll();
+    if (_entry.conditions.length === 0) return _products;
+
+    return _products.filter((prod) => matchPriceConditions(_entry.conditions, getTaxPrices(prod)));
+}
+
+/**
+ * Adds the search bar for the products of the database.
+ */
 function initSearchBar() {
     const _searchbarContainer = document.getElementById('vvp-items-button-container');
 
@@ -6016,7 +6049,7 @@ function initSearchBar() {
             if (searchInputTimeout) clearTimeout(searchInputTimeout);
             searchInputTimeout = setTimeout(
                 () => {
-                    database.query(_input.split(' ')).then((_objArr) => {
+                    searchProducts(_input).then((_objArr) => {
                         if (SETTINGS.DebugLevel > 10) console.log(`Found ${_objArr.length} Items with this Search`);
                         createNewSite(PAGETYPE.SEARCH_RESULT, _objArr);
                         searchInputTimeout = null;

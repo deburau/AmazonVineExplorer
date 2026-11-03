@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.37
+
+* New: the search for the products of the database can search for a price now, with the same conditions as the keywords: `[price >= 10]`, `[price < 5]`, `[price = 12.50]` and so on. A condition can be combined with a text (`kaffee [price >= 10]`) or used alone (`[price < 5]`) - a price can be searched without a keyword. Only the products whose price is known are searched, all other products are not part of the result.
+
 ##### [2026-11-03] - Version 0.15.0.36
 
 * The scan settings are grouped in the settings menu now: the switch "Enable Background Scan" and the button that starts a new scan are above the delay of the background scan, and every scan has its own heading ("Background scan", "Fast scan").

@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.36` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.37` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -205,6 +205,13 @@ Release erledigt und wurde geschlossen.
 * Neue Funktionen: `normalizePriceInput()`, `parsePriceCondition()`,
   `parseKeywordConfig()`, `matchPriceConditions()`, `loadProductDetails()`.
 * neuer Wächter `scripts/verify/verify_price_conditions.js` (50 Fälle).
+* Die **Suche** (Suchleiste) kann dieselben **Preisbedingungen** benutzen wie die
+  Keywords (`searchProducts()` in der Hauptdatei): `kaffee [price >= 10]`, aber
+  auch **nur** nach dem Preis (`[price < 5]`, dann werden alle Produkte mit
+  bekanntem Preis geprüft, `database.getAll()`). Produkte **ohne** bekannten
+  Preis erfüllen keine Bedingung und sind nicht im Ergebnis. Eine ungültige
+  Bedingung (`[price > abc]`) liefert kein Ergebnis (Warnung in der Konsole).
+  Wächter: `scripts/verify/verify_search.js` (16 Fälle).
 * Ein Keyword mit **mehreren Wörtern** matcht, wenn **alle Wörter** im Text
   vorkommen (Reihenfolge und Abstand egal, `matchesKeyword()`). Vorher waren die
   Wörter eine Phrase (direkt hintereinander in dieser Reihenfolge). Ein Regex
