@@ -65,6 +65,7 @@ details.
 
 ##### [2026-11-03] - Version 0.15.0.23
 
+* **Warning:** a keyword with a price condition loads the price of **every** product whose text matches the keyword. If the keyword is not specific, that are a lot of products and therefore a lot of requests to Amazon, and Amazon blocks the account temporarily if too many requests are made in a short time. An example is `black [price>50]`: the word "black" occurs in a very large number of product titles, so the price of hundreds of products is requested one after the other. A blocked account does not only stop the price details, it also affects the other requests of the script, e.g. the pages of the scan. Use a keyword that is as specific as possible - a keyword with several words only matches if all of them occur in the description (a regular expression works as well) - and watch the messages in the console, the script logs every request as `AVE: Loading the details of ...`.
 * Fix: if the database was deleted with the button in the settings while the scan was running, the state of the scan (the stage and the page) was kept. The scan therefore continued at the page where the deleted database stopped, e.g. at page 67, instead of starting at the beginning. The state of AVE is cleared now, so it starts like after a long time. The delete does not hang anymore while the scan is running either.
 
 ##### [2026-11-03] - Version 0.15.0.22
