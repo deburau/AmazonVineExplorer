@@ -63,6 +63,11 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.32
+
+* New: the turbo scan. It loads the first page of the categories that are selected in the settings again and again (default: every 30 seconds), so that a new product of one of those categories is found within a minute. The categories are selected with checkboxes in the settings; a main category selects all of its sub categories, so that the products are not loaded twice. The products are stored and the notifications work like they do for the products of the background scan.
+* The turbo scan runs in the same loop as the background scan, one page at a time, so that the requests are not made in parallel. The loop runs as well when the background scan is switched off and only the turbo scan is switched on.
+
 ##### [2026-11-03] - Version 0.15.0.26
 
 * New: the settings have a button that starts the background scan from its beginning (it is above the keywords). A scan that is running is set back to the first page, a scan that waits for the next round is started again. The button is greyed out and without function while the background scan is switched off.

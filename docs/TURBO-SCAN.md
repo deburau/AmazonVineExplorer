@@ -1,9 +1,12 @@
 # Turbo-Scan – Konzept
 
-> **Stand 2026-11-02: Konzept, noch nicht implementiert.** Die Entscheidungen
-> sind getroffen, die Umsetzung beginnt mit Schritt 1. Diese Datei liegt im
+> **Stand 2026-11-03: umgesetzt (Version 0.15.0.32).** Alle sechs Schritte aus
+> dem Abschnitt „Umsetzungsschritte“ sind erledigt. Diese Datei liegt im
 > Repository, damit die Messwerte und die Begründungen nach einer Verdichtung
 > des Chats nicht verloren gehen.
+>
+> Wächter: `scripts/verify/verify_category_tree.js` (24 Fälle),
+> `verify_settings_categories.js` (27 Fälle), `verify_turbo_scan.js` (21 Fälle).
 
 ## Ziel
 
@@ -113,10 +116,11 @@ Der Fast-Scan-Intervall mit diesen Parametern:
 
 ## Umsetzungsschritte
 
-1. **Einstellungen** in `globals.js` + Übersetzungen in `i18n.js`:
-   - `EnableTurboScan` (bool, Default: aus)
-   - `TurboScanCategories` (Textliste, ein Eintrag pro Zeile)
-   - `TurboScanIntervalSeconds` (number, Default 30, Minimum 10)
+1. ~~**Einstellungen** in `globals.js` + Übersetzungen in `i18n.js`:~~
+   **erledigt.** Statt einer Textliste gibt es eine Auswahlliste mit Checkboxen
+   (Einstellungstyp `categories`, `createSettingsCategoriesElement()`), in der
+   die Unterkategorien beim Aufklappen geladen werden. Gespeichert werden nur
+   die Nummern (`pn` bzw. `pn/cn`).
 2. **Kategorie-Eintrag auflösen:** Nummer direkt (`10925031` bzw. `10925031/87837030`),
    Name über die Sidebar der geladenen Seite. Offen: siehe unten.
 3. **Die Schleife:** `initTurboScan()`, `turboScanLoop()` mit einer

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.31
+// @version      0.15.0.32
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -53,10 +53,11 @@
    favStarEventhandlerClick, fixProductImageUrl, formatTaxPrize, getContrastColor, getFastScanState,
    getFastScanIntervalSeconds, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
    getScanDelay, getTaxPrices,
-   getTilesFromURL, getUrlParameter, getVariationRequestDelay, gotifyNotification,
+   getTilesFromURL, getTurboScanCategories, getTurboScanIndex, getTurboScanIntervalSeconds,
+   getUrlParameter, getVariationRequestDelay, gotifyNotification, isTurboScanDue,
    getSelectedCategoryPn, getVineCategoryChildren, getVineCategoryParents, parseCategoryNodes,
-   parseCategoryTree,
-   restartBackgroundScan,
+   parseCategoryTree, parseTurboScanCategory,
+   restartBackgroundScan, scanStepTurbo,
    startFastScan,
    handleFastScanFinished, handleInfiniteScroll, importDatabase, init, initBackgroundScan,
    initNavigationButtons,
@@ -3574,8 +3575,10 @@ function initBackgroundScan() {
         console.warn('initBackgroundScan(): Backgroundscan is already running => Exit');
         return;
     }
-    if (!SETTINGS.EnableBackgroundScan) {
-        console.warn('initBackgroundScan(): Backgroundscan is disabled => Exit');
+    // NOTE: The loop of the scan runs the turbo scan as well, so it is started
+    // when one of the two scans is switched on.
+    if (!SETTINGS.EnableBackgroundScan && SETTINGS.EnableTurboScan !== true) {
+        console.warn('initBackgroundScan(): the background scan and the turbo scan are disabled => Exit');
         return;
     }
     if (!AVE_IS_THIS_SESSION_MASTER) {
@@ -3676,7 +3679,10 @@ async function scanLoop(baseUrl, state) {
         if (!BackGroundScanIsRunning || _generation !== ScanLoopGeneration) break;
 
         try {
-            await scanStepBackground(baseUrl, state);
+            // The steps are made in the order of their priority: the turbo scan is
+            // time critical, the background scan is the normal case.
+            if (isTurboScanDue()) await scanStepTurbo();
+            else if (SETTINGS.EnableBackgroundScan !== false) await scanStepBackground(baseUrl, state);
         } catch (error) {
             // NOTE: The loop has to continue, whatever a step does.
             const _reason = error?.message || error || 'unknown error';
@@ -3958,6 +3964,128 @@ function restartBackgroundScan() {
     console.log('restartBackgroundScan(): the background scan was not running, it is started now');
     initBackgroundScan();
     scanStepImmediately = true;
+}
+
+/**
+ * The default interval of the turbo scan in seconds. It is used, if the setting
+ * "TurboScanIntervalSeconds" is not set.
+ */
+const TURBO_SCAN_INTERVAL_SECONDS = 30;
+
+/** The smallest interval that is allowed for the turbo scan in seconds. */
+const MIN_TURBO_SCAN_INTERVAL_SECONDS = 10;
+
+/**
+ * Returns the interval of the turbo scan.
+ *
+ * The interval is counted from the end of the last round, so that every category
+ * is loaded once in the interval.
+ *
+ * @returns {number} The interval in seconds
+ */
+function getTurboScanIntervalSeconds() {
+    const _configured = Number(SETTINGS.TurboScanIntervalSeconds);
+    if (!Number.isFinite(_configured)) return TURBO_SCAN_INTERVAL_SECONDS;
+    return Math.max(MIN_TURBO_SCAN_INTERVAL_SECONDS, _configured);
+}
+
+/**
+ * Returns the categories that the turbo scan watches.
+ *
+ * Only the numbers of the categories are stored ("pn" for a main category and
+ * "pn/cn" for a sub category), the names are only used for the display.
+ *
+ * @returns {string[]} The ids of the categories
+ */
+function getTurboScanCategories() {
+    const _stored = Array.isArray(SETTINGS.TurboScanCategories) ? SETTINGS.TurboScanCategories : [];
+    return _stored.filter((entry) => typeof entry === 'string' && /^\d+(\/\d+)?$/.test(entry));
+}
+
+/**
+ * Splits the id of a category into its numbers.
+ *
+ * @param {string} id The id of the category ("10925031" or "10925031/87837030")
+ * @returns {{pn: string, cn: string}} The numbers of the category
+ */
+function parseTurboScanCategory(id) {
+    const _parts = String(id).split('/');
+    return { pn: _parts[0], cn: _parts[1] || '' };
+}
+
+/**
+ * Returns the position of the turbo scan in the list of the categories.
+ *
+ * @returns {number} The index of the category that is loaded next
+ */
+function getTurboScanIndex() {
+    const _index = parseInt(localStorage.getItem('AVE_TURBO_SCAN_CATEGORY_INDEX'), 10);
+    const _length = getTurboScanCategories().length;
+    if (!Number.isFinite(_index) || _index < 0 || _index >= _length) return 0;
+    return _index;
+}
+
+/**
+ * Checks if the turbo scan has to make a step now.
+ *
+ * The categories are loaded one after the other: while a round is running (the
+ * position is not the first category) the next step is made at once. The waiting
+ * time starts at the end of a round.
+ *
+ * @returns {boolean} true if a category has to be loaded now
+ */
+function isTurboScanDue() {
+    if (SETTINGS.EnableTurboScan !== true) return false;
+    if (getTurboScanCategories().length === 0) return false;
+
+    // A round that is running is continued without a waiting time.
+    if (getTurboScanIndex() > 0) return true;
+
+    const _waitingMS = Date.now() - (Number(localStorage.getItem('AVE_TURBO_SCAN_LAST_TIME')) || 0);
+    return _waitingMS >= getTurboScanIntervalSeconds() * 1000;
+}
+
+/**
+ * One step of the scan loop: the first page of the next category of the turbo
+ * scan.
+ *
+ * The page is scanned like a page of the background scan, so that new products
+ * are stored and the search for the keywords runs for them. The position of the
+ * round is kept in the local storage.
+ *
+ * NOTE: The step is made in the loop of the scans, so that the requests are made
+ * one after the other and Amazon does not block the account.
+ *
+ * @returns {Promise<void>} Resolves when the page was scanned
+ */
+async function scanStepTurbo() {
+    const _categories = getTurboScanCategories();
+    if (_categories.length === 0) return;
+
+    const _index = getTurboScanIndex();
+    const _category = parseTurboScanCategory(_categories[_index]);
+    const _baseUrl = aveGetVineBaseUrl();
+    if (!_baseUrl) {
+        console.warn('scanStepTurbo(): no Vine URL found => Exit');
+        return;
+    }
+
+    const _url = `${_baseUrl}?queue=all_items&pn=${_category.pn}&cn=${_category.cn}&page=1`;
+    updateBackgroundScanScreenText(`Turbo Scanner: ${_index + 1} / ${_categories.length}`);
+    if (SETTINGS.DebugLevel > 1) console.log(`scanStepTurbo(): loading ${_url}`);
+
+    await new Promise((resolve) => {
+        backGroundTileScanner(_url, (newCount) => {
+            if (SETTINGS.DebugLevel > 1) console.log(`scanStepTurbo(): the page of ${_category.pn} has ${newCount} new products`);
+            resolve();
+        });
+    });
+
+    // NOTE: A round is complete when the position is back at the first category.
+    // Only then the waiting time of the next round starts.
+    const _nextIndex = _index + 1 >= _categories.length ? 0 : _index + 1;
+    localStorage.setItem('AVE_TURBO_SCAN_CATEGORY_INDEX', _nextIndex);
+    if (_nextIndex === 0) localStorage.setItem('AVE_TURBO_SCAN_LAST_TIME', Date.now());
 }
 
 /**

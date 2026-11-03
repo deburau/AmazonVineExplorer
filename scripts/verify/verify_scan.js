@@ -28,6 +28,13 @@ const NEW_NAMES = [
     'getFastScanIntervalSeconds',
     'getFastScanState',
     'startFastScan',
+    // Der Turbo-Scan laeuft in derselben Schleife.
+    'isTurboScanDue',
+    'scanStepTurbo',
+    'getTurboScanCategories',
+    'getTurboScanIndex',
+    'getTurboScanIntervalSeconds',
+    'parseTurboScanCategory',
     'prepareFastScan',
     'prepareScanIteration',
     'scanStageZero',
@@ -45,7 +52,12 @@ const NEW_NAMES = [
 
 // Die Konstanten der neuen Schleife stehen ausserhalb der Funktionen, sie
 // muessen deshalb mit in die Sandbox.
-const CONSTANT_NAMES = ['FAST_SCAN_INTERVAL_SECONDS', 'MIN_FAST_SCAN_INTERVAL_SECONDS'];
+const CONSTANT_NAMES = [
+    'FAST_SCAN_INTERVAL_SECONDS',
+    'MIN_FAST_SCAN_INTERVAL_SECONDS',
+    'TURBO_SCAN_INTERVAL_SECONDS',
+    'MIN_TURBO_SCAN_INTERVAL_SECONDS'
+];
 
 const { old: oldCode, new: newCode } = prepareWithConstants('verify_scan.js', OLD_NAMES, NEW_NAMES, CONSTANT_NAMES);
 

@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.31` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.32` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -245,7 +245,17 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   Request**; nur wenn die Seite sie nicht hat bzw. der Cache leer ist, wird die
   Seite per `fetch` im Hintergrund geladen. Cache in `AVE_CATEGORY_CACHE`,
   Wächter `verify_category_tree.js` (24 Fälle) und
-  `verify_settings_categories.js` (20 Fälle). **Der Turbo-Scan selbst fehlt noch** – die
+  `verify_settings_categories.js` (27 Fälle).
+* **Turbo-Scan ist umgesetzt** (0.15.0.32):
+  `isTurboScanDue()` (Einstellung an + Kategorien vorhanden + Wartezeit bzw.
+  laufende Runde) und `scanStepTurbo()` (eine Kategorie-Seite pro Schritt,
+  `?queue=all_items&pn=<pn>&cn=<cn>&page=1`, Rotationszähler
+  `AVE_TURBO_SCAN_CATEGORY_INDEX`, Rundenende setzt `AVE_TURBO_SCAN_LAST_TIME`).
+  Der Schritt läuft **in derselben Schleife** wie der Background-Scan (Priorität
+  Turbo vor BG, eine Seite pro Schritt) und benutzt `backGroundTileScanner()` –
+  dadurch werden neue Produkte gespeichert und die Keyword-Suche läuft wie
+  gewohnt. Die Schleife startet, wenn **einer** der beiden Scans an ist.
+  Wächter: `scripts/verify/verify_turbo_scan.js` (21 Fälle). **Der Turbo-Scan selbst fehlt noch** – die
   Einstellungen haben bis dahin keine Wirkung, darum gibt es noch keinen
   Changelog-Eintrag.
 * **Umbau der Steuerung:** eine einzige Schleife mit Prioritäten

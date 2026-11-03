@@ -892,6 +892,8 @@ const AVE_LOCAL_STORAGE_KEYS = [
     'AVE_NEW_COUNT',
     'AVE_OPEN_SETTINGS_TAB',
     'AVE_SESSIONS',
+    'AVE_TURBO_SCAN_CATEGORY_INDEX',
+    'AVE_TURBO_SCAN_LAST_TIME',
     'ave-share-details'
 ];
 
