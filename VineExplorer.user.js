@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.18
+// @version      0.15.0.19
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -4963,6 +4963,15 @@ function hasProductDetails(prod) {
  * switched off. The setting decides only, if the prices of a product that is
  * marked as favorite are loaded.
  *
+ * NOTE: The details of every product are requested at most **once**. The request
+ * is remembered in the product (detailsRequested), so that a product is not
+ * requested again on every search for the keywords. Without this the account can
+ * be blocked by Amazon, because the search runs after every scanned page.
+ *
+ * NOTE: The marker is set before the request, so that a request that fails is
+ * not repeated. The assumption is that Amazon does not change a product that was
+ * published already.
+ *
  * @param {Product} prod The product to load the details for
  * @returns {Promise<void>} Resolves when the details were loaded and stored
  */
@@ -4970,9 +4979,23 @@ async function loadProductDetails(prod) {
     // A product that is marked as favorite and unmarked again would be loaded
     // a second time otherwise.
     if (hasProductDetails(prod)) {
-        console.info(`AVE: The details of ${prod.id} are already loaded.`);
+        if (SETTINGS.DebugLevel > 1) console.info(`AVE: The details of ${prod.id} are already loaded.`);
         return;
     }
+    // The details were already requested and the request failed or the product
+    // has no price. It is not requested a second time.
+    if (prod.detailsRequested) {
+        if (SETTINGS.DebugLevel > 1) console.info(`AVE: The details of ${prod.id} were already requested.`);
+        return;
+    }
+
+    prod.detailsRequested = true;
+    // NOTE: The marker is stored before the request, so that it is kept even if
+    // the request fails. The request itself saves the details with the marker.
+    database.update(prod).catch((error) => {
+        console.error(`loadProductDetails(): could not save the product ${prod.id}: ${error}`);
+    });
+
     console.info(`AVE: Loading the details of ${prod.id} ...`);
     await requestProductDetailsQueued(prod);
     console.info(`AVE: The details of ${prod.id} were loaded.`);

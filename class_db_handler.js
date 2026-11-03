@@ -551,18 +551,24 @@ class DB_HANDLER {
  * Migrates a product of the database to the version 5.
  *
  * The version 5 of the database has the list with the prices of a product
- * (data_estimated_tax_prices). The price of the product is in
- * data_estimated_tax_prize, the prices of the variations are in the variations
- * of the product. Both are taken over, so that the prices do not have to be
- * requested from Amazon again after the migration.
+ * (data_estimated_tax_prices) and the marker detailsRequested, which remembers
+ * that the details of the product were requested once. The price of the product
+ * is in data_estimated_tax_prize, the prices of the variations are in the
+ * variations of the product. Both are taken over, so that the prices do not have
+ * to be requested from Amazon again after the migration.
  *
  * @param {object} prod The product from the database
- * @returns {object} The product with the list of the prices
+ * @returns {object} The product with the list of the prices and the marker
+ *                   detailsRequested
  */
 function migrateProductToVersion5(prod) {
     if (!prod || typeof prod != 'object') return prod;
-    // The product was already migrated.
-    if (Array.isArray(prod.data_estimated_tax_prices)) return prod;
+    // The product was already migrated. The marker of the request may be
+    // missing, e.g. in a database of an older development version.
+    if (Array.isArray(prod.data_estimated_tax_prices)) {
+        if (prod.data_estimated_tax_prices.length > 0) prod.detailsRequested = true;
+        return prod;
+    }
 
     const _prices = [];
 
@@ -581,5 +587,11 @@ function migrateProductToVersion5(prod) {
     }
 
     prod.data_estimated_tax_prices = _prices;
+
+    // The details of a product are requested at most once (see
+    // loadProductDetails()). A product that already has prices does not need a
+    // request any more, so the request counts as done for it.
+    if (_prices.length > 0) prod.detailsRequested = true;
+
     return prod;
 }

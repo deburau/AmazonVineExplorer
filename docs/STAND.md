@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.18` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.19` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -252,8 +252,11 @@ oft der Pfad lief.
   wird es **bei jedem Suchlauf erneut** angefragt → Rückschleife + Dauerlast.
 * **Nicht** die Ursache: die neue Schleife (`verify_scan.js` zeigt die identische
   Schrittfolge) und der neue Fast-Scan-Takt (läuft seltener als vorher).
-* **Der Maintainer hat entschieden, vorerst keine Maßnahme umzusetzen.**
-  Analyse, Vorschläge (Versuchs-Merker, Notbremse, Queue-Limit, Suche nur über
+* **Umgesetzt (0.15.0.19):** Die Details eines Produkts werden **höchstens
+  einmal** angefragt (Merker `detailsRequested` im Produkt, gesetzt **vor** dem
+  Request). Die Migration der DB-Version 5 setzt den Merker für Produkte, die
+  schon Preise haben. Damit ist der stärkste Hebel aus der Analyse drin.
+* Analyse, die restlichen Vorschläge (Notbremse, Queue-Limit, Suche nur über
   ungeprüfte Produkte, leises Log, Suche drosseln) und Meßhinweise stehen in
   **`docs/ANALYSE-DETAILS-REQUESTS.md`**.
 

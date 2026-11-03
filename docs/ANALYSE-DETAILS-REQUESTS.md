@@ -59,7 +59,7 @@ Auftreten der Sperre nicht von selbst aufhörte.
 
 | # | Maßnahme | Wirkung | Aufwand |
 |---|---|---|---|
-| 1 | **Versuchs-Merker je Produkt** (Map `id → Zeitstempel` im Speicher): kein zweiter Request für dasselbe Produkt innerhalb z. B. 30 min | durchbricht die Rückschleife aus Punkt 3 – **wichtigster Hebel** | klein |
+| 1 | ~~**Versuchs-Merker je Produkt**: kein zweiter Request für dasselbe Produkt innerhalb z. B. 30 min~~ **ERLEDIGT in 0.15.0.19:** Merker `detailsRequested` im Produkt (persistent), die Details werden **höchstens einmal** angefragt – auch nach einem Reload nicht erneut. Die Migration der DB-Version 5 setzt den Merker bei Produkten, die schon Preise haben. | durchbricht die Rückschleife aus Punkt 3 – **wichtigster Hebel**, umgesetzt | klein |
 | 2 | **Notbremse**: nach N Fehlern in Folge die Queue leeren und die Details für X Minuten pausieren | verhindert, dass eine Sperre eskaliert | klein |
 | 3 | **Queue begrenzen** (z. B. max. 50 offene Einträge, weitere verwerfen) | kein unbegrenzter Rückstau, begrenzter Speicher | klein |
 | 4 | **Suche nur über noch nicht geprüfte Produkte** (Merker im Speicher) | viel weniger CPU und Aufrufe; ändert die Suchsemantik (ein dauerhaft preisloses Produkt wird nicht mehr automatisch nachgeprüft) | mittel |
@@ -69,6 +69,22 @@ Auftreten der Sperre nicht von selbst aufhörte.
 Empfehlung des vorbereitenden Agents: **1 + 2 + 3 + 5** als ein Commit
 (Absicherung, keine Semantikänderung), danach 4 und 6 als zweiter Schritt mit
 eigener Verifikation.
+
+**Stand:** Maßnahme **1** ist umgesetzt (0.15.0.19, in der stärkeren Variante
+„höchstens einmal, dauerhaft"). Die Maßnahmen 2, 3, 4, 5 und 6 sind weiterhin
+offen.
+
+## Verifikation der umgesetzten Maßnahme
+
+* `verify_details_on_favorite.js`, neues Szenario „Preisbedingung passt nicht:
+die Details werden bei einem zweiten Suchlauf nicht erneut angefragt" – zwei
+Durchläufe über dasselbe Produkt, es darf genau **ein** API-Aufruf passieren.
+* Dazu das Szenario „Ein Produkt, dessen Details schon angefragt wurden, wird
+nicht erneut angefragt".
+* `verify_tax_prizes.js` prüft bei der Migration, dass Produkte mit Preisen den
+Merker `detailsRequested` bekommen und Produkte ohne Preise nicht.
+* Gegenprobe: mit abgeschaltetem Merker meldet die Verifikation genau diese
+beiden Fälle als Abweichung.
 
 ## Sofortmaßnahmen für den Benutzer
 

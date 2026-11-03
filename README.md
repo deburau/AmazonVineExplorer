@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.19
+
+* Fix: the price details of a product are requested at most once now. Before, a product whose price Amazon did not return was requested again on every search for the keywords, which runs after every scanned page. That could make the requests run without a break and Amazon blocked the account for a while. The marker is stored with the product, so a reload does not start the requests again.
+
 ##### [2026-11-03] - Version 0.15.0.18
 
 * New: the fast scan has its own interval now, it is the new setting "Fast scan interval" (default 5 minutes). Before, the interval was derived from the delay per page of the background scan: the fast scan waited 15 pages before it started again. A shorter delay per page therefore made it run much more often, about every 40 seconds with a delay of 2000/1000 milliseconds.

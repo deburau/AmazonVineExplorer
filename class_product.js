@@ -18,6 +18,9 @@ class Product {
     // NOTE: The field is not written any more. The prices are in
     // data_estimated_tax_prices. It will be removed in a future release.
     data_estimated_tax_prize;
+    // true, if the details of the product were requested once. The details are
+    // never requested a second time (see loadProductDetails()).
+    detailsRequested = false;
     // The prices of the product. It is empty for products without a known
     // price and has one entry for a product without variations.
     data_estimated_tax_prices = [];
