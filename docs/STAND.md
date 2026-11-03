@@ -238,6 +238,25 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   `FastScanIntervalSeconds` (Default **300 s**), Wächter
   `scripts/verify/verify_fast_scan_interval.js`.
 
+### Analyse: Kontosperre durch zu viele Detail-Requests (offen)
+
+Am 2026-11-03 hat Amazon den Zugriff in einem Browser vorübergehend gesperrt,
+nachdem massenhaft `AVE: The details of … are already loaded.` in der Konsole
+auftauchte. Die Meldung selbst ist harmlos (kein Request), sie zeigt aber, wie
+oft der Pfad lief.
+
+* Ursache (mit hoher Wahrscheinlichkeit): **Menge an Detail-Requests**. Die
+  Keyword-Suche läuft nach jeder Scan-Seite über **alle** neuen Einträge, jeder
+  Keyword-Treffer mit Preisbedingung lädt die Details (unabhängig von
+  `EnableDetailsOnFavorite`), und wenn ein Produkt nie einen Preis bekommt,
+  wird es **bei jedem Suchlauf erneut** angefragt → Rückschleife + Dauerlast.
+* **Nicht** die Ursache: die neue Schleife (`verify_scan.js` zeigt die identische
+  Schrittfolge) und der neue Fast-Scan-Takt (läuft seltener als vorher).
+* **Der Maintainer hat entschieden, vorerst keine Maßnahme umzusetzen.**
+  Analyse, Vorschläge (Versuchs-Merker, Notbremse, Queue-Limit, Suche nur über
+  ungeprüfte Produkte, leises Log, Suche drosseln) und Meßhinweise stehen in
+  **`docs/ANALYSE-DETAILS-REQUESTS.md`**.
+
 ## Wichtige Dateien
 
 | Datei | Inhalt |
@@ -252,6 +271,7 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
 | `.unotes/` | Lokale Testskripte (nicht versioniert) |
 | `docs/TURBO-SCAN.md` | Konzept des Turbo-Scans (Messwerte, Entscheidungen, offene Punkte) |
 | `docs/SCAN-LOOP.md` | Plan für die eine Schleife mit Prioritäten (Turbo/Fast/BG/Cleanup) |
+| `docs/ANALYSE-DETAILS-REQUESTS.md` | Analyse der zu vielen Detail-Requests (Kontosperre) |
 | `AGENTS.md` | Arbeitsregeln für AI-Sessions |
 | `HANDOVER.md` | Umzug auf ein anderes System |
 
