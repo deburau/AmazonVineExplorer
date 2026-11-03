@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.36
+
+* The scan settings are grouped in the settings menu now: the switch "Enable Background Scan" and the button that starts a new scan are above the delay of the background scan, and every scan has its own heading ("Background scan", "Fast scan").
+
 ##### [2026-11-03] - Version 0.15.0.35
 
 * New: the fast scan can be switched off now (the setting "Enable fast scan", it is above its interval). A fast scan that is running when it is switched off stops.

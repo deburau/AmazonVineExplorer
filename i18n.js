@@ -51,6 +51,7 @@ const I18N = {
             EnableTopLogoChange: 'Top-Logo ändern aktivieren',
             EnableBtnAll: 'Button Alle Produkte aktivieren',
             EnablePaginationTop: 'Paginierung oben aktivieren',
+            TITLE_BACKGROUND_SCAN: 'Background-Scan',
             EnableBackgroundScan: 'Background Scan aktivieren',
             EnableInfiniteScrollLiveQuerry: 'Infinite Scroll Live-Query aktivieren',
             EnableInfiniteSpinnerFix: 'Endloses Laden bei Varianten beheben',
@@ -65,6 +66,7 @@ const I18N = {
             GotifyToken: 'Gotify Anwendungstoken',
             BackGroundScanDelayPerPage: 'Background Scan Min. Delay pro Seite (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness pro Seite (ms)',
+            TITLE_FAST_SCAN: 'Fast-Scan',
             EnableFastScan: 'Fast-Scan aktivieren',
             FastScanIntervalSeconds: 'Fast-Scan-Takt (Sek.)',
             TITLE_TURBO: 'Turbo-Scan',
@@ -122,6 +124,7 @@ const I18N = {
             EnableTopLogoChange: 'Ersetzt das Amazon-Logo durch das AVE-Logo.',
             EnableBtnAll: 'Zeigt den Button „Alle Produkte“ an.',
             EnablePaginationTop: 'Zeigt die Paginierung oben an (nur ZA-Seite).',
+            TITLE_BACKGROUND_SCAN: 'Background-Scan',
             EnableBackgroundScan: 'Aktiviert den Scan im Hintergrund.',
             EnableInfiniteScrollLiveQuerry: 'Lädt die Produkte direkt von Amazon statt aus der Datenbank.',
             EnableInfiniteSpinnerFix: 'Behebt fehlerhafte Variantendaten.',
@@ -139,12 +142,13 @@ const I18N = {
             BackGroundScannerRandomness: 'Max. zufällige Wartezeit pro Seite in Millisekunden.',
             FastScanIntervalSeconds:
                 'Mindestzeit zwischen zwei Fast-Scans. Der Fast-Scan prüft die ersten Seiten, um einen Produkt-Drop früh zu erkennen. Die Zeit zählt ab dem Ende des letzten Fast-Scans und ändert die Wartezeit pro Seite des Background Scans nicht.',
-            TITLE_TURBO: 'Turbo-Scan',
+            TITLE_FAST_SCAN: 'Fast-Scan',
             EnableFastScan:
                 'Prüft die ersten Seiten der Produktliste immer wieder, damit ein möglicher Produkt-Drop früh erkannt wird. Nach dem Ende macht der Background Scan bei der Seite weiter, bei der der Fast-Scan gestartet ist.',
-            TITLE_DELAYS: 'Wartezeiten und Grenzen',
+            TITLE_TURBO: 'Turbo-Scan',
             EnableTurboScan:
                 'Prüft die erste Seite der ausgewählten Kategorien immer wieder, damit neue Produkte dieser Kategorien innerhalb einer Minute gefunden werden.',
+            TITLE_DELAYS: 'Wartezeiten und Grenzen',
             TurboScanIntervalSeconds:
                 'Zeit zwischen zwei Durchläufen des Turbo-Scans. Pro Durchlauf wird jede Kategorie einmal geladen, der Wert muss also größer sein als die Anzahl der Kategorien.',
             TurboScanCategories:
@@ -240,6 +244,7 @@ const I18N = {
             EnableTopLogoChange: 'Enable Top Logo Change',
             EnableBtnAll: 'Enable Button All Products',
             EnablePaginationTop: 'Enable Pagination on top',
+            TITLE_BACKGROUND_SCAN: 'Background scan',
             EnableBackgroundScan: 'Enable Background Scan',
             EnableInfiniteScrollLiveQuerry: 'Enable Infinite Scroll Live Query',
             EnableInfiniteSpinnerFix: 'Enable Infinite Spinner Fix',
@@ -254,6 +259,7 @@ const I18N = {
             GotifyToken: 'Gotify application token',
             BackGroundScanDelayPerPage: 'Background Scan Per Page Min Delay (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness per Page (ms)',
+            TITLE_FAST_SCAN: 'Fast scan',
             EnableFastScan: 'Enable the fast scan',
             FastScanIntervalSeconds: 'Fast scan interval (Seconds)',
             TITLE_TURBO: 'Turbo scan',
@@ -311,6 +317,7 @@ const I18N = {
             EnableTopLogoChange: 'Replaces the Amazon logo with the AVE logo.',
             EnableBtnAll: 'Shows the "All Products" button.',
             EnablePaginationTop: 'Shows the pagination on top (ZA page only).',
+            TITLE_BACKGROUND_SCAN: 'Background scan',
             EnableBackgroundScan: 'Enables the scan in the background.',
             EnableInfiniteScrollLiveQuerry: 'Loads the products directly from Amazon instead of the database.',
             EnableInfiniteSpinnerFix: 'Repairs faulty variant data.',
@@ -328,6 +335,7 @@ const I18N = {
             BackGroundScannerRandomness: 'Maximum random wait time per page in milliseconds.',
             FastScanIntervalSeconds:
                 'Minimum time between two fast scans. A fast scan looks at the first pages, so that a possible product drop is found early. The time is counted from the end of the last fast scan and does not change the delay per page of the background scan.',
+            TITLE_FAST_SCAN: 'Fast scan',
             TITLE_TURBO: 'Turbo scan',
             EnableFastScan:
                 'Looks at the first pages of the product list again and again, so that a possible product drop is found early. When it stopped, the background scan continues at the page where the fast scan started.',

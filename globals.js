@@ -423,12 +423,6 @@ SETTINGS_USERCONFIG_DEFINES.push({
     name: 'Enable Pagination on top',
     description: 'Enable Pagination to be displayed on top for ZA page'
 });
-SETTINGS_USERCONFIG_DEFINES.push({
-    key: 'EnableBackgroundScan',
-    type: 'bool',
-    name: 'Enable Background Scan',
-    description: 'Enables the Background scan, if disabled you will find a Button for Autoscan on the Vine Website'
-});
 // NOTE: 'EnableInfiniteScrollLiveQuerry' is a known typo for '...Query'. It is used
 //   consistently in globals.js and VineExplorer.user.js and is part of the persisted
 //   settings, so renaming it would invalidate existing user configurations.
@@ -483,19 +477,6 @@ SETTINGS_USERCONFIG_DEFINES.push({
     description: 'Instead of the &quot;Last seen&quot; date in the product box show the date, the item was first seen'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
-    type: 'button',
-    key: 'BUTTON_SCAN_RESTART',
-    name: 'Start a new background scan',
-    bgColor: 'rgb(255, 200, 0)',
-    description:
-        'Starts the background scan from its beginning. A running scan is set back to the first page, a waiting scan is started again.',
-    // The button needs the background scan, so it is not available without it.
-    btnEnabled: () => SETTINGS.EnableBackgroundScan !== false,
-    btnClick: () => {
-        restartBackgroundScan();
-    }
-});
-SETTINGS_USERCONFIG_DEFINES.push({
     key: 'DesktopNotifikationKeywords',
     type: 'keywords',
     name: 'Desktop Notification Highlight Keywords',
@@ -514,6 +495,26 @@ SETTINGS_USERCONFIG_DEFINES.push({
     name: 'Gotify application token',
     description: 'The authenticatin token of your Gotify application'
 });
+SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Background scan', description: '', key: 'TITLE_BACKGROUND_SCAN' });
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableBackgroundScan',
+    type: 'bool',
+    name: 'Enable Background Scan',
+    description: 'Enables the Background scan, if disabled you will find a Button for Autoscan on the Vine Website'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    type: 'button',
+    key: 'BUTTON_SCAN_RESTART',
+    name: 'Start a new background scan',
+    bgColor: 'rgb(255, 200, 0)',
+    description:
+        'Starts the background scan from its beginning. A running scan is set back to the first page, a waiting scan is started again.',
+    // The button needs the background scan, so it is not available without it.
+    btnEnabled: () => SETTINGS.EnableBackgroundScan !== false,
+    btnClick: () => {
+        restartBackgroundScan();
+    }
+});
 SETTINGS_USERCONFIG_DEFINES.push({
     key: 'BackGroundScanDelayPerPage',
     type: 'number',
@@ -530,6 +531,7 @@ SETTINGS_USERCONFIG_DEFINES.push({
     name: 'Background Scan Randomness per Page(Milliseconds)',
     description: 'A Value that gives the maximal range for the Randomy added delay per page load'
 });
+SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Fast scan', description: '', key: 'TITLE_FAST_SCAN' });
 SETTINGS_USERCONFIG_DEFINES.push({
     key: 'EnableFastScan',
     type: 'bool',
