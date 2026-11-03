@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.34
+// @version      0.15.0.35
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -4196,6 +4196,10 @@ function getFastScanIntervalSeconds() {
  *                                   running and true if it has to be started
  */
 function getFastScanState() {
+    // NOTE: The fast scan can be switched off. Then it is never started and a
+    // running fast scan is stopped (see prepareFastScan()).
+    if (SETTINGS.EnableFastScan === false) return { running: false, due: false };
+
     if (localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true') return { running: true, due: false };
 
     const _backgroundScanStage = localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') || -1;

@@ -9,9 +9,13 @@
  * unbeabsichtigt auch den Fast-Scan viel oefter laufen lassen. Der Takt ist
  * jetzt die Einstellung "FastScanIntervalSeconds".
  *
+ * Es wird ausserdem geprueft, ob der Fast-Scan ueberhaupt laufen darf
+ * (getFastScanState()): er kann abgeschaltet werden und er startet nur, wenn der
+ * Background-Scan weit genug ist.
+ *
  * Das Skript prueft das aktuelle Verhalten gegen erwartete Werte. Es vergleicht
- * nicht eine alte mit einer neuen Implementierung, weil der Takt eine
- * Einstellung ist und kein Refactoring.
+ * nicht eine alte mit einer neuen Implementierung, weil die Einstellungen ein
+ * Feature sind und kein Refactoring.
  *
  * Usage: node scripts/verify/verify_fast_scan_interval.js
  */
@@ -41,6 +45,40 @@ const CODE = [
     extractConstants(mainSrc, ['FAST_SCAN_INTERVAL_SECONDS', 'MIN_FAST_SCAN_INTERVAL_SECONDS']),
     extractBody(mainSrc, 'getFastScanIntervalSeconds')
 ].join('\n\n');
+
+// Fuer den Zustand des Fast-Scans wird eine eigene Sandbox gebraucht, weil die
+// Funktion den local storage liest.
+const STATE_CODE = [
+    extractConstants(mainSrc, ['FAST_SCAN_INTERVAL_SECONDS', 'MIN_FAST_SCAN_INTERVAL_SECONDS']),
+    extractBody(mainSrc, 'getFastScanIntervalSeconds'),
+    extractBody(mainSrc, 'getFastScanState')
+].join('\n\n');
+const NOW = 1800000000000;
+
+/**
+ * Liest den Zustand des Fast-Scans mit einem vorgegebenen Speicher.
+ *
+ * @param {object} opts Die Einstellung und der Inhalt des local storage
+ * @returns {{running: boolean, due: boolean}} Der Zustand
+ */
+function stateWith(opts) {
+    const _store = new Map(Object.entries(opts.stored || {}));
+    const _sandbox = {
+        console: { log: () => {}, warn: () => {}, error: () => {} },
+        localStorage: {
+            getItem: (key) => (_store.has(key) ? _store.get(key) : null),
+            setItem: (key, value) => _store.set(key, String(value))
+        },
+        Date: { now: () => NOW },
+        SETTINGS: { DebugLevel: 0, EnableFastScan: opts.enableFastScan, FastScanIntervalSeconds: 300 },
+        Number,
+        Math
+    };
+    _sandbox.globalThis = _sandbox;
+    const _ctx = vm.createContext(_sandbox);
+    vm.runInContext(STATE_CODE, _ctx, { filename: 'fast_scan_state.js' });
+    return vm.runInContext('getFastScanState()', _ctx);
+}
 
 const sandbox = {
     console: { log: () => {}, warn: () => {}, error: () => {} },
@@ -129,9 +167,96 @@ for (const _case of CASES) {
     }
 }
 
+// Der Zustand des Fast-Scans: darf er laufen?
+console.log('\nDarf der Fast-Scan laufen?');
+console.log('='.repeat(70));
+
+const STATE_CASES = [
+    {
+        label: 'Der Fast-Scan ist abgeschaltet',
+        opts: {
+            enableFastScan: false,
+            stored: { AVE_BACKGROUND_SCAN_STAGE: '1', AVE_BACKGROUND_SCAN_PAGE_MAX: '10', AVE_BACKGROUND_SCAN_PAGE_CURRENT: '5' }
+        },
+        expected: { running: false, due: false }
+    },
+    {
+        label: 'Der Fast-Scan ist abgeschaltet, waehrend er laeuft',
+        opts: { enableFastScan: false, stored: { AVE_FAST_SCAN_IS_RUNNING: 'true' } },
+        expected: { running: false, due: false }
+    },
+    {
+        label: 'Der Background-Scan ist am Anfang (Stage 0)',
+        opts: {
+            enableFastScan: true,
+            stored: { AVE_BACKGROUND_SCAN_STAGE: '0', AVE_BACKGROUND_SCAN_PAGE_MAX: '10', AVE_BACKGROUND_SCAN_PAGE_CURRENT: '0' }
+        },
+        expected: { running: false, due: false }
+    },
+    {
+        label: 'Mitten im Scan und die Wartezeit ist vorbei',
+        opts: {
+            enableFastScan: true,
+            stored: {
+                AVE_BACKGROUND_SCAN_STAGE: '1',
+                AVE_BACKGROUND_SCAN_PAGE_MAX: '10',
+                AVE_BACKGROUND_SCAN_PAGE_CURRENT: '5',
+                AVE_FAST_SCAN_IS_RUNNING: 'false',
+                AVE_FAST_SCAN_LAST_TIME: '1'
+            }
+        },
+        expected: { running: false, due: true }
+    },
+    {
+        label: 'Der Fast-Scan laeuft schon',
+        opts: {
+            enableFastScan: true,
+            stored: { AVE_FAST_SCAN_IS_RUNNING: 'true', AVE_BACKGROUND_SCAN_STAGE: '1', AVE_BACKGROUND_SCAN_PAGE_MAX: '10' }
+        },
+        expected: { running: true, due: false }
+    },
+    {
+        label: 'Die Wartezeit ist noch nicht vorbei',
+        opts: {
+            enableFastScan: true,
+            stored: {
+                AVE_BACKGROUND_SCAN_STAGE: '1',
+                AVE_BACKGROUND_SCAN_PAGE_MAX: '10',
+                AVE_BACKGROUND_SCAN_PAGE_CURRENT: '5',
+                AVE_FAST_SCAN_LAST_TIME: String(NOW)
+            }
+        },
+        expected: { running: false, due: false }
+    },
+    {
+        label: 'Im ersten Zwanzigstel der Seiten',
+        opts: {
+            enableFastScan: true,
+            stored: {
+                AVE_BACKGROUND_SCAN_STAGE: '1',
+                AVE_BACKGROUND_SCAN_PAGE_MAX: '100',
+                AVE_BACKGROUND_SCAN_PAGE_CURRENT: '1',
+                AVE_FAST_SCAN_LAST_TIME: '1'
+            }
+        },
+        expected: { running: false, due: false }
+    }
+];
+
+for (const _case of STATE_CASES) {
+    const _actual = stateWith(_case.opts);
+    if (JSON.stringify(_actual) === JSON.stringify(_case.expected)) {
+        console.log(`  OK   ${_case.label}`);
+        continue;
+    }
+    _errors++;
+    console.log(`  FAIL ${_case.label}`);
+    console.log(`         erwartet: ${JSON.stringify(_case.expected)}  bekommen: ${JSON.stringify(_actual)}`);
+}
+
 console.log('');
 console.log('='.repeat(70));
-const _total = CASES.length + 1;
+const _total = CASES.length + 1 + STATE_CASES.length;
 if (_errors === 0) {
     console.log(`>>> RESULT: all ${_total} test cases passed`);
     process.exit(0);

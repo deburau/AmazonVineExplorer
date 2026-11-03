@@ -63,6 +63,11 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.35
+
+* New: the fast scan can be switched off now (the setting "Enable fast scan", it is above its interval). A fast scan that is running when it is switched off stops.
+* The settings have a heading above the delays and the limits now, so that the settings after the turbo scan do not look like a part of it.
+
 ##### [2026-11-03] - Version 0.15.0.32
 
 * New: the turbo scan. It loads the first page of the categories that are selected in the settings again and again (default: every 30 seconds), so that a new product of one of those categories is found within a minute. The categories are selected with checkboxes in the settings; a main category selects all of its sub categories, so that the products are not loaded twice. The products are stored and the notifications work like they do for the products of the background scan.

@@ -65,11 +65,13 @@ const I18N = {
             GotifyToken: 'Gotify Anwendungstoken',
             BackGroundScanDelayPerPage: 'Background Scan Min. Delay pro Seite (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness pro Seite (ms)',
+            EnableFastScan: 'Fast-Scan aktivieren',
             FastScanIntervalSeconds: 'Fast-Scan-Takt (Sek.)',
             TITLE_TURBO: 'Turbo-Scan',
             EnableTurboScan: 'Turbo-Scan aktivieren',
             TurboScanIntervalSeconds: 'Turbo-Scan Takt (Sek.)',
             TurboScanCategories: 'Kategorien für den Turbo-Scan',
+            TITLE_DELAYS: 'Wartezeiten und Grenzen',
             DesktopNotifikationDelay: 'Desktop-Benachrichtigung Delay (Sek.)',
             SearchBarInputDelay: 'Suchleiste Verzögerung (ms)',
             VariationRequestDelay: 'Verzögerung zwischen den Requests der Varianten (ms)',
@@ -138,6 +140,9 @@ const I18N = {
             FastScanIntervalSeconds:
                 'Mindestzeit zwischen zwei Fast-Scans. Der Fast-Scan prüft die ersten Seiten, um einen Produkt-Drop früh zu erkennen. Die Zeit zählt ab dem Ende des letzten Fast-Scans und ändert die Wartezeit pro Seite des Background Scans nicht.',
             TITLE_TURBO: 'Turbo-Scan',
+            EnableFastScan:
+                'Prüft die ersten Seiten der Produktliste immer wieder, damit ein möglicher Produkt-Drop früh erkannt wird. Nach dem Ende macht der Background Scan bei der Seite weiter, bei der der Fast-Scan gestartet ist.',
+            TITLE_DELAYS: 'Wartezeiten und Grenzen',
             EnableTurboScan:
                 'Prüft die erste Seite der ausgewählten Kategorien immer wieder, damit neue Produkte dieser Kategorien innerhalb einer Minute gefunden werden.',
             TurboScanIntervalSeconds:
@@ -249,11 +254,13 @@ const I18N = {
             GotifyToken: 'Gotify application token',
             BackGroundScanDelayPerPage: 'Background Scan Per Page Min Delay (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness per Page (ms)',
+            EnableFastScan: 'Enable the fast scan',
             FastScanIntervalSeconds: 'Fast scan interval (Seconds)',
             TITLE_TURBO: 'Turbo scan',
             EnableTurboScan: 'Enable the turbo scan',
             TurboScanIntervalSeconds: 'Turbo scan interval (Seconds)',
             TurboScanCategories: 'Categories of the turbo scan',
+            TITLE_DELAYS: 'Delays and limits',
             DesktopNotifikationDelay: 'Desktop Notification Delay (Seconds)',
             SearchBarInputDelay: 'Search Bar Input Delay (ms)',
             VariationRequestDelay: 'Delay between the requests of the variations (ms)',
@@ -322,6 +329,9 @@ const I18N = {
             FastScanIntervalSeconds:
                 'Minimum time between two fast scans. A fast scan looks at the first pages, so that a possible product drop is found early. The time is counted from the end of the last fast scan and does not change the delay per page of the background scan.',
             TITLE_TURBO: 'Turbo scan',
+            EnableFastScan:
+                'Looks at the first pages of the product list again and again, so that a possible product drop is found early. When it stopped, the background scan continues at the page where the fast scan started.',
+            TITLE_DELAYS: 'Delays and limits',
             EnableTurboScan:
                 'Looks at the first page of the selected categories again and again, so that new products of those categories are found within a minute.',
             TurboScanIntervalSeconds:

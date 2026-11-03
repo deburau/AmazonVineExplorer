@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.34` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.35` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -348,3 +348,17 @@ gehört in `scripts/verify/` und nutzt `lib/verify_helpers.js`.
 * `dev-*` darf ohne Nachfrage gepusht werden
 * Commits: `type(scope): Beschreibung`, z. B. `fix(scan): ...`
 * Version im User-Script + Changelog in `README.md` bei jeder Änderung
+
+## Einstellungen (69)
+
+Aufbau des Menüs (Reihenfolge in `globals.js` = Reihenfolge im Menü):
+
+1. Schalter (bool) und Buttons
+2. Suchleiste, Keyword-Liste
+3. Scan-Werte: `BackGroundScanDelayPerPage`, `BackGroundScannerRandomness`,
+   **`EnableFastScan`**, `FastScanIntervalSeconds`, dann der Block
+   **Turbo-Scan** (`EnableTurboScan`, Takt, Kategorien)
+4. **Wartezeiten und Grenzen** (`TITLE_DELAYS`): `DesktopNotifikationDelay`,
+   `SearchBarInputDelay`, `IdlePeriodAfterScan`, `HoursBeforeCleanup`,
+   `MaxItemsPerPage`, die Schwellwerte der Benachrichtigungen
+5. Farben und Styles, Entwickler-Werte

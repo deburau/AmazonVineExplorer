@@ -531,6 +531,13 @@ SETTINGS_USERCONFIG_DEFINES.push({
     description: 'A Value that gives the maximal range for the Randomy added delay per page load'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableFastScan',
+    type: 'bool',
+    name: 'Enable the fast scan',
+    description:
+        'A fast scan looks at the first pages of the product list again and again, so that a possible product drop is found early. The background scan continues at the page where the fast scan started when it stopped.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
     key: 'FastScanIntervalSeconds',
     type: 'number',
     min: 30,
@@ -563,6 +570,7 @@ SETTINGS_USERCONFIG_DEFINES.push({
     description:
         'The categories that are watched by the turbo scan. Open a category with the arrow to select one of its sub categories. Only the numbers of the categories are stored.'
 });
+SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Delays and limits', description: '', key: 'TITLE_DELAYS' });
 SETTINGS_USERCONFIG_DEFINES.push({
     key: 'DesktopNotifikationDelay',
     type: 'number',
@@ -813,6 +821,7 @@ class SETTINGS_DEFAULT {
     FetchRetryMaxTime = 5000;
     BackGroundScanDelayPerPage = 6000;
     BackGroundScannerRandomness = 6000;
+    EnableFastScan = true;
     FastScanIntervalSeconds = 300;
     EnableTurboScan = false;
     TurboScanIntervalSeconds = 30;
