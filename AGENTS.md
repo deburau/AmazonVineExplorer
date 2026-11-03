@@ -235,8 +235,11 @@ script `scripts/check_css_syntax.js` checks that and is part of `npm run check`.
 
 **NOTE:** Every setting of `SETTINGS_USERCONFIG_DEFINES` needs a label and a
 description in every language of the `I18N`. The key of the setting has to be
-spelled the same way in all three places. The script
-`scripts/check_settings_keys.js` checks that and is part of `npm run check`.
+spelled the same way in all three places. It is checked as well that every
+category of the texts (e.g. `settings`) has the same keys in every language,
+because `translate()` falls back to the text of the caller when a translation is
+missing. The script `scripts/check_settings_keys.js` checks that and is part of
+`npm run check`.
 
 **NOTE:** Every key that AVE writes to the `localStorage` has to be listed in
 `AVE_LOCAL_STORAGE_KEYS` in `globals.js`. `clearAVEState()` removes exactly this

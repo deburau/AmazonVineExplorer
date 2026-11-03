@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.28
+// @version      0.15.0.29
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2006,6 +2006,12 @@ const AVE_SETTINGS_CSS = `
   color: red;
 }
 
+/* An item with a list (the categories of the turbo scan) is as high as the list */
+.ave-settings-item-tall {
+  height: auto;
+  align-items: flex-start;
+}
+
 /* The list of the categories (turbo scan) */
 .ave-category-list {
   display: none;
@@ -2759,6 +2765,8 @@ function createSettingsMenuElement(dat) {
  */
 function createSettingsCategoriesElement(dat, _elem, _labelName, _labelDescription) {
     const _elem_item_left = createSettingsItemLeft();
+    // NOTE: The item is as high as the list, the other items have a fixed height.
+    _elem.classList.add('ave-settings-item-tall');
 
     const _error = document.createElement('div');
     _error.classList.add('ave-category-error');

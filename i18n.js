@@ -32,7 +32,10 @@ const I18N = {
         },
         settings: {
             header: (title, version) => `Einstellungen ${title} - Version ${version}`,
-            languageLabel: 'Sprache'
+            languageLabel: 'Sprache',
+            categoriesLoading: 'Kategorien werden geladen ...',
+            categoriesError:
+                'Die Kategorien konnten nicht geladen werden. Öffne die Einstellungen einmal auf einer normalen Vine-Seite (vine/vine-items).'
         },
         settingsLabels: {
             UI_LANGUAGE: 'Sprache',
@@ -214,7 +217,9 @@ const I18N = {
         },
         settings: {
             header: (title, version) => `Settings ${title} - Version ${version}`,
-            languageLabel: 'Language'
+            languageLabel: 'Language',
+            categoriesLoading: 'Loading the categories ...',
+            categoriesError: 'The categories could not be loaded. Open the settings once on a normal Vine page (vine/vine-items).'
         },
         settingsLabels: {
             UI_LANGUAGE: 'Language',
