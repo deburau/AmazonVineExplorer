@@ -182,6 +182,16 @@ Vorgehen deshalb in zwei Klassen:
 3. **Fast-Scan entkoppeln:** eigener Zähler `AVE_FAST_SCAN_PAGE`, die
    Rückstellung entfernen. Verifikation: die BG-Position ändert sich während
    eines Fast-Scans nicht mehr.
+   * **Teil a) erledigt:** Der Takt ist jetzt die Einstellung
+     `FastScanIntervalSeconds` (Default 300 s, Minimum 30 s) statt „15 mal die
+     Wartezeit pro Seite". Dadurch wurde der Fast-Scan mit einem schnelleren
+     Background-Scan immer häufiger (bei 2000/1000 ms alle ~40 s statt alle
+     ~5 min). Wächter: `scripts/verify/verify_fast_scan_interval.js`
+     (8 Fälle, prüft auch, dass der Takt nicht mehr an der Wartezeit pro Seite
+     hängt).
+   * **Teil b) offen:** eigener Seitenzähler + ein Ende der Rückstellung. Dabei
+     wird `verify_scan.js` von „alt vs. neu" auf die Szenario-Tabelle
+     umgestellt, weil sich die Schritte dabei bewusst ändern.
 4. **Cleanup als Schritt:** `isCleanupDue()` (zeitbasiert + Idle-Phase) und
    `scanStepCleanup()` mit `withTimeout`. Verifikation: Cleanup läuft nur in der
    Idle-Phase und höchstens einmal je `HoursBeforeCleanup`.

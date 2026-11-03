@@ -115,6 +115,7 @@ const mainFile = [
     'getTaxPrices',
     'handleFastScanFinished',
     'getContrastColor',
+    'getFastScanIntervalSeconds',
     'getFastScanState',
     'getPageinationData',
     'getProductDetailsRequestDelay',

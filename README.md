@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.18
+
+* New: the fast scan has its own interval now, it is the new setting "Fast scan interval" (default 5 minutes). Before, the interval was derived from the delay per page of the background scan: the fast scan waited 15 pages before it started again. A shorter delay per page therefore made it run much more often, about every 40 seconds with a delay of 2000/1000 milliseconds.
+
 ##### [2026-11-02] - Version 0.15.0.16
 
 * New: the tiles of the products with variations show the range from the lowest to the highest price of the variations, the currency is shown once at the end of the range. Products without variations show their price as before, products without a known price show no price as before.

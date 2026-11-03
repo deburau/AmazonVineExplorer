@@ -10,7 +10,7 @@
  */
 
 const vm = require('vm');
-const { prepare, finish } = require('./lib/verify_helpers');
+const { prepareWithConstants, finish } = require('./lib/verify_helpers');
 
 const ITERATIONS = parseInt(process.argv[2] || '12', 10);
 const FIXED_NOW = 1800000000000;
@@ -25,6 +25,7 @@ const NEW_NAMES = [
     'scanLoop',
     'scanStepBackground',
     'getScanDelay',
+    'getFastScanIntervalSeconds',
     'getFastScanState',
     'startFastScan',
     'prepareFastScan',
@@ -42,7 +43,11 @@ const NEW_NAMES = [
     'formatDuration'
 ];
 
-const { old: oldCode, new: newCode } = prepare('verify_scan.js', OLD_NAMES, NEW_NAMES);
+// Die Konstanten der neuen Schleife stehen ausserhalb der Funktionen, sie
+// muessen deshalb mit in die Sandbox.
+const CONSTANT_NAMES = ['FAST_SCAN_INTERVAL_SECONDS', 'MIN_FAST_SCAN_INTERVAL_SECONDS'];
+
+const { old: oldCode, new: newCode } = prepareWithConstants('verify_scan.js', OLD_NAMES, NEW_NAMES, CONSTANT_NAMES);
 
 /**
  * Baut eine Sandbox mit gemockten Browser-APIs und startet den Scan.

@@ -62,6 +62,7 @@ const I18N = {
             GotifyToken: 'Gotify Anwendungstoken',
             BackGroundScanDelayPerPage: 'Background Scan Min. Delay pro Seite (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness pro Seite (ms)',
+            FastScanIntervalSeconds: 'Fast-Scan-Takt (Sek.)',
             DesktopNotifikationDelay: 'Desktop-Benachrichtigung Delay (Sek.)',
             SearchBarInputDelay: 'Suchleiste Verzögerung (ms)',
             VariationRequestDelay: 'Verzögerung zwischen den Requests der Varianten (ms)',
@@ -126,6 +127,8 @@ const I18N = {
             GotifyToken: 'Authentifizierungs-Token der Gotify-Anwendung.',
             BackGroundScanDelayPerPage: 'Min. Wartezeit pro Seite in Millisekunden.',
             BackGroundScannerRandomness: 'Max. zufällige Wartezeit pro Seite in Millisekunden.',
+            FastScanIntervalSeconds:
+                'Mindestzeit zwischen zwei Fast-Scans. Der Fast-Scan prüft die ersten Seiten, um einen Produkt-Drop früh zu erkennen. Die Zeit zählt ab dem Ende des letzten Fast-Scans und ändert die Wartezeit pro Seite des Background Scans nicht.',
             DesktopNotifikationDelay: 'Min. Zeit zwischen Benachrichtigungen in Sekunden (0 = aus).',
             SearchBarInputDelay: 'Wartezeit bis zur Suche in Millisekunden.',
             VariationRequestDelay:
@@ -227,6 +230,7 @@ const I18N = {
             GotifyToken: 'Gotify application token',
             BackGroundScanDelayPerPage: 'Background Scan Per Page Min Delay (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness per Page (ms)',
+            FastScanIntervalSeconds: 'Fast scan interval (Seconds)',
             DesktopNotifikationDelay: 'Desktop Notification Delay (Seconds)',
             SearchBarInputDelay: 'Search Bar Input Delay (ms)',
             VariationRequestDelay: 'Delay between the requests of the variations (ms)',
@@ -291,6 +295,8 @@ const I18N = {
             GotifyToken: 'Authentication token of the Gotify application.',
             BackGroundScanDelayPerPage: 'Minimum wait time per page in milliseconds.',
             BackGroundScannerRandomness: 'Maximum random wait time per page in milliseconds.',
+            FastScanIntervalSeconds:
+                'Minimum time between two fast scans. A fast scan looks at the first pages, so that a possible product drop is found early. The time is counted from the end of the last fast scan and does not change the delay per page of the background scan.',
             DesktopNotifikationDelay: 'Minimum time between notifications in seconds (0 = off).',
             SearchBarInputDelay: 'Wait time until the search starts in milliseconds.',
             VariationRequestDelay:

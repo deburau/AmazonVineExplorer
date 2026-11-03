@@ -518,6 +518,15 @@ SETTINGS_USERCONFIG_DEFINES.push({
     description: 'A Value that gives the maximal range for the Randomy added delay per page load'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'FastScanIntervalSeconds',
+    type: 'number',
+    min: 30,
+    max: 3600,
+    name: 'Fast scan interval (Seconds)',
+    description:
+        'The minimum time between two fast scans. A fast scan looks at the first pages of the product list, so that a possible product drop is found early. The waiting time is counted from the end of the last fast scan, so it does not change the delay per page of the background scan.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
     key: 'DesktopNotifikationDelay',
     type: 'number',
     min: 0,
@@ -757,6 +766,7 @@ class SETTINGS_DEFAULT {
     FetchRetryMaxTime = 5000;
     BackGroundScanDelayPerPage = 6000;
     BackGroundScannerRandomness = 6000;
+    FastScanIntervalSeconds = 300;
     DesktopNotifikationDelay = 60;
     SearchBarInputDelay = 500;
     IdlePeriodAfterScan = 180;

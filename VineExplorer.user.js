@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.17
+// @version      0.15.0.18
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -47,7 +47,8 @@
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, formatTaxPrize, getContrastColor, getFastScanState,
-   getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay, getScanDelay, getTaxPrices,
+   getFastScanIntervalSeconds, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
+   getScanDelay, getTaxPrices,
    getTilesFromURL, getUrlParameter, getVariationRequestDelay, gotifyNotification, startFastScan,
    handleFastScanFinished, handleInfiniteScroll, importDatabase, init, initBackgroundScan,
    initNavigationButtons,
@@ -3349,6 +3350,35 @@ function getScanDelay() {
 }
 
 /**
+ * The minimum time between two fast scans in seconds. It is used, if the
+ * setting "FastScanIntervalSeconds" is not set.
+ */
+const FAST_SCAN_INTERVAL_SECONDS = 300;
+
+/**
+ * The smallest interval that is allowed for the fast scan in seconds.
+ *
+ * NOTE: A fast scan loads the first pages of the product list, so a very short
+ * interval would load them again and again.
+ */
+const MIN_FAST_SCAN_INTERVAL_SECONDS = 30;
+
+/**
+ * Returns the minimum time between two fast scans.
+ *
+ * The time is taken from the setting "FastScanIntervalSeconds". It was counted
+ * from the delay per page of the background scan before, so a faster background
+ * scan made the fast scan run much more often.
+ *
+ * @returns {number} The interval in seconds
+ */
+function getFastScanIntervalSeconds() {
+    const _configured = Number(SETTINGS.FastScanIntervalSeconds);
+    if (!Number.isFinite(_configured)) return FAST_SCAN_INTERVAL_SECONDS;
+    return Math.max(MIN_FAST_SCAN_INTERVAL_SECONDS, _configured);
+}
+
+/**
  * Reads the state of the fast scan from the local storage.
  *
  * A fast scan is a shortened version of the background scan. It is only started
@@ -3370,8 +3400,7 @@ function getFastScanState() {
 
     const _fastTimeWaitingMS = Date.now() - (localStorage.getItem('AVE_FAST_SCAN_LAST_TIME') || 0);
     const _fastTimeWaitingSec = _fastTimeWaitingMS / 1000;
-    let _fastTimeIntervalSec = ((SETTINGS.BackGroundScanDelayPerPage + SETTINGS.BackGroundScannerRandomness / 2) * 15) / 1000;
-    if (_fastTimeIntervalSec < 30) _fastTimeIntervalSec = 30;
+    const _fastTimeIntervalSec = getFastScanIntervalSeconds();
 
     // The fast scan is started if the last scan is long enough ago, if the scan
     //   is not at the very beginning and if it did not just start with the encore
