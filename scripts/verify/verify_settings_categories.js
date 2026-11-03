@@ -14,6 +14,9 @@
  *   - das Aufklappen und das Laden der Unterkategorien (nur einmal)
  *   - das gleichzeitige Oeffnen einer Hauptkategorie mit ausgewaehlter Unterkategorie
  *   - das Setzen und Entfernen einer Auswahl (gespeichert wird nur die Nummer)
+ *   - eine Hauptkategorie waehlt alle ihre Unterkategorien mit aus, gespeichert
+ *     wird aber nur die Hauptkategorie (sonst wuerden die Produkte doppelt
+ *     gescannt)
  *   - der Hinweis, wenn die Kategorien nicht geladen werden koennen
  *
  * Es gibt keinen Vergleich mit einer alten Implementierung: der Typ der
@@ -168,6 +171,8 @@ const NEW_NAMES = [
     'renderSettingsCategories',
     'createSettingsCategoryRow',
     'toggleSettingsCategoryChildren',
+    'updateSettingsCategoryChildren',
+    'findSettingsCategoryCheckbox',
     'getCategoryId',
     'isCategorySelected',
     'hasSelectedSubCategory',
@@ -266,7 +271,48 @@ function check(ok, label) {
         'Ein zweites Aufklappen laedt die Unterkategorien nicht erneut'
     );
 
-    // 3. Eine Auswahl setzen und wieder entfernen
+    // 3. Eine Hauptkategorie waehlt ihre Unterkategorien mit aus
+    const _parentCheckbox = _openCheckboxes.find((c) => c.value === '10925031');
+    _parentCheckbox.checked = true;
+    _parentCheckbox.trigger('change');
+    check(
+        JSON.stringify(_plain.settings.TurboScanCategories) === JSON.stringify(['10925031']),
+        'Beim Anhaken einer Hauptkategorie wird nur diese gespeichert'
+    );
+    const _childrenAfterSelect = _openCheckboxes.filter((c) => c.value.includes('/'));
+    check(
+        _childrenAfterSelect.every((c) => c.checked === true),
+        'Alle Unterkategorien sind mit angehakt'
+    );
+    check(
+        _childrenAfterSelect.every((c) => c.disabled === true),
+        'Die Unterkategorien koennen nicht einzeln geaendert werden, solange die Hauptkategorie gewaehlt ist'
+    );
+
+    // Eine zuvor einzeln gewaehlte Unterkategorie wird dabei entfernt.
+    const _withChild = await run({ code: newCode, selected: ['10925031/87837030'] });
+    const _withChildParent = findAll(_withChild.element, (el) => el.tagName === 'INPUT' && el.value === '10925031')[0];
+    _withChildParent.checked = true;
+    _withChildParent.trigger('change');
+    check(
+        JSON.stringify(_withChild.settings.TurboScanCategories) === JSON.stringify(['10925031']),
+        'Eine zuvor gespeicherte Unterkategorie wird beim Anhaken der Hauptkategorie entfernt'
+    );
+
+    // 4. Die Hauptkategorie wieder abwaehlen
+    _parentCheckbox.checked = false;
+    _parentCheckbox.trigger('change');
+    check(JSON.stringify(_plain.settings.TurboScanCategories) === JSON.stringify([]), 'Die Hauptkategorie wird entfernt');
+    check(
+        _childrenAfterSelect.every((c) => c.checked === false),
+        'Beim Abwaehlen der Hauptkategorie werden die Unterkategorien abgehakt'
+    );
+    check(
+        _childrenAfterSelect.every((c) => c.disabled === false),
+        'Die Unterkategorien sind wieder aenderbar'
+    );
+
+    // 5. Eine Auswahl setzen und wieder entfernen
     const _childCheckbox = _openCheckboxes.find((c) => c.value === '10925031/87837030');
     _childCheckbox.checked = true;
     _childCheckbox.trigger('change');
@@ -280,7 +326,7 @@ function check(ok, label) {
     _childCheckbox.trigger('change');
     check(JSON.stringify(_plain.settings.TurboScanCategories) === JSON.stringify([]), 'Eine abgewaehlte Kategorie wird entfernt');
 
-    // 4. Eine ausgewaehlte Unterkategorie oeffnet die Hauptkategorie von selbst
+    // 6. Eine ausgewaehlte Unterkategorie oeffnet die Hauptkategorie von selbst
     const _selected = await run({ code: newCode, selected: ['10925031/87837030'] });
     const _selectedCheckboxes = findAll(_selected.element, (el) => el.tagName === 'INPUT');
     check(
@@ -294,7 +340,7 @@ function check(ok, label) {
     );
     check(_selectedCheckboxes.find((c) => c.value === '3167641').checked === false, 'Die anderen Kategorien sind nicht angehakt');
 
-    // 5. Die Kategorien sind nicht lesbar
+    // 7. Die Kategorien sind nicht lesbar
     const _failing = await run({ code: newCode, failParents: true });
     const _error = findAll(_failing.element, (el) => el._innerText === 'Die Kategorien konnten nicht geladen werden.');
     check(_error.length === 1, 'Ein Fehler beim Laden wird angezeigt');

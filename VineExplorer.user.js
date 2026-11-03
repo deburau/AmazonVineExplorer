@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.30
+// @version      0.15.0.31
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -45,9 +45,9 @@
    colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
    createProductSite, createSettingsCategoriesElement, createSettingsCategoryRow,
-   createSettingsKeywordsTableElement, createSettingsMenuElement,
+   createSettingsKeywordsTableElement, createSettingsMenuElement, findSettingsCategoryCheckbox,
    getCategoryId, hasSelectedSubCategory, isCategorySelected, renderSettingsCategories,
-   setCategorySelected, toggleSettingsCategoryChildren,
+   setCategorySelected, toggleSettingsCategoryChildren, updateSettingsCategoryChildren,
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, formatTaxPrize, getContrastColor, getFastScanState,
@@ -2068,6 +2068,11 @@ const AVE_SETTINGS_CSS = `
   color: rgb(255, 0, 0);
 }
 
+/* A sub category of a selected main category can not be changed on its own */
+.ave-category-row input:disabled + span {
+  opacity: .55;
+}
+
 /* Add this attribute to the element that needs a tooltip */
 [data-ave-tooltip] {
   position: relative;
@@ -2841,7 +2846,7 @@ async function renderSettingsCategories(dat, listElement) {
  * @param {boolean} isSubCategory true for a sub category
  * @returns {{row: Element, toggle: Element, children: Element}} The elements of the row
  */
-function createSettingsCategoryRow(dat, category, isSubCategory) {
+function createSettingsCategoryRow(dat, category, isSubCategory, parentSelected = false) {
     const _row = document.createElement('div');
     _row.classList.add('ave-category-row');
 
@@ -2869,9 +2874,15 @@ function createSettingsCategoryRow(dat, category, isSubCategory) {
     const _checkbox = document.createElement('input');
     _checkbox.type = 'checkbox';
     _checkbox.value = getCategoryId(category);
-    _checkbox.checked = isCategorySelected(dat, getCategoryId(category));
+    // A sub category is selected as well when its main category is selected: the
+    // main category covers all of its sub categories.
+    _checkbox.checked = (isSubCategory && parentSelected) || isCategorySelected(dat, getCategoryId(category));
+    // NOTE: As long as the main category is selected, the sub categories can not
+    // be changed, because the main category covers them anyway.
+    _checkbox.disabled = isSubCategory && parentSelected;
     _checkbox.addEventListener('change', () => {
         setCategorySelected(dat, getCategoryId(category), _checkbox.checked);
+        if (!isSubCategory) updateSettingsCategoryChildren(dat, { children: _children }, category, _checkbox.checked);
     });
     _label.appendChild(_checkbox);
 
@@ -2903,13 +2914,56 @@ async function toggleSettingsCategoryChildren(dat, item, category) {
 
     if (item.children.children.length === 0) {
         const _subCategories = await getVineCategoryChildren(category.pn);
+        const _parentSelected = isCategorySelected(dat, getCategoryId(category));
         for (const _subCategory of _subCategories) {
-            item.children.appendChild(createSettingsCategoryRow(dat, _subCategory, true).row);
+            item.children.appendChild(createSettingsCategoryRow(dat, _subCategory, true, _parentSelected).row);
         }
     }
 
     item.children.style.display = 'block';
     item.toggle.innerText = '▾';
+}
+
+/**
+ * Sets the state of the checkboxes of the sub categories of a main category.
+ *
+ * It is called when the checkbox of the main category is changed, so that all of
+ * its sub categories are selected (or not selected) as well.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {object} item The elements of the row of the main category
+ * @param {object} category The main category
+ * @param {boolean} selected true if the main category is selected
+ */
+function updateSettingsCategoryChildren(dat, item, category, selected) {
+    if (!item.children || !item.children.children) return;
+
+    for (const _row of item.children.children) {
+        const _checkbox = findSettingsCategoryCheckbox(_row);
+        if (!_checkbox) continue;
+        _checkbox.disabled = selected;
+        // A sub category is checked as well when it is selected on its own.
+        _checkbox.checked = selected || isCategorySelected(dat, _checkbox.value);
+    }
+
+    if (SETTINGS.DebugLevel > 1) console.log(`updateSettingsCategoryChildren(): ${category.pn} is selected: ${selected}`);
+}
+
+/**
+ * Returns the checkbox of a row of the list of the categories.
+ *
+ * @param {Element} row The row of the list
+ * @returns {HTMLInputElement|null} The checkbox, or null if the row has none
+ */
+function findSettingsCategoryCheckbox(row) {
+    if (!row || !row.children || row.children.length === 0) return null;
+    // The label is the last child of the row (the arrow is the first one).
+    const _label = row.children[row.children.length - 1];
+    if (!_label || !_label.children) return null;
+    for (const _child of _label.children) {
+        if (_child.tagName === 'INPUT') return _child;
+    }
+    return null;
 }
 
 /**
@@ -2953,14 +3007,17 @@ function hasSelectedSubCategory(dat, pn) {
  * @param {boolean} selected true to add the category, false to remove it
  */
 function setCategorySelected(dat, id, selected) {
-    const _selected = Array.isArray(SETTINGS[dat.key]) ? SETTINGS[dat.key] : [];
+    const _stored = Array.isArray(SETTINGS[dat.key]) ? SETTINGS[dat.key] : [];
+    let _selected;
 
     if (selected) {
+        // NOTE: A main category covers all of its sub categories, so the sub
+        // categories of this main category are removed from the list. They would
+        // load the same products a second time.
+        _selected = id.includes('/') ? _stored : _stored.filter((entry) => !entry.startsWith(`${id}/`));
         if (!_selected.includes(id)) _selected.push(id);
     } else {
-        SETTINGS[dat.key] = _selected.filter((entry) => entry !== id);
-        SETTINGS.save();
-        return;
+        _selected = _stored.filter((entry) => entry !== id);
     }
 
     SETTINGS[dat.key] = _selected;
