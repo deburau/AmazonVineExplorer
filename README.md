@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.22
+
+* New: a keyword with several words matches if all of the words occur in the description of a product, the order of the words and the distance between them do not matter. Before, the words had to stand next to each other in the given order, so `toaster white` did not find "a nice toaster and a white cable".
+
 ##### [2026-11-03] - Version 0.15.0.21
 
 * Fix: a keyword whose price condition stands between two words, e.g. `toaster [price > 100] white`, looked for a text with extra spaces in it (`toaster   white`) and therefore never matched. The spaces around the condition are removed together with it now.

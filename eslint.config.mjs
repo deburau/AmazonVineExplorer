@@ -131,6 +131,7 @@ const mainFile = [
     'importDatabase',
     'loadProductDetails',
     'matchPriceConditions',
+    'matchesKeyword',
     'init',
     'initBackgroundScan',
     'initNavigationButtons',

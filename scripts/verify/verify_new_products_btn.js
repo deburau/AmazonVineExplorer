@@ -22,6 +22,7 @@ const NEW_NAMES = [
     'updateNewProductsBtn',
     'notifyAboutUnseenItems',
     'addProductToKeywordSearch',
+    'matchesKeyword',
     'searchKeywordsInProducts',
     'checkKeywordsForProduct',
     'notifyAboutNewProducts',
@@ -247,6 +248,66 @@ const SCENARIOS = [
         }
     },
     {
+        name: 'Keyword mit zwei Woertern: beide Woerter muessen vorkommen (Reihenfolge egal)',
+        expectNotification: true,
+        opts: {
+            desktop: true,
+            keywords: ['toaster white'],
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'A nice toaster and a white cable',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'A nice toaster and a white cable',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
+        name: 'Keyword mit zwei Woertern: ein Wort fehlt',
+        expectNoNotification: true,
+        opts: {
+            desktop: true,
+            keywords: ['toaster white'],
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'A nice toaster with a cable',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'A nice toaster with a cable',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
         name: 'Keyword-Treffer mit Desktop-Notification',
         opts: {
             desktop: true,
@@ -407,13 +468,17 @@ const SCENARIOS = [
             _diffs.push(_expectDetails ? 'details missing' : 'unexpected details');
         }
 
+        const _hasNotification = _new.log.some((_l) => _l.startsWith('desktop:') || _l.startsWith('gotify:'));
+
         // Ein Produkt, das nicht gerade hinzugekommen ist, darf keine
         // Keyword-Benachrichtigung ausloesen.
-        if (_scenario.expectNoNotification) {
-            const _hasNotification = _new.log.some((_l) => _l.startsWith('desktop:') || _l.startsWith('gotify:'));
-            if (_hasNotification) {
-                _diffs.push('unexpected notification');
-            }
+        if (_scenario.expectNoNotification && _hasNotification) {
+            _diffs.push('unexpected notification');
+        }
+
+        // Ein Keyword-Treffer muss eine Benachrichtigung ausloesen.
+        if (_scenario.expectNotification && !_hasNotification) {
+            _diffs.push('notification missing');
         }
 
         if (_diffs.length === 0) {

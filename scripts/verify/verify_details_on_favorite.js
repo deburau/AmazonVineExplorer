@@ -26,7 +26,8 @@ const NEW_NAMES = [
     'hasProductDetails',
     // Die Funktion, die die Preise des Produkts liefert.
     'getTaxPrices',
-    // Die Funktionen fuer die Preisbedingungen der Keywords.
+    // Der Keyword-Vergleich und die Funktionen fuer die Preisbedingungen.
+    'matchesKeyword',
     'normalizePriceInput',
     'parsePriceCondition',
     'parseKeywordConfig',

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.21
+// @version      0.15.0.22
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -40,7 +40,7 @@
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
    addProductToKeywordSearch, backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct,
-   cleanUpDatabase,
+   cleanUpDatabase, matchesKeyword,
    scanLoop, scanStepBackground,
    colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
@@ -4307,16 +4307,7 @@ async function checkKeywordsForProduct(_prod, _configKeyWords) {
             continue;
         }
 
-        let _keyFound = false;
-        const _regExp = stringToRegex(_entry.keyword);
-        if (_regExp !== undefined) {
-            if (SETTINGS.DebugLevel > 1)
-                console.log(`updateNewProductsBtn(): Search Product Description for Regular Expression: ${_regExp}`);
-            _keyFound = _regExp.test(_descFull);
-        } else {
-            if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Search Product Description for Keyword: ${_entry.keyword}`);
-            _keyFound = _descFull.includes(_entry.keyword);
-        }
+        const _keyFound = matchesKeyword(_descFull, _entry.keyword);
         if (!_keyFound) continue;
 
         // The keyword matched. Only now the prices are loaded, if the keyword has
@@ -4398,6 +4389,30 @@ async function checkKeywordsForProduct(_prod, _configKeyWords) {
         return true;
     }
     return false;
+}
+
+/**
+ * Checks if a keyword matches the description of a product.
+ *
+ * A keyword that is a regular expression (e.g. "/toaster/i") is tested as it
+ * is. A keyword with several words matches if **all** of its words appear in the
+ * description, the order of the words and the distance between them do not
+ * matter.
+ *
+ * @param {string} descFull The description of the product in lower case
+ * @param {string} keyword The keyword of the settings in lower case
+ * @returns {boolean} true if the keyword matches
+ */
+function matchesKeyword(descFull, keyword) {
+    const _regExp = stringToRegex(keyword);
+    if (_regExp !== undefined) {
+        if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Search Product Description for Regular Expression: ${_regExp}`);
+        return _regExp.test(descFull);
+    }
+
+    if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Search Product Description for Keyword: ${keyword}`);
+    const _words = keyword.split(/\s+/).filter((word) => word.length > 0);
+    return _words.length > 0 && _words.every((word) => descFull.includes(word));
 }
 
 /**
