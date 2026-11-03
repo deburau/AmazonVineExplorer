@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.32` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.33` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -255,7 +255,15 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   Turbo vor BG, eine Seite pro Schritt) und benutzt `backGroundTileScanner()` –
   dadurch werden neue Produkte gespeichert und die Keyword-Suche läuft wie
   gewohnt. Die Schleife startet, wenn **einer** der beiden Scans an ist.
-  Wächter: `scripts/verify/verify_turbo_scan.js` (21 Fälle). **Der Turbo-Scan selbst fehlt noch** – die
+  Wächter: `scripts/verify/verify_turbo_scan.js` (28 Fälle).
+* **Seiten-Hash** (0.15.0.33): Vor dem Parsen vergleicht der Scanner den Hash der
+  Produkt-Ids der Seite mit dem Hash des letzten Ladens
+  (`getTileIdsHash()`, `isPageUnchanged()`, Speicher:
+  `AVE_TURBO_SCAN_PAGE_HASHES`, ein Eintrag je Kategorie). Ist er gleich, werden
+  die Tiles **nicht** geparst und nicht in die DB geschrieben. Folge: die
+  Timestamps (`ts_lastSeen`) werden von einem unveränderten Turbo-Durchlauf nicht
+  aktualisiert – das macht der Background-Scan (siehe NOTE im Code). Die Seite
+  selbst wird weiterhin geladen (Amazon bietet dafür keinen billigeren Weg). **Der Turbo-Scan selbst fehlt noch** – die
   Einstellungen haben bis dahin keine Wirkung, darum gibt es noch keinen
   Changelog-Eintrag.
 * **Umbau der Steuerung:** eine einzige Schleife mit Prioritäten

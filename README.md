@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.33
+
+* The products of a page are only parsed when the list of the products on it changed: the hash of the product ids is compared with the hash of the last load. Loading a page that did not change therefore does not write to the database, which makes the repeated scan of the same page much cheaper. A new product changes the hash, so nothing is missed.
+
 ##### [2026-11-03] - Version 0.15.0.32
 
 * New: the turbo scan. It loads the first page of the categories that are selected in the settings again and again (default: every 30 seconds), so that a new product of one of those categories is found within a minute. The categories are selected with checkboxes in the settings; a main category selects all of its sub categories, so that the products are not loaded twice. The products are stored and the notifications work like they do for the products of the background scan.

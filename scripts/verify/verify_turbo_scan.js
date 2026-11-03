@@ -15,6 +15,8 @@
  *     laufende Runde
  *   - die Schritte (scanStepTurbo()): die URL, die Reihenfolge der Kategorien und
  *     das Ende einer Runde
+ *   - der Hash der Produkte einer Seite (getTileIdsHash(), isPageUnchanged()):
+ *     die Tiles werden nur geparst, wenn sich die Produkte geaendert haben
  *
  * Das Skript prueft das aktuelle Verhalten gegen erwartete Werte. Es vergleicht
  * nicht eine alte mit einer neuen Implementierung, weil der Turbo-Scan ein
@@ -50,7 +52,9 @@ const CODE = [
     extractBody(mainSrc, 'parseTurboScanCategory'),
     extractBody(mainSrc, 'getTurboScanIndex'),
     extractBody(mainSrc, 'isTurboScanDue'),
-    extractBody(mainSrc, 'scanStepTurbo')
+    extractBody(mainSrc, 'scanStepTurbo'),
+    extractBody(mainSrc, 'getTileIdsHash'),
+    extractBody(mainSrc, 'isPageUnchanged')
 ].join('\n\n');
 
 /**
@@ -81,10 +85,13 @@ function createSandbox(opts = {}) {
         },
         aveGetVineBaseUrl: () => 'https://www.amazon.de/vine/vine-items',
         updateBackgroundScanScreenText: (text) => _log.push(`text: ${text}`),
-        backGroundTileScanner: (url, cb) => {
+        backGroundTileScanner: (url, cb, options) => {
             _log.push(`scan ${url}`);
+            if (options) _log.push(`options ${JSON.stringify(options)}`);
             cb(0);
         },
+        // Die Tiles werden nur fuer den Hash gebraucht. Die Funktion
+        // isPageUnchanged() wird aus dem Quelltext geladen (siehe CODE).
         Promise,
         Number,
         Math,
@@ -208,6 +215,24 @@ const _wrongIndex = createSandbox({
 });
 check(0, vm.runInContext('getTurboScanIndex()', _wrongIndex._ctx), 'Ein Index ausserhalb der Liste wird auf 0 gesetzt');
 
+// --- Der Hash der Produkte einer Seite ---
+const _tilesA = [{ getAttribute: () => 'A#1' }, { getAttribute: () => 'A#2' }];
+const _tilesB = [{ getAttribute: () => 'A#1' }, { getAttribute: () => 'A#2' }, { getAttribute: () => 'A#3' }];
+const _hashSandbox = createSandbox();
+const _tilesHashA = vm.runInContext('getTileIdsHash', _hashSandbox._ctx)(_tilesA);
+const _tilesHashB = vm.runInContext('getTileIdsHash', _hashSandbox._ctx)(_tilesB);
+check(true, _tilesHashA.length > 0, 'Der Hash der Tiles ist nicht leer');
+check(false, _tilesHashA === _tilesHashB, 'Ein neues Produkt aendert den Hash');
+check(_tilesHashA, vm.runInContext('getTileIdsHash', _hashSandbox._ctx)(_tilesA), 'Dieselben Produkte ergeben denselben Hash');
+
+const _pageSandbox = createSandbox();
+const _isUnchanged = vm.runInContext('isPageUnchanged', _pageSandbox._ctx);
+check(false, _isUnchanged('10925031', _tilesA), 'Beim ersten Laden ist die Seite nicht unveraendert');
+check(true, _isUnchanged('10925031', _tilesA), 'Beim zweiten Laden mit denselben Produkten ist sie unveraendert');
+check(false, _isUnchanged('10925031', _tilesB), 'Ein neues Produkt macht die Seite wieder anders');
+check(false, _isUnchanged('3167641', _tilesA), 'Eine andere Kategorie hat einen eigenen Hash');
+check(true, _pageSandbox._store.has('AVE_TURBO_SCAN_PAGE_HASHES'), 'Die Hashes werden im local storage abgelegt');
+
 // --- Die Schritte ---
 (async () => {
     const _one = createSandbox({ enabled: true, categories: ['10925031'], interval: 30 });
@@ -254,9 +279,19 @@ check(0, vm.runInContext('getTurboScanIndex()', _wrongIndex._ctx), 'Ein Index au
         'Der Text der Anzeige nennt die Kategorie und die Anzahl'
     );
 
+    // Der Hash wird mit der Nummer der Kategorie gebildet.
+    check(
+        ['options {"pageHashKey":"10925031/87837030"}'],
+        _sub._log.filter((l) => l.startsWith('options ')),
+        'Der Schritt uebergibt die Kategorie fuer den Hash der Seite'
+    );
+
+    // NOTE: Der Vergleich des Hashes passiert im Scanner (backGroundTileScanner),
+    // der Schritt uebergibt ihm nur die Kategorie (siehe oben).
+
     console.log('');
     console.log('='.repeat(70));
-    const _total = _intervalCases.length + 3 + _dueCases.length + 1 + 6;
+    const _total = _intervalCases.length + 3 + _dueCases.length + 1 + 5 + 6 + 2;
     if (_errors === 0) {
         console.log(`>>> RESULT: all ${_total} test cases passed`);
         process.exit(0);
