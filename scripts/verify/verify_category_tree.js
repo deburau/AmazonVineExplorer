@@ -12,11 +12,12 @@
  *   - parseCategoryNodes(): Name, Anzahl und Nummern aus einem Knoten
  *   - die Selektoren, mit denen die Knoten gesucht werden
  *   - parseCategoryTree(): Haupt- und Unterkategorien einer Seite
- *   - getVineCategoryParents(): die Hauptkategorien aus der Seite und aus dem
- *     Speicher (mit dem Rueckfall auf den Speicher)
+ *   - getSelectedCategoryPn(): die ausgewaehlte Kategorie einer Seite
+ *   - getVineCategoryParents(): die Hauptkategorien von der aktuellen Seite
+ *     (ohne Request), aus dem Speicher oder aus dem Netz
  *   - getVineCategoryChildren(): die Unterkategorien einer Hauptkategorie
- *     (sie werden traege geladen, damit nicht beim Oeffnen der Einstellungen
- *     alle 24 Seiten geholt werden)
+ *     (traege geladen, damit nicht beim Oeffnen der Einstellungen alle 24 Seiten
+ *     geholt werden)
  *
  * NOTE: Das HTML wird nicht geparst (das Projekt hat keinen HTML-Parser als
  * Abhaengigkeit). Die Knoten sind nachgebaut, sie verhalten sich aber wie die
@@ -52,6 +53,7 @@ const CODE = [
     extractBody(mainSrc, 'parseCategoryTree'),
     extractBody(mainSrc, 'getVineCategoryParents'),
     extractBody(mainSrc, 'getVineCategoryChildren'),
+    extractBody(mainSrc, 'getSelectedCategoryPn'),
     extractBody(mainSrc, 'fetchCategoryPage'),
     extractBody(mainSrc, 'readCategoryCache'),
     extractBody(mainSrc, 'writeCategoryCache'),
@@ -84,7 +86,7 @@ function makeNode(text, href) {
  * @param {object[]} children Die Unterkategorien
  * @returns {object} Das Dokument
  */
-function makeDoc(parents = [], children = []) {
+function makeDoc(parents = [], children = [], selectedPn = '') {
     return {
         selectors: [],
         querySelectorAll(selector) {
@@ -92,6 +94,10 @@ function makeDoc(parents = [], children = []) {
             if (selector.includes('parent-node')) return parents;
             if (selector.includes('child-node')) return children;
             return [];
+        },
+        querySelector(selector) {
+            this.selectors.push(selector);
+            return selectedPn ? { getAttribute: () => `?pn=${selectedPn}` } : null;
         }
     };
 }
@@ -121,6 +127,9 @@ function createSandbox(opts = {}) {
         },
         delay: () => Promise.resolve(),
         getRandomizedDelay: (ms) => ms,
+        // Das Dokument der aktuellen Seite. Der Test setzt es, wenn die Seite
+        // die Kategorien zeigt.
+        document: null,
         aveGetVineBaseUrl: () => 'https://www.amazon.de/vine/vine-items',
         vineFetch: async (url) => {
             _requests.push(url);
@@ -226,6 +235,10 @@ check(
     'Der Baum einer Seite enthaelt beide Listen'
 );
 
+// --- getSelectedCategoryPn() ---
+check('', vm.runInContext('getSelectedCategoryPn', _ctx)(null), 'Ohne Seite gibt es keine ausgewaehlte Kategorie');
+check('10925031', vm.runInContext('getSelectedCategoryPn', _ctx)(makeDoc([], [], '10925031')), 'Die ausgewaehlte Kategorie einer Seite');
+
 // --- getVineCategoryParents() und getVineCategoryChildren() ---
 (async () => {
     const _getParents = vm.runInContext('getVineCategoryParents', _ctx);
@@ -277,6 +290,30 @@ check(
     check(2, _fallbackParents.length, 'Ohne lesbare Seiten werden die gespeicherten Hauptkategorien benutzt');
     const _fallbackChildren = await vm.runInContext('getVineCategoryChildren', _failing._ctx)('10925031');
     check(2, _fallbackChildren.length, 'Ohne lesbare Seiten werden die gespeicherten Unterkategorien benutzt');
+
+    // Die Kategorien der aktuellen Seite werden ohne Request benutzt.
+    const _onPage = createSandbox();
+    _onPage.document = makeDoc(
+        [makeNode('Küche, Haushalt & Wohnen (13602)', '?pn=3167641'), makeNode('Garten (1249)', '?pn=10925031')],
+        [],
+        '10925031'
+    );
+    const _pageParents = await vm.runInContext('getVineCategoryParents', _onPage._ctx)();
+    check(2, _pageParents.length, 'Die Hauptkategorien der aktuellen Seite werden benutzt');
+    check(0, _onPage._requests.length, 'Dafuer ist kein Request noetig');
+    check(true, vm.runInContext('readCategoryCache', _onPage._ctx)().parents !== null, 'Die Kategorien der Seite werden gespeichert');
+
+    // Die Unterkategorien der ausgewaehlten Kategorie stehen auf der Seite.
+    const _onParentPage = createSandbox();
+    _onParentPage.document = makeDoc([], [makeNode('Gartendeko (238)', '?pn=10925031&cn=87837030')], '10925031');
+    const _pageChildren = await vm.runInContext('getVineCategoryChildren', _onParentPage._ctx)('10925031');
+    check(1, _pageChildren.length, 'Die Unterkategorien der ausgewaehlten Kategorie werden benutzt');
+    check(0, _onParentPage._requests.length, 'Dafuer ist kein Request noetig');
+
+    // Die Unterkategorien einer anderen Kategorie stehen nicht auf der Seite.
+    const _otherChildren = await vm.runInContext('getVineCategoryChildren', _onParentPage._ctx)('3167641');
+    check(1, _otherChildren.length, 'Die Unterkategorien einer anderen Kategorie werden geladen');
+    check(1, _onParentPage._requests.length, 'Dafuer ist ein Request noetig');
 
     // Ohne lesbare Seiten und ohne Speicher gibt es einen Fehler.
     const _failing2 = createSandbox({ failRequests: true });

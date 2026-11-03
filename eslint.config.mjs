@@ -124,6 +124,7 @@ const mainFile = [
     'getFastScanState',
     'getPageinationData',
     'getProductDetailsRequestDelay',
+    'getSelectedCategoryPn',
     'getRandomizedDelay',
     'getScanDelay',
     'getTilesFromURL',

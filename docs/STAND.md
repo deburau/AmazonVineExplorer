@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.27` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.28` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -239,9 +239,13 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   mit Checkboxen (Unterkategorien werden beim Aufklappen geladen, bereits
   gewählte Hauptkategorien öffnen sich von selbst), `EnableTurboScan` und
   `TurboScanIntervalSeconds` stehen in den Einstellungen. Das Lesen der
-  Kategorien: `getVineCategoryParents()` / `getVineCategoryChildren()` (Cache in
-  `AVE_CATEGORY_CACHE`, Wächter `verify_category_tree.js`, Auswahl-Wächter
-  `verify_settings_categories.js`). **Der Turbo-Scan selbst fehlt noch** – die
+  Kategorien: `getVineCategoryParents()` / `getVineCategoryChildren()`. Sie
+  lesen die Kategorien **zuerst aus dem DOM der aktuellen Seite** (die sind dort
+  immer vorhanden, bevor `createProductSite()` den Container leert) → **kein
+  Request**; nur wenn die Seite sie nicht hat bzw. der Cache leer ist, wird die
+  Seite per `fetch` im Hintergrund geladen. Cache in `AVE_CATEGORY_CACHE`,
+  Wächter `verify_category_tree.js` (24 Fälle) und
+  `verify_settings_categories.js` (20 Fälle). **Der Turbo-Scan selbst fehlt noch** – die
   Einstellungen haben bis dahin keine Wirkung, darum gibt es noch keinen
   Changelog-Eintrag.
 * **Umbau der Steuerung:** eine einzige Schleife mit Prioritäten

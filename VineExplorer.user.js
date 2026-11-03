@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.27
+// @version      0.15.0.28
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -54,7 +54,8 @@
    getFastScanIntervalSeconds, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
    getScanDelay, getTaxPrices,
    getTilesFromURL, getUrlParameter, getVariationRequestDelay, gotifyNotification,
-   getVineCategoryChildren, getVineCategoryParents, parseCategoryNodes, parseCategoryTree,
+   getSelectedCategoryPn, getVineCategoryChildren, getVineCategoryParents, parseCategoryNodes,
+   parseCategoryTree,
    restartBackgroundScan,
    startFastScan,
    handleFastScanFinished, handleInfiniteScroll, importDatabase, init, initBackgroundScan,
@@ -3686,6 +3687,15 @@ async function getVineCategoryParents(forceReload = false) {
     const _cached = readCategoryCache().parents;
     if (!forceReload && _cached && isCategoryCacheFresh(_cached)) return _cached.list;
 
+    // NOTE: The categories of the current page are used when they are there. They
+    // are always in the side bar before AVE replaces them (its own pages empty the
+    // container), so no request is needed in that case.
+    const _fromPage = parseCategoryTree(document).parents;
+    if (_fromPage.length > 0) {
+        writeCategoryCache('parents', _fromPage);
+        return _fromPage;
+    }
+
     try {
         const _baseUrl = aveGetVineBaseUrl();
         if (!_baseUrl) throw new Error('no Vine URL found');
@@ -3721,6 +3731,16 @@ async function getVineCategoryChildren(pn, forceReload = false) {
     const _cached = readCategoryCache().children[pn];
     if (!forceReload && _cached && isCategoryCacheFresh(_cached)) return _cached.list;
 
+    // NOTE: A page of a category shows its sub categories. When the page of this
+    // category is open, they are used without a request.
+    if (getSelectedCategoryPn(document) === pn) {
+        const _fromPage = parseCategoryTree(document).children;
+        if (_fromPage.length > 0) {
+            writeCategoryCache(`children.${pn}`, _fromPage);
+            return _fromPage;
+        }
+    }
+
     try {
         const _baseUrl = aveGetVineBaseUrl();
         if (!_baseUrl) throw new Error('no Vine URL found');
@@ -3738,6 +3758,19 @@ async function getVineCategoryChildren(pn, forceReload = false) {
         }
         throw error;
     }
+}
+
+/**
+ * Returns the number of the category that is selected on a page.
+ *
+ * @param {Document} doc The document of the page
+ * @returns {string} The number of the main category, or an empty string
+ */
+function getSelectedCategoryPn(doc) {
+    if (!doc || typeof doc.querySelector !== 'function') return '';
+    const _selected = doc.querySelector('#vvp-browse-nodes-container a.selectedNode');
+    if (!_selected) return '';
+    return ((_selected.getAttribute('href') || '').match(/[?&]pn=(\d+)/) || [])[1] || '';
 }
 
 /**
