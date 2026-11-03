@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.33
+// @version      0.15.0.32
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -53,8 +53,7 @@
    favStarEventhandlerClick, fixProductImageUrl, formatTaxPrize, getContrastColor, getFastScanState,
    getFastScanIntervalSeconds, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
    getScanDelay, getTaxPrices,
-   getTileIdsHash, getTilesFromURL, getTurboScanCategories, getTurboScanIndex,
-   getTurboScanIntervalSeconds, isPageUnchanged,
+   getTilesFromURL, getTurboScanCategories, getTurboScanIndex, getTurboScanIntervalSeconds,
    getUrlParameter, getVariationRequestDelay, gotifyNotification, isTurboScanDue,
    getSelectedCategoryPn, getVineCategoryChildren, getVineCategoryParents, parseCategoryNodes,
    parseCategoryTree, parseTurboScanCategory,
@@ -4076,16 +4075,10 @@ async function scanStepTurbo() {
     if (SETTINGS.DebugLevel > 1) console.log(`scanStepTurbo(): loading ${_url}`);
 
     await new Promise((resolve) => {
-        backGroundTileScanner(
-            _url,
-            (newCount) => {
-                if (SETTINGS.DebugLevel > 1) console.log(`scanStepTurbo(): the page of ${_category.pn} has ${newCount} new products`);
-                resolve();
-                // NOTE: The hash of the products of the page is compared with the last
-                // load, so that the tiles are only parsed when the products changed.
-            },
-            { pageHashKey: _categories[_index] }
-        );
+        backGroundTileScanner(_url, (newCount) => {
+            if (SETTINGS.DebugLevel > 1) console.log(`scanStepTurbo(): the page of ${_category.pn} has ${newCount} new products`);
+            resolve();
+        });
     });
 
     // NOTE: A round is complete when the position is back at the first category.
@@ -4641,65 +4634,6 @@ function removeScanIframe(iframe) {
 }
 
 /**
- * Returns the hash of the products of a page.
- *
- * The hash is built from the recommendation ids of the tiles. It changes when a
- * product is added to the page or removed from it.
- *
- * @param {NodeList|Element[]} tiles The tiles of the page
- * @returns {string} The hash of the products
- */
-function getTileIdsHash(tiles) {
-    let _ids = '';
-    for (const _tile of tiles) {
-        if (typeof _tile.getAttribute !== 'function') continue;
-        _ids += `${_tile.getAttribute('data-recommendation-id') || ''}|`;
-    }
-
-    // A small hash (djb2). It is only compared with the hash of the same page.
-    let _hash = 5381;
-    for (let i = 0; i < _ids.length; i++) {
-        _hash = (_hash * 33 + _ids.charCodeAt(i)) | 0;
-    }
-    return `${_hash >>> 0}`;
-}
-
-/**
- * Checks if the products of a page are the same as at the last load.
- *
- * NOTE: The hash is stored as well when it changed, so that the tiles are parsed
- * only once per change. The products of a page that did not change are not parsed
- * at all, so their timestamps are not updated by the turbo scan (the background
- * scan does that).
- *
- * @param {string} key The key of the page (the id of the category)
- * @param {NodeList|Element[]} tiles The tiles of the page
- * @returns {boolean} true if the products did not change
- */
-function isPageUnchanged(key, tiles) {
-    const _hash = getTileIdsHash(tiles);
-    let _stored;
-    try {
-        _stored = JSON.parse(localStorage.getItem('AVE_TURBO_SCAN_PAGE_HASHES') || '{}');
-    } catch (error) {
-        console.error(`isPageUnchanged(): the stored hashes could not be read: ${error}`);
-        _stored = {};
-    }
-    if (!_stored || typeof _stored !== 'object') _stored = {};
-
-    if (_stored[key] === _hash) return true;
-
-    try {
-        _stored[key] = _hash;
-        localStorage.setItem('AVE_TURBO_SCAN_PAGE_HASHES', JSON.stringify(_stored));
-    } catch (error) {
-        console.error(`isPageUnchanged(): the hashes could not be stored: ${error}`);
-    }
-
-    return false;
-}
-
-/**
  * Loads a page of the Vine site in a hidden iframe and reads its tiles.
  *
  * The page is loaded in an iframe, so that the user does not see it and the
@@ -4709,7 +4643,7 @@ function isPageUnchanged(key, tiles) {
  * @param {function} cb The function that is called with the number of the new
  *                       products
  */
-function backGroundTileScanner(url, cb, options = {}) {
+function backGroundTileScanner(url, cb) {
     if (SETTINGS.DebugLevel > 10) console.log(`Called backgroundTileScanner(${url})`);
     const _iconLoading = addLoadingSymbol();
 
@@ -4757,19 +4691,6 @@ function backGroundTileScanner(url, cb, options = {}) {
         if (SETTINGS.DebugLevel > 10) unsafeWindow.ave.backGroundIFrame = _liveDoc;
         const _tiles = _liveDoc.querySelectorAll('.vvp-item-tile');
         const _tilesLength = _tiles.length;
-
-        // NOTE: The page of a category of the turbo scan is loaded again and
-        // again, but its products change very rarely. The hash of the products is
-        // compared with the last load, so that the tiles are only parsed (and
-        // stored) when the products of the page changed.
-        if (options.pageHashKey && isPageUnchanged(options.pageHashKey, _tiles)) {
-            if (SETTINGS.DebugLevel > 1) console.log(`backgroundTileScanner(): the products of ${options.pageHashKey} did not change`);
-            clearInterval(_loopDelay);
-            removeScanIframe(_iframe);
-            cb(0);
-            _iconLoading.remove();
-            return;
-        }
 
         // The pagination of the scanned page is cached, because the iframe (and
         // with it the document) is removed after the scan.
