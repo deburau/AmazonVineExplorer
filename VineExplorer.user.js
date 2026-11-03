@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.37
+// @version      0.15.0.38
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -40,7 +40,8 @@
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
    addProductToKeywordSearch, backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct,
-   cleanUpDatabase, matchesKeyword,
+   cleanUpDatabase, getPageCategoryText, hasCategoryCondition, matchCategoryConditions, matchesKeyword,
+   matchesKeywordEntry, matchesPriceConditions, parseCategoryCondition,
    scanLoop, scanStepBackground,
    colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
@@ -134,6 +135,20 @@ let scanStepImmediately = false;
 
 /** The background colour of a button of the settings that is not available. */
 const DISABLED_SETTINGS_BUTTON_COLOR = 'rgb(200, 200, 200)';
+
+/**
+ * The ids of the products that were checked a second time because their category
+ * became known (see addProductToKeywordSearch()).
+ * @type {Set<string>}
+ */
+const categoryCheckedProducts = new Set();
+
+/**
+ * The last result of hasCategoryCondition(), so that the keywords do not have to
+ * be parsed for every product of a page.
+ * @type {{key: string, result: boolean}}
+ */
+let categoryConditionCache = { key: '', result: false };
 
 /**
  * The function that tells the scan loop that the current step is done. It is
@@ -4710,6 +4725,7 @@ function backGroundTileScanner(url, cb) {
         clearInterval(_loopDelay);
 
         if (_tilesLength > 0) {
+            const pageCategoryText = getPageCategoryText(_liveDoc);
             let _newCount = 0;
             let _returned = 0;
             const _tilesProm = [];
@@ -4719,9 +4735,11 @@ function backGroundTileScanner(url, cb) {
                         _returned++;
                         if (SETTINGS.DebugLevel > 14)
                             console.log(`BACKGROUNDSCAN => Got TileData Back: Tile ${_returned}/${_tilesLength} =>`, prod);
+                        // NOTE: The name of the category of the scanned page is given to
+                        // the search of the keywords. It is not stored in the database.
+                        addProductToKeywordSearch(prod, pageCategoryText);
                         if (!prod.gotFromDB) {
                             ++_newCount;
-                            addProductToKeywordSearch(prod);
                             // NOTE: database.add() is fire-and-forget on purpose. Awaiting it
                             //   would delay the scan unnecessarily. Failed writes are caught by
                             //   .catch() and logged. _newCount may be slightly off if a write
@@ -4981,13 +4999,15 @@ function parsePriceCondition(text) {
  */
 function parseKeywordConfig(config) {
     const _text = String(config ?? '');
-    const _result = { keyword: _text, conditions: [], valid: true };
+    const _result = { keyword: _text, conditions: [], categories: [], valid: true };
 
-    // NOTE: Only a keyword with a price condition is parsed. The keywords can be
+    // NOTE: Only a keyword with a condition is parsed. The keywords can be
     // regular expressions and they can contain brackets themselves.
-    if (!_text.toLowerCase().includes('price')) return _result;
+    const _lowerText = _text.toLowerCase();
+    if (!_lowerText.includes('price') && !_lowerText.includes('category')) return _result;
 
     const _conditions = [];
+    const _categories = [];
     _result.keyword = _text
         // NOTE: The spaces around a condition are removed together with it, so
         // that a keyword like "toaster [price > 100] white" keeps the text
@@ -4998,17 +5018,109 @@ function parseKeywordConfig(config) {
                 _conditions.push(_condition);
                 return ' ';
             }
-            // The bracket does not contain a valid price condition. If it names
-            // the price, the keyword is broken and it does not match.
-            if (_content.toLowerCase().includes('price')) {
+
+            const _category = parseCategoryCondition(_content);
+            if (_category) {
+                _categories.push(_category);
+                return ' ';
+            }
+
+            // The bracket does not contain a valid condition. If it names one of
+            // the fields, the keyword is broken and it does not match.
+            if (/price|category/i.test(_content)) {
                 _result.valid = false;
-                console.warn(`The price condition "${_content}" is not valid.`);
+                console.warn(`The condition "${_content}" is not valid.`);
             }
             return _match;
         })
         .trim();
     _result.conditions = _conditions;
+    _result.categories = _categories;
     return _result;
+}
+
+/**
+ * Parses a category condition of the keyword configuration.
+ *
+ * The format of a condition is "[category~text]". The condition is fulfilled
+ * when the text occurs in the name of the category of the product.
+ *
+ * @param {string} text The content of the brackets
+ * @returns {object|null} The condition, or null if it is not valid
+ */
+function parseCategoryCondition(text) {
+    const _match = /^\s*category\s*~\s*(.+?)\s*$/i.exec(String(text ?? ''));
+    if (!_match) return null;
+
+    const _text = _match[1].toLowerCase();
+    if (_text.length === 0) return null;
+    return { text: _text };
+}
+
+/**
+ * Checks the price conditions of a keyword against the prices of a product.
+ *
+ * The prices are loaded, if the keyword has price conditions and they are not
+ * known yet.
+ *
+ * NOTE: The prices are loaded, even if the setting EnableDetailsOnFavorite is
+ * switched off. The setting decides only, if the prices of a product without
+ * price conditions are loaded.
+ *
+ * @param {object} entry The parsed keyword
+ * @param {Product} prod The product to check
+ * @param {string} currKey The keyword of the settings (for the messages)
+ * @returns {Promise<boolean>} true if there are no conditions or all of them match
+ */
+async function matchesPriceConditions(entry, prod, currKey) {
+    if (entry.conditions.length === 0) return true;
+
+    await loadProductDetails(prod);
+    const _prices = getTaxPrices(prod);
+    if (matchPriceConditions(entry.conditions, _prices)) return true;
+
+    if (SETTINGS.DebugLevel > 1)
+        console.log(`updateNewProductsBtn(): The price conditions of "${currKey}" do not match the prices: ${JSON.stringify(_prices)}`);
+    return false;
+}
+
+/**
+ * Checks if the text and the category conditions of a keyword match a product.
+ *
+ * @param {object} entry The parsed keyword
+ * @param {string} descFull The description of the product in lower case
+ * @param {string} categoryText The name of the category of the product
+ * @returns {boolean} true if the entry matches
+ */
+function matchesKeywordEntry(entry, descFull, categoryText) {
+    // The text of the keyword has to match, if the entry has one.
+    if (entry.keyword && !matchesKeyword(descFull, entry.keyword)) return false;
+
+    // The category of the product has to match as well.
+    if (entry.categories.length > 0 && !matchCategoryConditions(entry.categories, categoryText)) return false;
+
+    return true;
+}
+
+/**
+ * Checks the category conditions of a keyword against the category of a product.
+ *
+ * NOTE: The category of a product is only known when it was seen on a page of a
+ * category (e.g. by the turbo scan). A product whose category is not known can
+ * not fulfil a category condition.
+ *
+ * @param {object[]} categories The conditions of the keyword
+ * @param {string} categoryText The name of the category of the product
+ * @returns {boolean} true if all conditions are fulfilled
+ */
+function matchCategoryConditions(categories, categoryText) {
+    if (typeof categoryText !== 'string' || categoryText.length === 0) return false;
+
+    const _lowerText = categoryText.toLowerCase();
+    for (const _category of categories) {
+        if (!_lowerText.includes(_category.text)) return false;
+    }
+    return true;
 }
 
 /**
@@ -5075,7 +5187,7 @@ function matchPriceConditions(conditions, prices) {
  * @param {string[]} _configKeyWords The keywords to search for
  * @returns {Promise<boolean>} true if a keyword was found
  */
-async function checkKeywordsForProduct(_prod, _configKeyWords) {
+async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = '') {
     const _descFull = _prod.description_full.toLowerCase();
 
     if (_prod.isNotified) {
@@ -5092,33 +5204,25 @@ async function checkKeywordsForProduct(_prod, _configKeyWords) {
         const _entry = parseKeywordConfig(_currKey);
         if (!_entry.valid) continue;
 
-        // NOTE: A price condition only works together with a keyword. A keyword
-        // that only has price conditions can never match.
-        if (!_entry.keyword) {
-            console.warn(`The keyword "${_currKey}" has no keyword next to its price conditions and can never match.`);
+        // NOTE: A keyword or a search for a category is needed. An entry that only
+        // has price conditions can never match.
+        if (!_entry.keyword && _entry.categories.length === 0) {
+            console.warn(`The keyword "${_currKey}" has no keyword and no category next to its price conditions and can never match.`);
             continue;
         }
 
-        const _keyFound = matchesKeyword(_descFull, _entry.keyword);
-        if (!_keyFound) continue;
+        if (!matchesKeywordEntry(_entry, _descFull, categoryText)) {
+            if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): "${_currKey}" does not match the text or the category`);
+            continue;
+        }
+
+        // The key of the keyword is shown in the notifications. An entry without a
+        // keyword (a search for a category) shows the entry of the settings.
+        const _matchLabel = _entry.keyword || _currKey;
 
         // The keyword matched. Only now the prices are loaded, if the keyword has
         // price conditions. The conditions are checked with the prices.
-        //
-        // NOTE: The prices are loaded, even if the setting EnableDetailsOnFavorite
-        // is switched off. The setting decides only, if the prices of a product
-        // without price conditions are loaded.
-        if (_entry.conditions.length > 0) {
-            await loadProductDetails(_prod);
-            const _prices = getTaxPrices(_prod);
-            if (!matchPriceConditions(_entry.conditions, _prices)) {
-                if (SETTINGS.DebugLevel > 1)
-                    console.log(
-                        `updateNewProductsBtn(): The price conditions of "${_currKey}" do not match the prices: ${JSON.stringify(_prices)}`
-                    );
-                continue;
-            }
-        }
+        if (!(await matchesPriceConditions(_entry, _prod, _currKey))) continue;
 
         _prod.isNotified = true;
         const _markedAsFavorite = SETTINGS.EnableAutoMarkFavorite;
@@ -5146,7 +5250,7 @@ async function checkKeywordsForProduct(_prod, _configKeyWords) {
         if (SETTINGS.EnableDesktopNotifikation) {
             // NOTE: The key of the keyword is shown before the description of the
             // product, because it is the reason for the notification.
-            const _matchText = translate('notifications', 'keywordMatch', `Treffer: ${_entry.keyword}`, _entry.keyword);
+            const _matchText = translate('notifications', 'keywordMatch', `Treffer: ${_matchLabel}`, _matchLabel);
             desktopNotifikation(
                 `Amazon Vine Explorer - ${AVE_VERSION}`,
                 `${_matchText}\n${_prod.description_full}`,
@@ -5169,12 +5273,12 @@ async function checkKeywordsForProduct(_prod, _configKeyWords) {
         if (SETTINGS.GotifyUrl) {
             if (_prod.link) {
                 gotifyNotification(
-                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \nMatched key: ${_entry.keyword}`,
+                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \nMatched key: ${_matchLabel}`,
                     _prod
                 );
             } else {
                 gotifyNotification(
-                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \nMatched key: ${_entry.keyword}`
+                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \nMatched key: ${_matchLabel}`
                 );
             }
         }
@@ -5208,17 +5312,75 @@ function matchesKeyword(descFull, keyword) {
 }
 
 /**
+ * Returns the name of the category of a page.
+ *
+ * The category is only in the side bar of the page, it is not stored with the
+ * product. A page of the all items list has no category, so the result is empty.
+ *
+ * @param {Document} doc The document of the page
+ * @returns {string} The name of the category, or an empty string
+ */
+function getPageCategoryText(doc) {
+    if (!doc || typeof doc.querySelectorAll !== 'function') return '';
+
+    const _selected = doc.querySelectorAll('#vvp-browse-nodes-container a.selectedNode');
+    const _names = [];
+    for (const _node of _selected) {
+        const _name = String(_node.textContent).trim();
+        if (_name) _names.push(_name);
+    }
+    return _names.join(' > ');
+}
+
+/**
+ * Checks if the keywords of the settings contain a search for a category.
+ *
+ * @returns {boolean} true if at least one keyword has a category condition
+ */
+function hasCategoryCondition() {
+    const _keywords = Array.isArray(SETTINGS.DesktopNotifikationKeywords) ? SETTINGS.DesktopNotifikationKeywords : [];
+    const _key = JSON.stringify(_keywords);
+
+    // The result is cached, because it is asked for every product of a page.
+    if (categoryConditionCache.key !== _key) {
+        categoryConditionCache = {
+            key: _key,
+            result: _keywords.some((keyword) => parseKeywordConfig(String(keyword).toLowerCase()).categories.length > 0)
+        };
+    }
+    return categoryConditionCache.result;
+}
+
+/**
  * Remembers a product for the search of the keywords.
  *
- * The product is checked once, as soon as the search runs. It is called at the
- * two places that add a product to the database (the tile of the page and the
- * page of the background scan).
+ * A product that is new is checked once, as soon as the search runs. It is called
+ * at the two places that add a product to the database (the tile of the page and
+ * the page of the background scan).
+ *
+ * NOTE: A product that is already in the database was checked before its category
+ * was known (the background scan does not show a category). It is checked once
+ * more when its category becomes known and the keywords contain a search for a
+ * category, so that such a search can match it after all.
  *
  * @param {Product} prod The product that was added to the database
+ * @param {string} [categoryText] The name of the category of the page
  */
-function addProductToKeywordSearch(prod) {
+function addProductToKeywordSearch(prod, categoryText = '') {
     if (!prod) return;
-    productsToCheckForKeywords.push(prod);
+
+    if (prod.gotFromDB) {
+        if (!categoryText || prod.isNotified) return;
+        if (categoryCheckedProducts.has(prod.id)) return;
+        if (!hasCategoryCondition()) return;
+
+        categoryCheckedProducts.add(prod.id);
+        // NOTE: The search has to run for this product, so it is remembered like a
+        // new product.
+        newProductWasAdded = true;
+    }
+
+    productsToCheckForKeywords.push({ prod: prod, categoryText: categoryText });
 }
 
 /**
@@ -5246,10 +5408,10 @@ async function searchKeywordsInProducts(_prodArr) {
     let _notifyed = false;
 
     for (let i = 0; i < _prodArr.length; i++) {
-        const _prod = _prodArr[i];
+        const _entry = _prodArr[i];
         // NOTE: The product is awaited, because the prices are loaded before
         // its notification is sent.
-        if (await checkKeywordsForProduct(_prod, _configKeyWords)) {
+        if (await checkKeywordsForProduct(_entry.prod, _configKeyWords, _entry.categoryText)) {
             _notifyed = true;
         }
     }
@@ -5546,9 +5708,12 @@ function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeVal
  * @param {Product} _product The product of the tile
  */
 function addStyleToTile(_currTile, _product) {
+    // NOTE: A product that is shown on a page of a category gets the name of the
+    // category for the search of the keywords. It is not stored in the database.
+    addProductToKeywordSearch(_product, getPageCategoryText(document));
+
     if (!_product.gotFromDB) {
         // We have a new one ==> Save it to our Database ;)
-        addProductToKeywordSearch(_product);
         // NOTE: The promise is not awaited, so a failed write has to be caught here.
         // The write fails e.g. if a product with the same ASIN is already in the database.
         database.add(_product).catch((error) => {

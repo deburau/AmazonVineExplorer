@@ -63,6 +63,11 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.38
+
+* New: the keywords of the notification can search for the category of a product: `[category~getränke]` matches every product of a category whose name contains "getränke". At least one keyword or one category is needed, so a price can be searched together with a category: `[price=0] [category~getränke]` notifies about all products with the price 0 of the category "Lebensmittel & Getränke".
+* The category of a product is read from the page it was found on (the side bar shows the selected category), it is not stored in the database. Products of the background scan are found on the unfiltered list, so they have no category until a scan of their category (e.g. by the turbo scan) sees them - then they are checked once more, so that a search for the category can match them after all.
+
 ##### [2026-11-03] - Version 0.15.0.37
 
 * New: the search for the products of the database can search for a price now, with the same conditions as the keywords: `[price >= 10]`, `[price < 5]`, `[price = 12.50]` and so on. A condition can be combined with a text (`kaffee [price >= 10]`) or used alone (`[price < 5]`) - a price can be searched without a keyword. Only the products whose price is known are searched, all other products are not part of the result.

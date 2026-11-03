@@ -23,6 +23,10 @@ const NEW_NAMES = [
     'notifyAboutUnseenItems',
     'addProductToKeywordSearch',
     'matchesKeyword',
+    'matchesKeywordEntry',
+    'matchesPriceConditions',
+    'parseCategoryCondition',
+    'matchCategoryConditions',
     'searchKeywordsInProducts',
     'checkKeywordsForProduct',
     'notifyAboutNewProducts',
@@ -118,7 +122,10 @@ function run(code, opts) {
         newProductWasAdded: opts.newProductWasAdded !== false,
         // Die Produkte, die seit dem letzten Lauf hinzugekommen sind. Nur sie
         // werden gegen die Keywords geprueft (addProductToKeywordSearch()).
-        productsToCheckForKeywords: (opts.newProducts || []).map((e) => Object.assign({}, e)),
+        productsToCheckForKeywords: (opts.newProducts || []).map((e) => ({
+            prod: Object.assign({}, e),
+            categoryText: opts.categoryText || ''
+        })),
         oldCountOfNewItems: opts.oldCount || 0,
         lastDesktopNotifikationTimestamp: opts.lastNotifTs || 0,
         AVE_VERSION: '1.0',
@@ -298,6 +305,68 @@ const SCENARIOS = [
                 {
                     id: 'p1',
                     description_full: 'A nice toaster with a cable',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
+        name: 'Kategorie-Suche: die Kategorie des Produkts passt',
+        expectNotification: true,
+        opts: {
+            desktop: true,
+            keywords: ['[category~getränke]'],
+            categoryText: 'Lebensmittel & Getränke',
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
+        name: 'Kategorie-Suche: die Kategorie des Produkts passt nicht',
+        expectNoNotification: true,
+        opts: {
+            desktop: true,
+            keywords: ['[category~getränke]'],
+            categoryText: 'Garten',
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein Produkt',
                     isNew: 1,
                     isFav: 0,
                     isNotified: 0,

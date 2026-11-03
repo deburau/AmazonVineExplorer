@@ -46,6 +46,7 @@ const CODE = [
     extractBody(mainSrc, 'stringToRegex'),
     extractBody(mainSrc, 'normalizePriceInput'),
     extractBody(mainSrc, 'parsePriceCondition'),
+    extractBody(mainSrc, 'parseCategoryCondition'),
     extractBody(mainSrc, 'parseKeywordConfig'),
     extractBody(mainSrc, 'getTaxPrices'),
     extractBody(mainSrc, 'matchPriceConditions'),

@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.37` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.38` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -204,7 +204,20 @@ Release erledigt und wurde geschlossen.
   **nicht** als Favorit markiert – es wird beim nächsten Scan erneut geprüft.
 * Neue Funktionen: `normalizePriceInput()`, `parsePriceCondition()`,
   `parseKeywordConfig()`, `matchPriceConditions()`, `loadProductDetails()`.
-* neuer Wächter `scripts/verify/verify_price_conditions.js` (50 Fälle).
+* Wächter `scripts/verify/verify_keyword_conditions.js` (70 Fälle: Preise,
+  Kategorien, das Parsen und die Vergleiche).
+* **Kategoriebedingungen** in den Keywords (`[category~getränke]`):
+  `parseCategoryCondition()` + `matchCategoryConditions()` (Teilstring, klein
+  geschrieben, alle Bedingungen müssen passen). Es muss ein **Keyword oder eine
+  Kategorie** angegeben sein (nur Preis bleibt ungültig). Die Kategorie eines
+  Produkts wird **nicht** in der DB gespeichert, sondern beim Parsen aus der
+  Seite gelesen (`getPageCategoryText()`, der `selectedNode` im Sidebar) und an
+  die Suche **mitgegeben** (`productsToCheckForKeywords` enthält jetzt
+  `{prod, categoryText}`). Ein Produkt, das schon in der DB ist und später auf
+  einer Kategorieseite gesehen wird (z. B. durch den Turbo-Scan), wird **einmal**
+  nachgeprüft (`categoryCheckedProducts` + `hasCategoryCondition()`), sonst
+  würde eine Kategoriesuche nie greifen. Die **Suche** (Suchleiste) kann
+  Kategorien nicht prüfen (`searchProducts()` warnt und liefert nichts).
 * Die **Suche** (Suchleiste) kann dieselben **Preisbedingungen** benutzen wie die
   Keywords (`searchProducts()` in der Hauptdatei): `kaffee [price >= 10]`, aber
   auch **nur** nach dem Preis (`[price < 5]`, dann werden alle Produkte mit

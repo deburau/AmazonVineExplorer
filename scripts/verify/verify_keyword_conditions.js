@@ -1,24 +1,27 @@
 #!/usr/bin/env node
 /**
- * verify_price_conditions.js
+ * verify_keyword_conditions.js
  *
- * Prueft die Preisbedingungen der Keywords.
+ * Prueft die Bedingungen der Keywords (Preis und Kategorie).
  *
  * Ein Keyword kann Preisbedingungen enthalten, z. B.
- * "toaster [price >= 10] [price < 20]".
- * Die Bedingungen werden nur zusammen mit dem Keyword geprueft.
+ * "toaster [price >= 10] [price < 20]", und Kategoriebedingungen, z. B.
+ * "[category~getraenke]". Ein Text oder eine Kategorie muss angegeben sein, nur
+ * Preisbedingungen koennen nie matchen.
  *
  * Geprueft werden:
  *   - die Normalisierung der Preise aus der Benutzereingabe (normalizePriceInput())
  *   - das Parsen einer Preisbedingung (parsePriceCondition())
  *   - das Parsen eines Keywords mit Bedingungen (parseKeywordConfig())
  *   - der Vergleich der Bedingungen mit den Preisen (matchPriceConditions())
+ *   - das Parsen einer Kategoriebedingung (parseCategoryCondition())
+ *   - der Vergleich der Kategorie mit dem Namen der Kategorie (matchCategoryConditions())
  *
  * Das Skript prueft das aktuelle Verhalten gegen erwartete Werte. Es vergleicht
  * nicht eine alte mit einer neuen Implementierung, weil die Preisbedingungen
  * ein Feature sind und kein Refactoring.
  *
- * Usage: node scripts/verify/verify_price_conditions.js
+ * Usage: node scripts/verify/verify_keyword_conditions.js
  */
 
 const fs = require('fs');
@@ -46,8 +49,10 @@ const mainSrc = readSource('VineExplorer.user.js');
 const CODE = [
     extractBody(mainSrc, 'normalizePriceInput'),
     extractBody(mainSrc, 'parsePriceCondition'),
+    extractBody(mainSrc, 'parseCategoryCondition'),
     extractBody(mainSrc, 'parseKeywordConfig'),
-    extractBody(mainSrc, 'matchPriceConditions')
+    extractBody(mainSrc, 'matchPriceConditions'),
+    extractBody(mainSrc, 'matchCategoryConditions')
 ].join('\n\n');
 
 const sandbox = {
@@ -68,6 +73,8 @@ const normalizePriceInput = vm.runInContext('normalizePriceInput', ctx);
 const parsePriceCondition = vm.runInContext('parsePriceCondition', ctx);
 const parseKeywordConfig = vm.runInContext('parseKeywordConfig', ctx);
 const matchPriceConditions = vm.runInContext('matchPriceConditions', ctx);
+const parseCategoryCondition = vm.runInContext('parseCategoryCondition', ctx);
+const matchCategoryConditions = vm.runInContext('matchCategoryConditions', ctx);
 
 /**
  * Die erwarteten Ergebnisse der Normalisierung der Preise.
@@ -113,23 +120,76 @@ const CONDITION_CASES = [
 ];
 
 /**
+ * Die erwarteten Ergebnisse des Parsens einer Kategoriebedingung.
+ */
+const CATEGORY_CONDITION_CASES = [
+    { label: 'Eine Kategorie', input: 'category~getraenke', expected: { text: 'getraenke' } },
+    { label: 'Eine Kategorie mit Leerzeichen', input: 'category ~ Lebensmittel', expected: { text: 'lebensmittel' } },
+    { label: 'Eine Kategorie ohne Text', input: 'category~', expected: null },
+    { label: 'Eine Kategorie ohne Tilde', input: 'category=getraenke', expected: null },
+    { label: 'Ein unbekanntes Feld', input: 'kategorie~getraenke', expected: null }
+];
+
+/**
+ * Die erwarteten Ergebnisse des Vergleichs der Kategorie.
+ */
+const CATEGORY_MATCH_CASES = [
+    {
+        label: 'Der Name kommt in der Kategorie vor',
+        categories: [{ text: 'getränke' }],
+        categoryText: 'Lebensmittel & Getränke',
+        expected: true
+    },
+    {
+        label: 'Der Name kommt nicht vor',
+        categories: [{ text: 'getränke' }],
+        categoryText: 'Garten',
+        expected: false
+    },
+    {
+        label: 'Der Name kommt auch in einer Unterkategorie vor',
+        categories: [{ text: 'kaffee' }],
+        categoryText: 'Lebensmittel & Getränke > Getränke, Kaffee & Tee',
+        expected: true
+    },
+    {
+        label: 'Ohne Kategorie passt keine Bedingung',
+        categories: [{ text: 'getränke' }],
+        categoryText: '',
+        expected: false
+    },
+    {
+        label: 'Beide Bedingungen muessen passen',
+        categories: [{ text: 'lebensmittel' }, { text: 'tee' }],
+        categoryText: 'Lebensmittel & Getränke > Getränke, Kaffee & Tee',
+        expected: true
+    },
+    {
+        label: 'Eine von zwei Bedingungen passt nicht',
+        categories: [{ text: 'lebensmittel' }, { text: 'blumen' }],
+        categoryText: 'Lebensmittel & Getränke > Getränke, Kaffee & Tee',
+        expected: false
+    }
+];
+
+/**
  * Die erwarteten Ergebnisse des Parsens eines Keywords.
  */
 const KEYWORD_CASES = [
     {
         label: 'Ein einfaches Keyword bleibt unveraendert',
         input: 'toaster',
-        expected: { keyword: 'toaster', conditions: [], valid: true }
+        expected: { keyword: 'toaster', conditions: [], categories: [], valid: true }
     },
     {
         label: 'Ein regulaerer Ausdruck bleibt unveraendert',
         input: '/wicht.*produkt/i',
-        expected: { keyword: '/wicht.*produkt/i', conditions: [], valid: true }
+        expected: { keyword: '/wicht.*produkt/i', conditions: [], categories: [], valid: true }
     },
     {
         label: 'Ein Keyword mit einer Preisbedingung',
         input: 'toaster [price >= 10]',
-        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], valid: true }
+        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
     },
     {
         label: 'Ein Keyword mit zwei Preisbedingungen',
@@ -140,45 +200,77 @@ const KEYWORD_CASES = [
                 { op: '>=', price: 10 },
                 { op: '<', price: 20 }
             ],
+            categories: [],
             valid: true
         }
     },
     {
         label: 'Eine Preisbedingung ohne Keyword',
         input: '[price >= 10]',
-        expected: { keyword: '', conditions: [{ op: '>=', price: 10 }], valid: true }
+        expected: { keyword: '', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
     },
     {
         // Die Bedingung steht in der Mitte: die Leerzeichen drumherum muessen
         // mitverschwinden, sonst sucht das Script nach "toaster   white".
         label: 'Eine Bedingung zwischen zwei Woertern',
         input: 'toaster [price > 100] white',
-        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], valid: true }
+        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], categories: [], valid: true }
     },
     {
         label: 'Eine Bedingung am Anfang',
         input: '[price > 100] toaster white',
-        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], valid: true }
+        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], categories: [], valid: true }
     },
     {
         label: 'Eine Bedingung am Ende',
         input: 'toaster white [price > 100]',
-        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], valid: true }
+        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], categories: [], valid: true }
+    },
+    {
+        label: 'Ein Keyword mit einer Kategoriebedingung',
+        input: 'kaffee [category~getraenke]',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'getraenke' }], valid: true }
+    },
+    {
+        // Der Ausdruck der Anforderung: ein Preis ohne Keyword, nur mit Kategorie.
+        label: 'Nur Bedingungen ohne Keyword',
+        input: '[price=0] [category~getränke]',
+        expected: { keyword: '', conditions: [{ op: '=', price: 0 }], categories: [{ text: 'getränke' }], valid: true }
+    },
+    {
+        label: 'Zwei Kategoriebedingungen',
+        input: '[category~lebensmittel] [category~tee]',
+        expected: {
+            keyword: '',
+            conditions: [],
+            categories: [{ text: 'lebensmittel' }, { text: 'tee' }],
+            valid: true
+        }
     },
     {
         label: 'Eine kaputte Preisbedingung macht das Keyword ungueltig',
         input: 'toaster [price > abc]',
-        expected: { keyword: 'toaster [price > abc]', conditions: [], valid: false }
+        expected: { keyword: 'toaster [price > abc]', conditions: [], categories: [], valid: false }
+    },
+    {
+        label: 'Eine kaputte Kategoriebedingung macht das Keyword ungueltig',
+        input: 'kaffee [category ohne tilde]',
+        expected: { keyword: 'kaffee [category ohne tilde]', conditions: [], categories: [], valid: false }
     },
     {
         label: 'Ein Keyword mit dem Wort price, aber ohne Bedingung',
         input: 'special price',
-        expected: { keyword: 'special price', conditions: [], valid: true }
+        expected: { keyword: 'special price', conditions: [], categories: [], valid: true }
+    },
+    {
+        label: 'Ein Keyword mit dem Wort category, aber ohne Bedingung',
+        input: 'category',
+        expected: { keyword: 'category', conditions: [], categories: [], valid: true }
     },
     {
         label: 'Eine Bedingung mit dem alten Feldnamen ist ungueltig',
         input: 'toaster [data_estimated_tax_prices >= 10]',
-        expected: { keyword: 'toaster [data_estimated_tax_prices >= 10]', conditions: [], valid: false }
+        expected: { keyword: 'toaster [data_estimated_tax_prices >= 10]', conditions: [], categories: [], valid: false }
     }
 ];
 
@@ -298,7 +390,7 @@ const MATCH_CASES = [
     }
 ];
 
-console.log('Preisbedingungen der Keywords pruefen');
+console.log('Bedingungen der Keywords pruefen (Preis und Kategorie)');
 console.log('='.repeat(70));
 
 let _errors = 0;
@@ -324,6 +416,14 @@ for (const _case of CONDITION_CASES) {
     check(_case.expected, parsePriceCondition(_case.input), _case.label);
 }
 
+for (const _case of CATEGORY_CONDITION_CASES) {
+    check(_case.expected, parseCategoryCondition(_case.input), _case.label);
+}
+
+for (const _case of CATEGORY_MATCH_CASES) {
+    check(_case.expected, matchCategoryConditions(_case.categories, _case.categoryText), _case.label);
+}
+
 for (const _case of KEYWORD_CASES) {
     check(_case.expected, parseKeywordConfig(_case.input), _case.label);
 }
@@ -332,7 +432,13 @@ for (const _case of MATCH_CASES) {
     check(_case.expected, matchPriceConditions(_case.conditions, _case.prices), _case.label);
 }
 
-const _total = PRICE_CASES.length + CONDITION_CASES.length + KEYWORD_CASES.length + MATCH_CASES.length;
+const _total =
+    PRICE_CASES.length +
+    CONDITION_CASES.length +
+    CATEGORY_CONDITION_CASES.length +
+    KEYWORD_CASES.length +
+    CATEGORY_MATCH_CASES.length +
+    MATCH_CASES.length;
 if (_errors === 0) {
     console.log(`  alle ${_total} Faelle sind ok`);
 } else {
