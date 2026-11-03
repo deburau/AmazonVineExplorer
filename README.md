@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.23
+
+* Fix: if the database was deleted with the button in the settings while the scan was running, the state of the scan (the stage and the page) was kept. The scan therefore continued at the page where the deleted database stopped, e.g. at page 67, instead of starting at the beginning. The state of AVE is cleared now, so it starts like after a long time. The delete does not hang anymore while the scan is running either.
+
 ##### [2026-11-03] - Version 0.15.0.22
 
 * New: a keyword with several words matches if all of the words occur in the description of a product, the order of the words and the distance between them do not matter. Before, the words had to stand next to each other in the given order, so `toaster white` did not find "a nice toaster and a white cable".

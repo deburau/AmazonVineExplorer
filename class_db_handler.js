@@ -526,6 +526,20 @@ class DB_HANDLER {
     }
 
     /**
+     * Closes the connection to the database.
+     *
+     * NOTE: An open connection blocks the delete of the database. The connection
+     * has to be closed before deleteDatabase() is called, otherwise the delete
+     * request waits for the connection and never finishes.
+     */
+    closeDatabase() {
+        if (!this.#db) return;
+        this.#db.close();
+        this.#db = null;
+        console.log('DB_HANDLER: the connection to the database was closed');
+    }
+
+    /**
      * Deletes the entire database.
      * @returns {Promise<void>}
      */

@@ -700,7 +700,17 @@ SETTINGS_USERCONFIG_DEFINES.push({
     description: 'A USER DOES NOT NEED TO DO THIS ! ITS ONLY FOR DEVELOPMENT PURPOSES',
     key: 'BUTTON_DB_DELETE',
     btnClick: () => {
+        // NOTE: The scan is stopped and the connection is closed, because the
+        // open connection of this page blocks the delete of the database.
+        stopBackgroundScan();
+        database.closeDatabase();
+
         database.deleteDatabase().then(() => {
+            // NOTE: The state of AVE (the stage and the page of the scan and so
+            // on) is kept in the local storage. Without clearing it the new scan
+            // would continue at the page where the deleted database stopped
+            // instead of starting at the beginning.
+            clearAVEState();
             /* eslint-disable-next-line no-self-assign */
             window.location.href = window.location.href;
         });

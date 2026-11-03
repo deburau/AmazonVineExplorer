@@ -238,6 +238,13 @@ description in every language of the `I18N`. The key of the setting has to be
 spelled the same way in all three places. The script
 `scripts/check_settings_keys.js` checks that and is part of `npm run check`.
 
+**NOTE:** Every key that AVE writes to the `localStorage` has to be listed in
+`AVE_LOCAL_STORAGE_KEYS` in `globals.js`. `clearAVEState()` removes exactly this
+list, it is used by the reset of the settings and by the button that deletes the
+database. A missing key would survive both, e.g. the scan would continue at the
+page where it stopped although the database is empty. The script
+`scripts/check_state_keys.js` checks that and is part of `npm run check`.
+
 A function whose purpose is not obvious **must** have a JSDoc block that
 explains what it does, what the parameters are and what it returns. A
 comment that explains *why* something is done in that way is more valuable

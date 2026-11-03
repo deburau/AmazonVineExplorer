@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.22` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.23` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -280,6 +280,7 @@ oft der Pfad lief.
 | `scripts/verify/` | 10 Verifikationsskripte für die Refactorings und die Features |
 | `scripts/check_css_syntax.js` | prüft die CSS auf Kommentare mit falscher Syntax |
 | `scripts/check_settings_keys.js` | prüft die Schlüssel der Einstellungen und der Übersetzungen |
+| `scripts/check_state_keys.js` | prüft, dass jeder localStorage-Schlüssel in `AVE_LOCAL_STORAGE_KEYS` steht |
 | `scripts/verify/baselines.json` | Git-Stand, gegen den verglichen wird |
 | `scripts/verify/lib/verify_helpers.js` | Gemeinsame Helfer der Skripte |
 | `.unotes/` | Lokale Testskripte (nicht versioniert) |
@@ -308,7 +309,7 @@ gehört in `scripts/verify/` und nutzt `lib/verify_helpers.js`.
 
 | Befehl | Wirkung |
 |---|---|
-| `npm run check` | Prettier + ESLint + CSS-Check + Schlüssel-Check (muss immer grün sein) |
+| `npm run check` | Prettier + ESLint + CSS-Check + Schlüssel-Check + State-Check (muss immer grün sein) |
 | `npm run verify` | alle Verifikationen |
 | `npm run verify:baseline` | Baseline einfrieren |
 | `npm run format` | Quellen formatieren |
