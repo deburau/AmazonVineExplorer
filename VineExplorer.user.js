@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.29
+// @version      0.15.0.30
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2018,6 +2018,8 @@ const AVE_SETTINGS_CSS = `
   width: 320px;
   max-height: 260px;
   overflow-y: auto;
+  /* A long name is wrapped, so that the list does not scroll sideways */
+  overflow-x: hidden;
   border: 1px solid rgba(128, 128, 128, .5);
   border-radius: 4px;
   padding: 4px;
@@ -2028,24 +2030,37 @@ const AVE_SETTINGS_CSS = `
 
 .ave-category-row {
   display: flex;
-  align-items: center;
-  white-space: nowrap;
+  /* The checkbox stays at the top when a name is wrapped */
+  align-items: flex-start;
+  line-height: 1.4;
 }
 
 .ave-category-row label {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
   cursor: pointer;
+  overflow-wrap: anywhere;
 }
 
+/*
+ * The arrow of a main category. The width is fixed, so that the checkboxes of
+ * all main categories are in the same column.
+ */
 .ave-category-toggle {
-  display: inline-block;
-  width: 18px;
+  flex: 0 0 18px;
   text-align: center;
   cursor: pointer;
   user-select: none;
 }
 
+/*
+ * The sub categories of a main category. The margin is the width of the arrow,
+ * so that a sub category starts where the checkbox of its main category is.
+ */
 .ave-category-children {
-  margin-left: 18px;
+  margin-left: 22px;
+  border-left: 1px dotted rgba(128, 128, 128, .5);
 }
 
 .ave-category-error {
@@ -2830,11 +2845,13 @@ function createSettingsCategoryRow(dat, category, isSubCategory) {
     const _row = document.createElement('div');
     _row.classList.add('ave-category-row');
 
-    const _toggle = document.createElement('span');
-    _toggle.classList.add('ave-category-toggle');
-
+    let _toggle = null;
     let _children = null;
     if (!isSubCategory) {
+        // NOTE: Only a main category gets the arrow. A sub category has no
+        // placeholder for it, so that it is indented by the container only.
+        _toggle = document.createElement('span');
+        _toggle.classList.add('ave-category-toggle');
         // The element that holds the sub categories of this main category.
         _children = document.createElement('div');
         _children.classList.add('ave-category-children');
@@ -2845,8 +2862,8 @@ function createSettingsCategoryRow(dat, category, isSubCategory) {
                 console.error(`createSettingsCategoryRow(): the sub categories could not be loaded: ${error}`);
             });
         });
+        _row.appendChild(_toggle);
     }
-    _row.appendChild(_toggle);
 
     const _label = document.createElement('label');
     const _checkbox = document.createElement('input');

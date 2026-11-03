@@ -67,6 +67,7 @@ function createDomMock(log) {
                 return this.attributes[name] !== undefined ? this.attributes[name] : null;
             },
             appendChild(child) {
+                child.parentElement = this;
                 this.children.push(child);
                 return child;
             },
@@ -237,6 +238,23 @@ function check(ok, label) {
     check(
         _openCheckboxes.some((c) => c.value === '10925031/87837030'),
         'Eine Unterkategorie wird mit der Nummer der Haupt- und der Unterkategorie gespeichert'
+    );
+
+    // NOTE: Eine Unterkategorie hat keinen Platzhalter fuer den Pfeil, damit sie
+    // nur durch ihren Container eingerueckt wird und alle Unterkategorien in
+    // derselben Spalte stehen.
+    const _childRows = _openCheckboxes
+        .filter((c) => c.value === '10925031/87837030' || c.value === '10925031/5211155030')
+        .map((c) => c.parentElement.parentElement);
+    check(_childRows.length === 2, 'Es gibt eine Zeile je Unterkategorie');
+    check(
+        _childRows.every((r) => r.children.length === 1),
+        'Eine Unterkategorie hat keinen Platzhalter fuer den Pfeil (nur die Beschriftung)'
+    );
+    const _parentRows = _openCheckboxes.filter((c) => c.value === '10925031').map((c) => c.parentElement.parentElement);
+    check(
+        _parentRows.every((r) => r.children.length === 2),
+        'Eine Hauptkategorie hat den Pfeil und die Beschriftung'
     );
 
     // Ein zweites Aufklappen darf nicht erneut laden.
