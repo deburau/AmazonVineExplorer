@@ -10,7 +10,7 @@
  */
 
 const vm = require('vm');
-const { prepareWithConstants, finish } = require('./lib/verify_helpers');
+const { prepareWithConstants, extractBody, currentSource, finish } = require('./lib/verify_helpers');
 
 const ITERATIONS = parseInt(process.argv[2] || '12', 10);
 const FIXED_NOW = 1800000000000;
@@ -113,6 +113,7 @@ async function runScenario(code, initial) {
         BackGroundScanIsRunning: false,
         // Die Variablen der neuen Schleife (die alte Version kennt sie nicht).
         ScanLoopGeneration: 0,
+        scanStepImmediately: false,
         scanStepDone: null,
         backGroundScanTimeout: null,
         lastScanPaginationData: null,
@@ -307,6 +308,99 @@ const _main = async () => {
                 console.log('    alt: ' + o);
                 console.log('    neu: ' + n);
             }
+        }
+    }
+
+    /**
+     * Fuehrt restartBackgroundScan() in einer Sandbox aus.
+     *
+     * @param {boolean} scanRunning true, wenn gerade ein Scan laeuft
+     * @param {boolean} enableScan der Wert der Einstellung "Background Scan aktivieren"
+     * @returns {object} Das Protokoll und der Inhalt des local storage
+     */
+    function runRestart(scanRunning, enableScan) {
+        const _log = [];
+        const _store = new Map([
+            ['AVE_BACKGROUND_SCAN_STAGE', '1'],
+            ['AVE_BACKGROUND_SCAN_PAGE_CURRENT', '67'],
+            ['AVE_BACKGROUND_SCAN_LAST_TIME', '1800000000000']
+        ]);
+
+        const _sandbox = {
+            console: { log: () => {}, warn: () => {}, error: () => {} },
+            localStorage: {
+                getItem: (key) => (_store.has(key) ? _store.get(key) : null),
+                setItem: (key, value) => {
+                    _log.push(`set ${key}=${value}`);
+                    _store.set(key, String(value));
+                }
+            },
+            SETTINGS: { EnableBackgroundScan: enableScan },
+            BackGroundScanIsRunning: scanRunning,
+            lastScanPaginationData: { maxPage: 10 },
+            scanStepImmediately: false,
+            updateBackgroundScanScreenText: () => _log.push('screen'),
+            initBackgroundScan: () => _log.push('initBackgroundScan')
+        };
+        _sandbox.globalThis = _sandbox;
+
+        const _ctx = vm.createContext(_sandbox);
+        vm.runInContext(extractBody(currentSource(), 'restartBackgroundScan'), _ctx, { filename: 'restart.js' });
+        vm.runInContext('restartBackgroundScan()', _ctx, { filename: 'restartRun.js' });
+
+        return { log: _log, store: _store, stepImmediately: _sandbox.scanStepImmediately };
+    }
+
+    console.log('\nNeustart des Scans (Button in den Einstellungen):');
+
+    const _restartCases = [
+        {
+            label: 'Ein Scan laeuft: die Position wird auf Seite 1 zurueckgesetzt',
+            scanRunning: true,
+            enableScan: true,
+            expectInit: false
+        },
+        {
+            label: 'Kein Scan laeuft: der Scan wird gestartet',
+            scanRunning: false,
+            enableScan: true,
+            expectInit: true
+        },
+        {
+            label: 'Background Scan ist aus: es passiert nichts',
+            scanRunning: false,
+            enableScan: false,
+            expectInit: false,
+            expectNothing: true
+        }
+    ];
+
+    for (const _case of _restartCases) {
+        const _result = runRestart(_case.scanRunning, _case.enableScan);
+        const _problems = [];
+
+        if (_case.expectNothing) {
+            if (_result.log.length > 0) _problems.push(`es wurde etwas gemacht: ${_result.log.join(', ')}`);
+        } else {
+            const _reset = ['AVE_BACKGROUND_SCAN_LAST_TIME=0', 'AVE_BACKGROUND_SCAN_STAGE=0', 'AVE_BACKGROUND_SCAN_PAGE_CURRENT=0'];
+            for (const _expected of _reset) {
+                if (!_result.log.includes(`set ${_expected}`)) _problems.push(`fehlt: ${_expected}`);
+            }
+            if (_result.log.includes('set AVE_FAST_SCAN_IS_RUNNING=false') === false)
+                _problems.push('fehlt: AVE_FAST_SCAN_IS_RUNNING=false');
+            if (_result.stepImmediately !== true) _problems.push('der naechste Schritt wird nicht sofort gemacht');
+            if (_result.store.get('AVE_BACKGROUND_SCAN_PAGE_CURRENT') !== '0') _problems.push('die Seite wurde nicht zurueckgesetzt');
+            if (_result.log.includes('initBackgroundScan') !== _case.expectInit) {
+                _problems.push(_case.expectInit ? 'der Scan wurde nicht gestartet' : 'der laufende Scan wurde neu gestartet');
+            }
+        }
+
+        if (_problems.length === 0) {
+            console.log(`  OK   ${_case.label}`);
+        } else {
+            failures++;
+            console.log(`  FAIL ${_case.label}`);
+            for (const _problem of _problems) console.log(`         ${_problem}`);
         }
     }
 

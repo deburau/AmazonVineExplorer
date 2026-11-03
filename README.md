@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.26
+
+* New: the settings have a button that starts the background scan from its beginning (it is above the keywords). A scan that is running is set back to the first page, a scan that waits for the next round is started again. The button is greyed out and without function while the background scan is switched off.
+
 ##### [2026-11-03] - Version 0.15.0.24
 
 * The tooltip of the keyword setting warns about unspecific keywords: a keyword with a price condition loads the price of every match, so an unspecific keyword like `black [price>50]` can get the account blocked by Amazon.

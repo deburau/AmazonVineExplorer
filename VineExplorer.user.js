@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.25
+// @version      0.15.0.26
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -50,7 +50,8 @@
    favStarEventhandlerClick, fixProductImageUrl, formatTaxPrize, getContrastColor, getFastScanState,
    getFastScanIntervalSeconds, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
    getScanDelay, getTaxPrices,
-   getTilesFromURL, getUrlParameter, getVariationRequestDelay, gotifyNotification, startFastScan,
+   getTilesFromURL, getUrlParameter, getVariationRequestDelay, gotifyNotification,
+   restartBackgroundScan, startFastScan,
    handleFastScanFinished, handleInfiniteScroll, importDatabase, init, initBackgroundScan,
    initNavigationButtons,
    loadProductDetails, matchPriceConditions, normalizePriceInput, parseKeywordConfig,
@@ -63,7 +64,7 @@
    shouldStopFastScan, showBackgroundScanScreen, sort_by_key,
    stickElementToTopScrollEVhandler, stopBackgroundScan, stopFastScan,
    stringToRegex, timeAgo, translate, updateBackgroundScanScreenText,
-   updateFavoritesBtn, updateNewProductsBtn, updateTileStyle */
+   updateFavoritesBtn, updateNewProductsBtn, updateSettingsButtonStates, updateTileStyle */
 console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 
 /**
@@ -115,6 +116,17 @@ const productsToCheckForKeywords = [];
  * @type {number}
  */
 let ScanLoopGeneration = 0;
+
+/**
+ * true, if the waiting time before the next step of the scan has to be skipped.
+ * It is set when the scan is restarted by the button in the settings and it is
+ * used once by the scan loop.
+ * @type {boolean}
+ */
+let scanStepImmediately = false;
+
+/** The background colour of a button of the settings that is not available. */
+const DISABLED_SETTINGS_BUTTON_COLOR = 'rgb(200, 200, 200)';
 
 /**
  * The function that tells the scan loop that the current step is done. It is
@@ -2265,6 +2277,8 @@ function createSettingsBoolElement(dat, _elem, _labelName, _labelDescription) {
         console.log('This is a Boolean Value Input', event);
         SETTINGS[dat.key] = event.target.checked;
         SETTINGS.save();
+        // A button can depend on this setting, so its state has to be updated.
+        updateSettingsButtonStates();
     });
 
     const _elem_item_left_label_span = document.createElement('span');
@@ -2276,6 +2290,39 @@ function createSettingsBoolElement(dat, _elem, _labelName, _labelDescription) {
     _elem.appendChild(_elem_item_left);
 
     _elem.appendChild(createSettingsItemRight(_labelName, _labelDescription));
+}
+
+/**
+ * Shows or hides the availability of a button of the settings.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {Element} label The label element that carries the background colour
+ * @param {HTMLButtonElement} button The button
+ */
+function applySettingsButtonState(dat, label, button) {
+    const _isEnabled = typeof dat.btnEnabled === 'function' ? dat.btnEnabled() : true;
+    button.disabled = !_isEnabled;
+    label.style.backgroundColor = _isEnabled ? dat.bgColor || '' : DISABLED_SETTINGS_BUTTON_COLOR;
+}
+
+/**
+ * Updates the availability of all buttons of the settings.
+ *
+ * NOTE: It is called when a setting is changed, because the availability of a
+ * button can depend on it (the button that starts a new scan needs the
+ * background scan to be switched on for example).
+ */
+function updateSettingsButtonStates() {
+    for (const _define of SETTINGS_USERCONFIG_DEFINES) {
+        if (_define.type !== 'button' || typeof _define.btnEnabled !== 'function' || !_define.key) continue;
+
+        const _elem = document.querySelector(`[ave-config-key="${_define.key}"]`);
+        if (!_elem) continue;
+        const _button = _elem.querySelector('button.ave-input-button');
+        if (!_button) continue;
+
+        applySettingsButtonState(_define, _button.parentElement, _button);
+    }
 }
 
 /**
@@ -2408,8 +2455,12 @@ function createSettingsButtonElement(dat, _elem, _labelName, _labelDescription) 
     _elem_item_left_input.className = 'ave-input-button';
 
     _elem_item_left_input.innerText = _labelName;
+    // A button can depend on another setting. Then it is shown grey as long as
+    // the other setting is switched off (see updateSettingsButtonStates()).
+    if (typeof dat.btnEnabled === 'function') applySettingsButtonState(dat, _elem_item_left_input_label, _elem_item_left_input);
     _elem_item_left_input.addEventListener('click', (event) => {
         console.log('This is a button Input', event);
+        if (_elem_item_left_input.disabled) return;
         if (dat.btnClick) dat.btnClick();
     });
 
@@ -3284,7 +3335,10 @@ async function scanLoop(baseUrl, state) {
     if (SETTINGS.DebugLevel > 10) console.log(`scanLoop(): started with the generation ${_generation}`);
 
     while (BackGroundScanIsRunning && _generation === ScanLoopGeneration) {
-        await delay(getScanDelay());
+        // NOTE: A restart of the scan (see restartBackgroundScan()) makes the next
+        // step at once instead of waiting for the delay.
+        await delay(scanStepImmediately ? 0 : getScanDelay());
+        scanStepImmediately = false;
 
         if (!BackGroundScanIsRunning || _generation !== ScanLoopGeneration) break;
 
@@ -3298,6 +3352,45 @@ async function scanLoop(baseUrl, state) {
     }
 
     if (SETTINGS.DebugLevel > 10) console.log(`scanLoop(): stopped (generation ${_generation})`);
+}
+
+/**
+ * Starts the background scan from its beginning.
+ *
+ * It is used by the button in the settings. A scan that is running is set back to
+ * the first page, a scan that is waiting for the next round is started again.
+ * Nothing happens while the background scan is switched off.
+ */
+function restartBackgroundScan() {
+    if (SETTINGS.EnableBackgroundScan === false) {
+        console.warn('restartBackgroundScan(): the background scan is switched off => Exit');
+        return;
+    }
+
+    // NOTE: The position of the scan is kept in the local storage and it is read
+    // again at the beginning of every step. The time of the last round is set to
+    // 0, which makes the scan start at the beginning (see prepareScanIteration()),
+    // and the fast scan is stopped, so that it does not keep a position either.
+    localStorage.setItem('AVE_BACKGROUND_SCAN_LAST_TIME', 0);
+    localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
+    localStorage.setItem('AVE_FAST_SCAN_LAST_TIME', 0);
+    localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', 0);
+    localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', 0);
+    // The pagination of the last scanned page belongs to the old position.
+    lastScanPaginationData = undefined;
+    // The next step of the scan is made at once.
+    scanStepImmediately = true;
+
+    if (BackGroundScanIsRunning) {
+        updateBackgroundScanScreenText('Start Background Scanner');
+        return;
+    }
+
+    // No scan is running, so the loop is started again. It sets the flag itself,
+    // but it is set here as well, because the scan is started with a delay.
+    console.log('restartBackgroundScan(): the background scan was not running, it is started now');
+    initBackgroundScan();
+    scanStepImmediately = true;
 }
 
 /**

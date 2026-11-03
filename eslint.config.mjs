@@ -147,6 +147,7 @@ const mainFile = [
     'notifyAboutProductDrop',
     'notifyAboutUnseenItems',
     'normalizePriceInput',
+    'restartBackgroundScan',
     'parseKeywordConfig',
     'parsePriceCondition',
     'parseTileData',
@@ -180,6 +181,7 @@ const mainFile = [
     'updateBackgroundScanScreenText',
     'updateFavoritesBtn',
     'updateNewProductsBtn',
+    'updateSettingsButtonStates',
     'updateTileStyle',
     'stopBackgroundScan'
 ];

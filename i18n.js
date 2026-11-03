@@ -93,6 +93,7 @@ const I18N = {
             TITLE_COLORS: 'Farben und Styles',
             TITLE_SHOPPING: 'Amazon Shopping',
             TITLE_DEV: 'Einstellungen für Entwickler und Tester',
+            BUTTON_SCAN_RESTART: 'Neuen Background Scan starten',
             BUTTON_RESET_SETTINGS: 'Einstellungen zurücksetzen',
             BUTTON_DB_EXPORT: 'Datenbank exportieren >>>',
             BUTTON_DB_IMPORT: 'Datenbank importieren <<<',
@@ -144,6 +145,8 @@ const I18N = {
             NewItemsNotificationRepititionMinutes: 'Wartezeit zwischen den Benachrichtigungen in Minuten.',
             DisableFooterShopping: 'Blendet die Fußzeile der Shopping-Seite aus.',
             DisableSuggestionsShopping: 'Blendet die Vorschläge der Shopping-Seite aus.',
+            BUTTON_SCAN_RESTART:
+                'Startet den Background Scan von vorne: ein laufender Scan wird auf Seite 1 zurückgesetzt, ein wartender neu gestartet. Ohne die Einstellung Background Scan aktivieren ist der Button nicht verfügbar.',
             BUTTON_RESET_SETTINGS: 'Setzt alle Einstellungen zurück.',
             BUTTON_DB_EXPORT: 'Lädt die Datenbank als Datei herunter.',
             BUTTON_DB_IMPORT: 'Löscht die Datenbank und importiert eine Datei.',
@@ -261,6 +264,7 @@ const I18N = {
             TITLE_COLORS: 'Colors and Styles',
             TITLE_SHOPPING: 'Amazon Shopping',
             TITLE_DEV: 'Settings for Developers and Testers',
+            BUTTON_SCAN_RESTART: 'Start a new background scan',
             BUTTON_RESET_SETTINGS: 'RESET SETTINGS TO DEFAULT',
             BUTTON_DB_EXPORT: 'DATABASE EXPORT >>>',
             BUTTON_DB_IMPORT: 'DATABASE IMPORT <<<',
@@ -312,6 +316,8 @@ const I18N = {
             NewItemsNotificationRepititionMinutes: 'Wait time between the notifications in minutes.',
             DisableFooterShopping: 'Hides the footer of the shopping page.',
             DisableSuggestionsShopping: 'Hides the suggestions of the shopping page.',
+            BUTTON_SCAN_RESTART:
+                'Starts the background scan from its beginning: a running scan is set back to the first page, a waiting scan is started again. The button is not available without the setting Enable Background Scan.',
             BUTTON_RESET_SETTINGS: 'Resets all settings.',
             BUTTON_DB_EXPORT: 'Downloads the database as a file.',
             BUTTON_DB_IMPORT: 'Deletes the database and imports a file.',

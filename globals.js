@@ -483,6 +483,19 @@ SETTINGS_USERCONFIG_DEFINES.push({
     description: 'Instead of the &quot;Last seen&quot; date in the product box show the date, the item was first seen'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
+    type: 'button',
+    key: 'BUTTON_SCAN_RESTART',
+    name: 'Start a new background scan',
+    bgColor: 'rgb(255, 200, 0)',
+    description:
+        'Starts the background scan from its beginning. A running scan is set back to the first page, a waiting scan is started again.',
+    // The button needs the background scan, so it is not available without it.
+    btnEnabled: () => SETTINGS.EnableBackgroundScan !== false,
+    btnClick: () => {
+        restartBackgroundScan();
+    }
+});
+SETTINGS_USERCONFIG_DEFINES.push({
     key: 'DesktopNotifikationKeywords',
     type: 'keywords',
     name: 'Desktop Notification Highlight Keywords',
