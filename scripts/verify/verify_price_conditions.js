@@ -269,6 +269,32 @@ const MATCH_CASES = [
         conditions: [{ op: '!=', price: 12.5 }],
         prices: [],
         expected: false
+    },
+    {
+        // Ein Produkt ohne Preis hat eine leere Liste, es darf nicht als
+        // "Preis 0" gelten.
+        label: 'Ohne Preis matcht "= 0" nicht',
+        conditions: [{ op: '=', price: 0 }],
+        prices: [],
+        expected: false
+    },
+    {
+        label: 'Ein echter Preis von 0 matcht "= 0"',
+        conditions: [{ op: '=', price: 0 }],
+        prices: [0],
+        expected: true
+    },
+    {
+        label: 'Ein Preis groesser 0 matcht "= 0" nicht',
+        conditions: [{ op: '=', price: 0 }],
+        prices: [25],
+        expected: false
+    },
+    {
+        label: 'Ohne Preis matcht ">= 0" nicht',
+        conditions: [{ op: '>=', price: 0 }],
+        prices: [],
+        expected: false
     }
 ];
 
