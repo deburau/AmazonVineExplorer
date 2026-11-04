@@ -8,10 +8,10 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.48` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.49` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
-| Verifikationen | alle 17 erfolgreich (`npm run verify`) |
+| Verifikationen | alle 18 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
 
 ## Bestätigte Tests (vom Maintainer im Browser)
@@ -30,6 +30,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.45 / 0.15.0.46 | Abkürzungen der Bedingungen (jede Verkürzung) | **offen** |
 | 0.15.0.47 | Verbatim-Strings in doppelten Anführungszeichen | **offen** |
 | 0.15.0.48 | Kategoriename wird beim Speichern vervollständigt | **offen** |
+| 0.15.0.49 | Vollständige Kategorienliste im Hintergrund | **offen** |
 
 Alle für das Release 0.16.0 vorgesehenen Änderungen sind damit im Browser
 getestet.
@@ -224,6 +225,21 @@ Release erledigt und wurde geschlossen.
   **nicht** als Favorit markiert – es wird beim nächsten Scan erneut geprüft.
 * Neue Funktionen: `normalizePriceInput()`, `parsePriceCondition()`,
   `parseKeywordConfig()`, `matchPriceConditions()`, `loadProductDetails()`.
+* **Vollständige Kategorienliste im Hintergrund** (0.15.0.49):
+  `loadCategoryListInBackground()` prüft über `isCategoryCacheComplete()`, ob die
+  Hauptkategorien **und** die Unterkategorien aller Hauptkategorien frisch (24 h)
+  vorliegen; sonst werden die Seiten nacheinander mit `CATEGORY_REQUEST_DELAY`
+  (1500 ms, über `getRandomizedDelay()` gestreut) geladen. Aufruf am Ende von
+  `completeDelayedInit()` und danach alle
+  `CATEGORY_LOAD_CHECK_INTERVAL_SECONDS` (30 min). **Vorrang vor dem Scan**: in
+  `scanLoop()` wird vor jedem Schritt `isCategoryListLoadRunning()` geprüft (Merker
+  `AVE_CATEGORY_LOAD_IS_RUNNING` mit 5-Minuten-Timeout, damit ein geschlossener Tab
+  nicht blockt) – der Scan wartet also. Während des Ladens steht die Meldung unten
+  links (`showCategoryLoadScreen()` auf dem Element des Scan-Bildschirms, i18n
+  `notifications.loadingCategories`). Jede Liste wird sofort in den Cache
+  geschrieben, ein Abbruch verliert nichts. Wächter
+  `scripts/verify/verify_category_load.js` (25 Fälle mit gemockten
+  Kategoriefunktionen, `delay` und local storage).
 * **Kategoriename beim Speichern vervollständigt**: `aveExpandCategoryNames(text,
   names)` ersetzt den getippten Teil durch den ganzen Namen aus der Kategorieliste
   (`aveGetCategoryNames()`), gespeichert wird `category~"Lebensmittel & Getränke"`.

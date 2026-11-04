@@ -56,7 +56,12 @@ const CONSTANT_NAMES = [
     'FAST_SCAN_INTERVAL_SECONDS',
     'MIN_FAST_SCAN_INTERVAL_SECONDS',
     'TURBO_SCAN_INTERVAL_SECONDS',
-    'MIN_TURBO_SCAN_INTERVAL_SECONDS'
+    'MIN_TURBO_SCAN_INTERVAL_SECONDS',
+    'CATEGORY_LOAD_MAX_AGE_SECONDS',
+    // Der Merker im Speicher: die Schritte warten, waehrend die Kategorien geladen
+    // werden. Er ist nur im Speicher, damit der Vergleich der Zugriffe auf den
+    // local storage unveraendert bleibt.
+    'CategoryListIsLoading'
 ];
 
 const { old: oldCode, new: newCode } = prepareWithConstants('verify_scan.js', OLD_NAMES, NEW_NAMES, CONSTANT_NAMES);

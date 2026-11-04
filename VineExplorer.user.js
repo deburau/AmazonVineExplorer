@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.48
+// @version      0.15.0.49
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -72,6 +72,7 @@
    notifyAboutNewProducts, notifyAboutProductDrop, notifyAboutUnseenItems, parseTileData,
    populateSettingsContainer, readFile, reloadPageWithSubpageTarget, requestProductDetails,
    rgbToHex, rgbaToHex, searchKeywordsInProducts, searchProducts, shareEventHandlerClick,
+   isCategoryCacheComplete, isCategoryListLoadRunning, loadCategoryListInBackground, removeBackgroundScanScreen,
    shouldStopFastScan, showBackgroundScanScreen, sort_by_key,
    stickElementToTopScrollEVhandler, stopBackgroundScan, stopFastScan,
    stringToRegex, timeAgo, translate, updateBackgroundScanScreenText,
@@ -1901,6 +1902,17 @@ function addTileEventhandlers(_currTile) {
  */
 function completeDelayedInit() {
     initTileEventHandlers();
+
+    // NOTE: The whole list of the categories is loaded in the background when it is
+    // missing or older than a day. It has priority over the scan (see scanLoop()).
+    const _loadCategories = () => {
+        loadCategoryListInBackground().catch((error) => {
+            const _reason = error?.message || error || 'unknown error';
+            console.error(`completeDelayedInit(): the categories could not be loaded: ${_reason}`);
+        });
+    };
+    _loadCategories();
+    setInterval(_loadCategories, CATEGORY_LOAD_CHECK_INTERVAL_SECONDS * 1000);
 }
 
 // Populate settings only once per render to avoid duplicates on re-open.
@@ -3723,6 +3735,10 @@ async function scanLoop(baseUrl, state) {
 
         if (!BackGroundScanIsRunning || _generation !== ScanLoopGeneration) break;
 
+        // NOTE: The list of the categories has priority: the steps wait while it is
+        // loaded, so that no two pages are loaded at the same time.
+        if (CategoryListIsLoading) continue;
+
         try {
             // The steps are made in the order of their priority: the turbo scan is
             // time critical, the background scan is the normal case.
@@ -3747,6 +3763,35 @@ async function scanLoop(baseUrl, state) {
  * the local storage, so that the requests are only made once a day.
  */
 const CATEGORY_CACHE_MAX_AGE_SECONDS = 24 * 60 * 60;
+
+/**
+ * The delay between two requests for the sub categories in milliseconds.
+ *
+ * NOTE: The pages of the sub categories are loaded one after the other with this
+ * delay, so that the loading in the background is not a burst of requests.
+ */
+const CATEGORY_REQUEST_DELAY = 1500;
+
+/**
+ * The interval in seconds that checks if the stored categories are stale.
+ */
+const CATEGORY_LOAD_CHECK_INTERVAL_SECONDS = 30 * 60;
+
+/**
+ * The age of the flag of a running load in seconds. An older flag belongs to a tab
+ * that was closed while it loaded the categories, so it does not block the loading.
+ */
+const CATEGORY_LOAD_MAX_AGE_SECONDS = 5 * 60;
+
+/**
+ * True while this tab loads the list of the categories.
+ *
+ * NOTE: The steps of the scan wait while it is true (see scanLoop()), so that no two
+ * pages are loaded at the same time. The flag is only in the memory, so that the
+ * scan does not have to read the local storage for every step (that would change the
+ * order of the accesses).
+ */
+let CategoryListIsLoading = false;
 
 /**
  * Reads the category nodes of a page.
@@ -3970,6 +4015,105 @@ function writeCategoryCache(path, list) {
  */
 function isCategoryCacheFresh(entry) {
     return Date.now() - entry.ts < CATEGORY_CACHE_MAX_AGE_SECONDS * 1000;
+}
+
+/**
+ * Checks if the stored categories are complete.
+ *
+ * The list is complete when the main categories and the sub categories of every
+ * main category are stored and not older than a day.
+ *
+ * @returns {boolean} true if nothing has to be loaded
+ */
+function isCategoryCacheComplete() {
+    const _cache = readCategoryCache();
+    if (!_cache.parents || !isCategoryCacheFresh(_cache.parents)) return false;
+
+    return _cache.parents.list.every((_parent) => _cache.children[_parent.pn] && isCategoryCacheFresh(_cache.children[_parent.pn]));
+}
+
+/**
+ * Checks if the list of the categories is loaded at the moment.
+ *
+ * NOTE: The flag is in the local storage, so that only one tab of the browser loads
+ * the pages. A flag that is older than CATEGORY_LOAD_MAX_AGE_SECONDS is ignored,
+ * because it belongs to a tab that was closed while it loaded the categories.
+ *
+ * @returns {boolean} true if a load is running
+ */
+function isCategoryListLoadRunning() {
+    const _startedAt = Number(localStorage.getItem('AVE_CATEGORY_LOAD_IS_RUNNING'));
+    if (!Number.isFinite(_startedAt) || _startedAt <= 0) return false;
+    return Date.now() - _startedAt < CATEGORY_LOAD_MAX_AGE_SECONDS * 1000;
+}
+
+/**
+ * Shows the progress of the loading of the categories in the corner of the page.
+ *
+ * The element of the screen of the scan is used when it is there already, so that
+ * both texts stand in the same place.
+ *
+ * @param {number} done The number of the main categories that were worked on
+ * @param {number} total The number of the main categories
+ */
+function showCategoryLoadScreen(done, total) {
+    const _text = translate('notifications', 'loadingCategories', `Kategorien werden geladen: ${done} / ${total}`, done, total);
+    if (document.getElementById('ave-backgroundscan-text')) updateBackgroundScanScreenText(_text);
+    else showBackgroundScanScreen(_text);
+}
+
+/**
+ * Loads the whole list of the categories in the background.
+ *
+ * The list is loaded when it is missing or older than a day (see
+ * isCategoryCacheComplete()). The pages are loaded one after the other with a delay
+ * and every list is stored at once, so that an interruption does not lose what was
+ * loaded (getVineCategoryParents() and getVineCategoryChildren() use the stored list
+ * and do not load a page again that is fresh).
+ *
+ * NOTE: The list has priority over the scan, the steps of the scan wait while it is
+ * loaded (see scanLoop()), so that no two pages are loaded at the same time.
+ *
+ * @returns {Promise<void>}
+ */
+async function loadCategoryListInBackground() {
+    if (isCategoryCacheComplete() || isCategoryListLoadRunning()) return;
+
+    localStorage.setItem('AVE_CATEGORY_LOAD_IS_RUNNING', String(Date.now()));
+    CategoryListIsLoading = true;
+    // NOTE: The screen is only removed again if it was created here, a screen of the
+    // scan belongs to the scan (its next step writes the text again).
+    const _ownScreen = !document.getElementById('ave-backgroundscan-text');
+
+    try {
+        const _parents = await getVineCategoryParents();
+        showCategoryLoadScreen(0, _parents.length);
+        if (SETTINGS.DebugLevel > 1) console.log(`loadCategoryListInBackground(): ${_parents.length} main categories`);
+
+        const _cache = readCategoryCache();
+        for (let _index = 0; _index < _parents.length; _index++) {
+            const _parent = _parents[_index];
+            // The sub categories that are fresh are not loaded again.
+            if (_cache.children[_parent.pn] && isCategoryCacheFresh(_cache.children[_parent.pn])) continue;
+
+            await delay(getRandomizedDelay(CATEGORY_REQUEST_DELAY));
+            showCategoryLoadScreen(_index + 1, _parents.length);
+            try {
+                await getVineCategoryChildren(_parent.pn);
+            } catch (error) {
+                const _reason = error?.message || error || 'unknown error';
+                console.warn(`loadCategoryListInBackground(): the sub categories of ${_parent.name} could not be loaded: ${_reason}`);
+            }
+        }
+    } catch (error) {
+        const _reason = error?.message || error || 'unknown error';
+        console.error(`loadCategoryListInBackground(): the categories could not be loaded: ${_reason}`);
+    } finally {
+        localStorage.removeItem('AVE_CATEGORY_LOAD_IS_RUNNING');
+        CategoryListIsLoading = false;
+        if (_ownScreen) removeBackgroundScanScreen();
+        else updateBackgroundScanScreenText('');
+    }
 }
 
 /**
@@ -4879,6 +5023,14 @@ function showBackgroundScanScreen(text) {
 function updateBackgroundScanScreenText(text = '') {
     const _elem = document.getElementById('ave-backgroundscan-text');
     _elem.textContent = text;
+}
+
+/**
+ * Removes the text of the background scan screen from the page.
+ */
+function removeBackgroundScanScreen() {
+    const _elem = document.getElementById('ave-backgroundscan-text');
+    if (_elem && _elem.parentElement) _elem.parentElement.remove();
 }
 
 /**

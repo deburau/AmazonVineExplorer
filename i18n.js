@@ -24,7 +24,8 @@ const I18N = {
             unseenItemsBody: (count) => `Es wurden ${count} neue Eintraege gefunden`,
             keywordMatch: (keyword) => `Keyword-Treffer: ${keyword}`,
             priceMatch: (price) => `Preis-Treffer: ${price}`,
-            categoryMatch: (category) => `Kategorie-Treffer: ${category}`
+            categoryMatch: (category) => `Kategorie-Treffer: ${category}`,
+            loadingCategories: (done, total) => `Kategorien werden geladen: ${done} / ${total}`
         },
         share: {
             myFSE: 'Mein FSE',
@@ -220,7 +221,8 @@ const I18N = {
             unseenItemsBody: (count) => `${count} new entries found`,
             keywordMatch: (keyword) => `Keyword match: ${keyword}`,
             priceMatch: (price) => `Price match: ${price}`,
-            categoryMatch: (category) => `Category match: ${category}`
+            categoryMatch: (category) => `Category match: ${category}`,
+            loadingCategories: (done, total) => `Loading the categories: ${done} / ${total}`
         },
         share: {
             myFSE: 'My FSE',

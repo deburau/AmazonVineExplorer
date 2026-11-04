@@ -63,6 +63,11 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-04] - Version 0.15.0.49
+
+* The whole list of the categories (the main categories and their sub categories) is loaded in the background now. After the start of the script and then every 30 minutes it is checked if the stored list is missing or older than a day; in that case the pages are loaded one after the other with a pause of about 1.5 seconds. Every list is stored at once, so an interruption (closing the tab) does not lose what was loaded - a sub category that is known is used for the conditions of the keywords right away.
+* While the categories are loaded, a message stands in the lower left corner of the page ("Kategorien werden geladen: 3 / 30"). The steps of the scan wait during that time, so that no two pages of Amazon are loaded at the same time - the list of the categories has priority.
+
 ##### [2026-11-04] - Version 0.15.0.48
 
 * A condition for a category is stored with the whole name of the category now: `category~lebens` becomes `category~"Lebensmittel & Getränke"`, so that the list of the keywords shows which category is meant (the name is taken from the list of the categories, the first name that contains the typed text wins, an unknown text stays as it is). The list of the categories is only loaded if the input really has a condition for a category, so a plain keyword does not cause a request.
