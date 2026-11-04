@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-04] - Version 0.15.0.48
+
+* A condition for a category is stored with the whole name of the category now: `category~lebens` becomes `category~"Lebensmittel & Getränke"`, so that the list of the keywords shows which category is meant (the name is taken from the list of the categories, the first name that contains the typed text wins, an unknown text stays as it is). The list of the categories is only loaded if the input really has a condition for a category, so a plain keyword does not cause a request.
+
 ##### [2026-11-04] - Version 0.15.0.47
 
 * A part of a keyword in double quotes is a verbatim string: `"kaffee bohnen"` matches only if that text stands in the description as it is, spaces included. Without the quotes the words are matched as before, so `a b` matches the text "a x b" and `"a b"` does not. The same works for the name of a category: `category~"kaffee tee"` checks the whole name with its spaces, and in the search bar both forms work as well.

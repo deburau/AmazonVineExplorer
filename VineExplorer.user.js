@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.47
+// @version      0.15.0.48
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -39,9 +39,9 @@
 /* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
-   addProductToKeywordSearch, aveExpandKeywordAbbreviations, aveIsConditionWord, aveMatchImageUrl,
-   aveSplitQuotedWords, aveUnquoteKeywordPart, backGroundTileScanner, btnEventhandlerClick,
-   checkKeywordsForProduct,
+   addProductToKeywordSearch, aveExpandCategoryNames, aveExpandKeywordAbbreviations, aveGetCategoryNames,
+   aveIsConditionWord, aveMatchImageUrl, aveSplitQuotedWords, aveUnquoteKeywordPart, backGroundTileScanner,
+   btnEventhandlerClick, checkKeywordsForProduct,
    cleanUpDatabase, getPageCategoryText, hasCategoryCondition, matchCategoryConditions, matchesKeyword,
    matchesKeywordEntry, matchesPriceConditions, parseCategoryCondition,
    scanLoop, scanStepBackground,
@@ -2713,19 +2713,31 @@ function createSettingsKeywordsElement(dat, _elem, _labelName, _labelDescription
     _elem_keyword_input_input.setAttribute('cols', 70);
     _elem_keyword_input_input.setAttribute('rows', 1);
     _elem_keyword_input_input.setAttribute('placeholder', _inputPlaceholder || dat.inputPlaceholder);
-    _elem_keyword_input_input.addEventListener('change', (elm, ev) => {
+    _elem_keyword_input_input.addEventListener('change', async (elm, ev) => {
         if (SETTINGS.DebugLevel > 1) console.log('EVENTHANDLER CHANGE:', elm, 'event:', ev);
         const _value = elm.target.value.trim();
         const _added = [];
         if (_value && _value.length > 0) {
+            // NOTE: The names of the categories are loaded once for all lines and
+            // only if a line really has a condition for a category, so that a plain
+            // keyword does not load the list of the categories.
+            const _hasCategory = _value.split('\n').some((line) => {
+                const _match = /\b([a-z]+)\s*~/i.exec(line);
+                return _match && aveIsConditionWord(_match[1], 'category');
+            });
+            const _categoryNames = _hasCategory ? await aveGetCategoryNames() : [];
+
             for (let _key of _value.split('\n')) {
                 _key = _key.trim();
                 if (_key.length === 0) {
                     continue;
                 }
-                // NOTE: The abbreviations of the conditions are stored with the
-                // full words (see aveExpandKeywordAbbreviations()).
+                // NOTE: The abbreviations of the conditions are stored with the full
+                // words and a condition for a category with the whole name of the
+                // category (see aveExpandKeywordAbbreviations() and
+                // aveExpandCategoryNames()).
                 _key = aveExpandKeywordAbbreviations(_key);
+                _key = aveExpandCategoryNames(_key, _categoryNames);
                 if (!SETTINGS[dat.key].includes(_key) && !_added.includes(_key)) {
                     _added.push(_key);
                 }
@@ -5049,6 +5061,59 @@ function aveExpandKeywordAbbreviations(text) {
         if (aveIsConditionWord(_word, 'price')) return 'price';
         if (aveIsConditionWord(_word, 'category')) return 'category';
         return _match;
+    });
+}
+
+/**
+ * Returns the names of all categories that are known.
+ *
+ * The main categories are read from the list of the categories (see
+ * getVineCategoryParents(), it loads the list once and keeps it for a day). The sub
+ * categories are known for the main categories that were opened once (see
+ * getVineCategoryChildren()), they are used without a request.
+ *
+ * @returns {Promise<string[]>} The names of the categories
+ */
+async function aveGetCategoryNames() {
+    const _names = [];
+    try {
+        for (const _parent of await getVineCategoryParents()) _names.push(_parent.name);
+    } catch (error) {
+        console.warn(`aveGetCategoryNames(): the list of the categories is not available: ${error}`);
+    }
+
+    const _children = readCategoryCache().children;
+    for (const _pn of Object.keys(_children)) {
+        for (const _child of _children[_pn].list || []) _names.push(_child.name);
+    }
+    return _names;
+}
+
+/**
+ * Replaces the name of a condition for a category with the whole name.
+ *
+ * The user can write a part of the name (e.g. category~lebens). The setting stores
+ * the whole name (category~"Lebensmittel & Getränke"), so that the list of the
+ * keywords shows which category is meant. The name is taken from the list of the
+ * categories (see aveGetCategoryNames()), the first name that contains the typed
+ * text wins. A text that matches nothing stays as it is.
+ *
+ * @param {string} text The keyword as it was entered
+ * @param {string[]} names The names of the categories
+ * @returns {string} The keyword with the whole names
+ */
+function aveExpandCategoryNames(text, names) {
+    if (!Array.isArray(names) || names.length === 0) return String(text ?? '');
+
+    return String(text ?? '').replace(/\b([a-z]+)\s*~\s*("[^"]*"|\S+)/gi, (_match, _word, _value) => {
+        if (!aveIsConditionWord(_word, 'category')) return _match;
+
+        const _typed = aveUnquoteKeywordPart(_value).toLowerCase();
+        if (_typed.length === 0) return _match;
+
+        const _name = names.find((name) => String(name).toLowerCase().includes(_typed));
+        if (!_name) return _match;
+        return `${_word}~"${_name}"`;
     });
 }
 

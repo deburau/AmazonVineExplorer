@@ -16,6 +16,8 @@
  *   - mehrere neue Keywords auf einmal behalten ihre Reihenfolge oben
  *   - ein Keyword, das es schon gibt, wird nicht doppelt aufgenommen
  *   - die Abkuerzungen der Bedingungen werden voll ausgeschrieben gespeichert
+ *   - ein Kategoriename wird beim Speichern vervollstaendigt, ohne dass die Liste
+ *     der Kategorien fuer ein Keyword ohne Kategoriebedingung geladen wird
  *   - Leerzeichen und leere Zeilen werden ignoriert
  *   - die Reihenfolge der angezeigten Zeilen passt zum Feld index der Loeschen-Knoepfe
  *
@@ -48,12 +50,22 @@ const mainSrc = readSource('VineExplorer.user.js');
 
 const CODE = [
     extractBody(mainSrc, 'aveExpandKeywordAbbreviations'),
+    extractBody(mainSrc, 'aveExpandCategoryNames'),
     extractBody(mainSrc, 'aveIsConditionWord'),
+    extractBody(mainSrc, 'aveUnquoteKeywordPart'),
     extractBody(mainSrc, 'createSettingsKeywordsElement'),
     extractBody(mainSrc, 'createSettingsKeywordsList'),
     extractBody(mainSrc, 'createSettingsKeywordsTableElement'),
     extractBody(mainSrc, 'updateSettingsKeywordsList')
 ].join('\n\n');
+
+// Die Namen der Kategorien kommen im Test aus einer Liste, damit kein Netz und
+// kein local storage noetig ist. Der Zaehler zeigt, ob die Liste geladen wurde.
+const CATEGORY_STUB = `
+function aveGetCategoryNames() {
+    globalThis.__categoryCalls = (globalThis.__categoryCalls || 0) + 1;
+    return Promise.resolve(['Lebensmittel & Getränke', 'Kaffee Tee Sorten', 'Garten']);
+}`;
 
 /**
  * Ein sehr kleines DOM, damit die Funktionen in Node laufen.
@@ -160,9 +172,10 @@ function build(keywords) {
         String
     };
     sandbox.globalThis = sandbox;
+    sandbox.__categoryCalls = 0;
 
     const _ctx = vm.createContext(sandbox);
-    vm.runInContext(CODE, _ctx, { filename: 'keyword_order.js' });
+    vm.runInContext(CODE + CATEGORY_STUB, _ctx, { filename: 'keyword_order.js' });
 
     const _element = _dom._mk('div');
     sandbox.__element = _element;
@@ -191,8 +204,10 @@ function build(keywords) {
         // Der Handler des Eingabefeldes wird mit einem Ereignis aufgerufen.
         enter(value) {
             const _input = findElement(_element, 'TEXTAREA');
-            _input.handlers.change({ target: { value } });
+            // Der Handler ist asynchron, weil er die Namen der Kategorien laden kann.
+            return _input.handlers.change({ target: { value } });
         },
+        categoryCalls: () => sandbox.__categoryCalls,
         inputElement: () => findElement(_element, 'TEXTAREA')
     };
 }
@@ -221,81 +236,116 @@ function check(expected, actual, label) {
 console.log('Reihenfolge der Keywords pruefen');
 console.log('='.repeat(70));
 
-// 1. Beim Aufbau wird alphabetisch sortiert (wie bisher).
-const _sorted = build(['zebra', 'apfel', 'Mitte']);
-check(['apfel', 'Mitte', 'zebra'], _sorted.keywords(), 'Die Liste wird beim Aufbau alphabetisch sortiert');
+(async () => {
+    // 1. Beim Aufbau wird alphabetisch sortiert (wie bisher).
+    const _sorted = build(['zebra', 'apfel', 'Mitte']);
+    check(['apfel', 'Mitte', 'zebra'], _sorted.keywords(), 'Die Liste wird beim Aufbau alphabetisch sortiert');
 
-// 2. Ein neues Keyword steht oben und wird gespeichert.
-const _one = build(['apfel', 'zebra']);
-_one.enter('neu');
-check(['neu', 'apfel', 'zebra'], _one.keywords(), 'Ein neues Keyword steht an erster Stelle');
-check(1, _one.settings.saves, 'Die Einstellungen werden gespeichert');
-check('', _one.inputElement().value, 'Das Eingabefeld wird geleert');
-check(
-    [
-        { text: 'neu', index: '0', button: 'neu' },
-        { text: 'apfel', index: '1', button: 'apfel' },
-        { text: 'zebra', index: '2', button: 'zebra' }
-    ],
-    _one.rows(),
-    'Die angezeigten Zeilen passen zur Reihenfolge und zum Feld index'
-);
+    // 2. Ein neues Keyword steht oben und wird gespeichert.
+    const _one = build(['apfel', 'zebra']);
+    await _one.enter('neu');
+    check(['neu', 'apfel', 'zebra'], _one.keywords(), 'Ein neues Keyword steht an erster Stelle');
+    check(1, _one.settings.saves, 'Die Einstellungen werden gespeichert');
+    check('', _one.inputElement().value, 'Das Eingabefeld wird geleert');
+    check(
+        [
+            { text: 'neu', index: '0', button: 'neu' },
+            { text: 'apfel', index: '1', button: 'apfel' },
+            { text: 'zebra', index: '2', button: 'zebra' }
+        ],
+        _one.rows(),
+        'Die angezeigten Zeilen passen zur Reihenfolge und zum Feld index'
+    );
 
-// 3. Mehrere neue Keywords behalten ihre Reihenfolge oben.
-const _many = build(['apfel', 'zebra']);
-_many.enter('x\ny');
-check(['x', 'y', 'apfel', 'zebra'], _many.keywords(), 'Zwei neue Keywords stehen in der eingegebenen Reihenfolge oben');
+    // 3. Mehrere neue Keywords behalten ihre Reihenfolge oben.
+    const _many = build(['apfel', 'zebra']);
+    await _many.enter('x\ny');
+    check(['x', 'y', 'apfel', 'zebra'], _many.keywords(), 'Zwei neue Keywords stehen in der eingegebenen Reihenfolge oben');
 
-// 4. Ein Keyword, das es schon gibt, wird nicht noch einmal aufgenommen.
-const _existing = build(['apfel', 'zebra']);
-_existing.enter('zebra');
-check(['apfel', 'zebra'], _existing.keywords(), 'Ein vorhandenes Keyword wird nicht doppelt aufgenommen');
+    // 4. Ein Keyword, das es schon gibt, wird nicht noch einmal aufgenommen.
+    const _existing = build(['apfel', 'zebra']);
+    await _existing.enter('zebra');
+    check(['apfel', 'zebra'], _existing.keywords(), 'Ein vorhandenes Keyword wird nicht doppelt aufgenommen');
 
-// 5. Die Abkuerzungen der Bedingungen werden voll ausgeschrieben gespeichert.
-const _short = build(['kaffee']);
-_short.enter('p>=10');
-check(['price>=10', 'kaffee'], _short.keywords(), 'Die Abkuerzung p wird zu price');
-_short.enter('c~getraenke');
-check(['category~getraenke', 'price>=10', 'kaffee'], _short.keywords(), 'Die Abkuerzung c wird zu category');
-check(
-    [
-        { text: 'category~getraenke', index: '0', button: 'category~getraenke' },
-        { text: 'price>=10', index: '1', button: 'price>=10' },
-        { text: 'kaffee', index: '2', button: 'kaffee' }
-    ],
-    _short.rows(),
-    'Die Liste zeigt die vollstaendigen Woerter'
-);
-_short.enter('pri>=5');
-check(['price>=5', 'category~getraenke', 'price>=10', 'kaffee'], _short.keywords(), 'Jede Verkuerzung wird ausgeschrieben (pri)');
-_short.enter('ca~tee');
-check(
-    ['category~tee', 'price>=5', 'category~getraenke', 'price>=10', 'kaffee'],
-    _short.keywords(),
-    'Jede Verkuerzung wird ausgeschrieben (ca)'
-);
+    // 5. Die Abkuerzungen der Bedingungen werden voll ausgeschrieben gespeichert.
+    const _short = build(['kaffee']);
+    await _short.enter('p>=10');
+    check(['price>=10', 'kaffee'], _short.keywords(), 'Die Abkuerzung p wird zu price');
+    await _short.enter('c~getraenke');
+    check(['category~getraenke', 'price>=10', 'kaffee'], _short.keywords(), 'Die Abkuerzung c wird zu category');
+    check(
+        [
+            { text: 'category~getraenke', index: '0', button: 'category~getraenke' },
+            { text: 'price>=10', index: '1', button: 'price>=10' },
+            { text: 'kaffee', index: '2', button: 'kaffee' }
+        ],
+        _short.rows(),
+        'Die Liste zeigt die vollstaendigen Woerter'
+    );
+    await _short.enter('pri>=5');
+    check(['price>=5', 'category~getraenke', 'price>=10', 'kaffee'], _short.keywords(), 'Jede Verkuerzung wird ausgeschrieben (pri)');
+    // NOTE: Der Text "xyz" passt auf keinen Namen der Kategorien, hier wird also nur
+    // die Verkuerzung des Feldnamens geprueft.
+    await _short.enter('ca~xyz');
+    check(
+        ['category~xyz', 'price>=5', 'category~getraenke', 'price>=10', 'kaffee'],
+        _short.keywords(),
+        'Jede Verkuerzung wird ausgeschrieben (ca)'
+    );
 
-// 6. Ein Keyword, das zweimal in der Eingabe steht, wird einmal aufgenommen.
-const _double = build(['apfel']);
-_double.enter('doppelt\ndoppelt');
-check(['doppelt', 'apfel'], _double.keywords(), 'Ein zweimal eingegebenes Keyword wird einmal aufgenommen');
+    // 6. Ein Keyword, das zweimal in der Eingabe steht, wird einmal aufgenommen.
+    const _double = build(['apfel']);
+    await _double.enter('doppelt\ndoppelt');
+    check(['doppelt', 'apfel'], _double.keywords(), 'Ein zweimal eingegebenes Keyword wird einmal aufgenommen');
 
-// 7. Leerzeichen und leere Zeilen werden ignoriert.
-const _spaces = build(['apfel']);
-_spaces.enter('  \n  neu  \n   \n');
-check(['neu', 'apfel'], _spaces.keywords(), 'Leerzeichen und leere Zeilen werden ignoriert');
+    // 7. Leerzeichen und leere Zeilen werden ignoriert.
+    const _spaces = build(['apfel']);
+    await _spaces.enter('  \n  neu  \n   \n');
+    check(['neu', 'apfel'], _spaces.keywords(), 'Leerzeichen und leere Zeilen werden ignoriert');
 
-// 8. Eine leere Eingabe aendert nichts.
-const _empty = build(['apfel']);
-_empty.enter('   ');
-check(['apfel'], _empty.keywords(), 'Eine leere Eingabe aendert die Liste nicht');
+    // 8. Der Kategoriename wird beim Speichern vervollstaendigt.
+    const _category = build(['kaffee']);
+    await _category.enter('cat~lebens');
+    check(['category~"Lebensmittel & Getränke"', 'kaffee'], _category.keywords(), 'Ein Teil des Namens wird vervollstaendigt (cat~lebens)');
+    await _category.enter('category~garten');
+    check(
+        ['category~"Garten"', 'category~"Lebensmittel & Getränke"', 'kaffee'],
+        _category.keywords(),
+        'Ein kurzer Name wird vervollstaendigt (garten)'
+    );
+    await _category.enter('cat~"kaffee tee"');
+    check(
+        ['category~"Kaffee Tee Sorten"', 'category~"Garten"', 'category~"Lebensmittel & Getränke"', 'kaffee'],
+        _category.keywords(),
+        'Ein Name mit Leerzeichen wird vervollstaendigt'
+    );
+    await _category.enter('category~xyz');
+    check(
+        ['category~xyz', 'category~"Kaffee Tee Sorten"', 'category~"Garten"', 'category~"Lebensmittel & Getränke"', 'kaffee'],
+        _category.keywords(),
+        'Ein unbekannter Name bleibt wie er ist'
+    );
 
-console.log('');
-console.log('='.repeat(70));
-const _total = _checks;
-if (_errors === 0) {
-    console.log(`>>> RESULT: all ${_total} test cases passed`);
-    process.exit(0);
-}
-console.log(`>>> RESULT: ${_errors} of ${_total} test cases failed`);
-process.exit(1);
+    // 9. Die Liste der Kategorien wird nur geladen, wenn eine Kategoriebedingung dabei ist.
+    const _plain = build(['kaffee']);
+    check(0, _plain.categoryCalls(), 'Vor der Eingabe wurde die Kategorieliste nicht geladen');
+    await _plain.enter('tee');
+    check(0, _plain.categoryCalls(), 'Ohne Kategoriebedingung wird die Kategorieliste nicht geladen');
+    await _plain.enter('category~garten');
+    check(1, _plain.categoryCalls(), 'Mit Kategoriebedingung wird die Kategorieliste geladen');
+
+    // 10. Eine leere Eingabe aendert nichts.
+    const _empty = build(['apfel']);
+    await _empty.enter('   ');
+    check(['apfel'], _empty.keywords(), 'Eine leere Eingabe aendert die Liste nicht');
+
+    console.log('');
+    console.log('='.repeat(70));
+    const _total = _checks;
+    if (_errors === 0) {
+        console.log(`>>> RESULT: all ${_total} test cases passed`);
+        process.exit(0);
+    }
+    console.log(`>>> RESULT: ${_errors} of ${_total} test cases failed`);
+    process.exit(1);
+})();

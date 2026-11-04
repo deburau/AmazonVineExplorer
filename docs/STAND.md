@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.47` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.48` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 17 erfolgreich (`npm run verify`) |
@@ -29,6 +29,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.44 | Neues Keyword oben in der Liste | **offen** |
 | 0.15.0.45 / 0.15.0.46 | Abkürzungen der Bedingungen (jede Verkürzung) | **offen** |
 | 0.15.0.47 | Verbatim-Strings in doppelten Anführungszeichen | **offen** |
+| 0.15.0.48 | Kategoriename wird beim Speichern vervollständigt | **offen** |
 
 Alle für das Release 0.16.0 vorgesehenen Änderungen sind damit im Browser
 getestet.
@@ -223,6 +224,13 @@ Release erledigt und wurde geschlossen.
   **nicht** als Favorit markiert – es wird beim nächsten Scan erneut geprüft.
 * Neue Funktionen: `normalizePriceInput()`, `parsePriceCondition()`,
   `parseKeywordConfig()`, `matchPriceConditions()`, `loadProductDetails()`.
+* **Kategoriename beim Speichern vervollständigt**: `aveExpandCategoryNames(text,
+  names)` ersetzt den getippten Teil durch den ganzen Namen aus der Kategorieliste
+  (`aveGetCategoryNames()`), gespeichert wird `category~"Lebensmittel & Getränke"`.
+  Die Namen kommen aus `getVineCategoryParents()` (lädt die Liste höchstens einmal,
+  24 h Cache) und aus den **bereits gecachten** Unterkategorien
+  (`readCategoryCache().children`) – für ein Keyword ohne Kategoriebedingung wird
+  nichts geladen (der change-Handler ist dafür `async`).
 * **Verbatim-Strings**: ein Teil eines Keywords in **doppelten
   Anführungszeichen** wird genau so gesucht (mit Leerzeichen), z. B. `"kaffee
   bohnen"`; ohne Anführungszeichen müssen wie bisher nur alle Wörter irgendwo
