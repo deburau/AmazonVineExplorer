@@ -11,8 +11,20 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Version im User-Script | `0.15.0.41` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
-| Verifikationen | alle 10 erfolgreich (`npm run verify`) |
+| Verifikationen | alle 16 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
+
+## Bestätigte Tests (vom Maintainer im Browser)
+
+| Version | Feature | Stand |
+|---|---|---|
+| 0.14.0.2 | Sprachsegment der URL (Firefox) | bestätigt |
+| 0.15.0 | Keyword in der Benachrichtigung, Bilder (Issue #68) | bestätigt |
+| 0.15.0.36 | gruppiertes Einstellungsmenü | bestätigt |
+| 0.15.0.37 | Preissuche in der Suchleiste | bestätigt |
+| 0.15.0.40 | Bedingungen ohne Klammern | bestätigt |
+| 0.15.0.38 / 0.15.0.39 | Kategoriebedingungen, Unterkategoriename beim Turbo-Scan | **offen** |
+| 0.15.0.41 | Zeilen der Benachrichtigung (Keyword/Preis/Kategorie) | **offen** |
 
 ## Was in dieser Session gemacht wurde
 
