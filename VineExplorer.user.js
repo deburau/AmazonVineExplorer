@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.41
+// @version      0.15.0.42
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -47,7 +47,7 @@
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
    createProductSite, createSettingsCategoriesElement, createSettingsCategoryRow,
    createSettingsKeywordsTableElement, createSettingsMenuElement, findSettingsCategoryCheckbox,
-   getCategoryId, getCategoryTextById, hasSelectedSubCategory, isCategorySelected,
+   getCategoryId, getCategoryTextById, getMatchImageName, hasSelectedSubCategory, isCategorySelected,
    renderSettingsCategories,
    setCategorySelected, toggleSettingsCategoryChildren, updateSettingsCategoryChildren,
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
@@ -5205,6 +5205,27 @@ function formatMatchLines(entry, prod, categoryText = '') {
 }
 
 /**
+ * Returns the name of the icon of a notification about a match.
+ *
+ * The icon shows, which kind of a match the notification has: "k" for the text of
+ * the keyword, "c" for the category and "p" for the price. The icons are in the
+ * folder "images" of the repository, e.g. "vine_logo_match_k_c_p.png".
+ *
+ * @param {object} entry The parsed keyword of the settings
+ * @returns {string} The name of the icon without the path and the extension
+ */
+function getMatchImageName(entry) {
+    const _kinds = [];
+    if (entry.keyword) _kinds.push('k');
+    if (entry.categories.length > 0) _kinds.push('c');
+    if (entry.conditions.length > 0) _kinds.push('p');
+
+    // NOTE: The order of the kinds is always k, c, p - that is the order of the
+    // names of the icons in the repository as well.
+    return `vine_logo_match_${_kinds.length > 0 ? _kinds.join('_') : 'none'}`;
+}
+
+/**
  * Checks if the text and the category conditions of a keyword match a product.
  *
  * @param {object} entry The parsed keyword
@@ -5386,7 +5407,9 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
                         })
                     )}`;
                     window.open(newUrl, '_blank');
-                }
+                },
+                // The icon of the notification shows the kinds of the match.
+                getMatchImageName(_entry)
             );
         }
         if (SETTINGS.GotifyUrl) {
@@ -5615,19 +5638,22 @@ function updateNewProductsBtn() {
  * @param {boolean|null} requireInteraction true, if the notification has to stay
  *                                        until the user clicks on it
  * @param {function} onClick The function that is called on a click
+ * @param {string} [iconName] The name of the icon of a notification about a
+ *                            match (see getMatchImageName())
  */
-function desktopNotifikation(title, message, image = null, requireInteraction = null, onClick = () => {}) {
+function desktopNotifikation(title, message, image = null, requireInteraction = null, onClick = () => {}, iconName = null) {
     // NOTE: The images are loaded from the main branch of the repository of the
-    //   project. They are not changed any more, so the main branch is enough.
+    //   project. The notifications of a match show the kind of the match in the
+    //   icon (see getMatchImageName()), the other ones show the logo.
     const _imageBaseUrl = 'https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/';
     const _vineLogo = `${_imageBaseUrl}vine_logo.png`;
-    const _vineLogoImp = `${_imageBaseUrl}vine_logo_important.png`;
     const _defaultImage = `${_imageBaseUrl}vine_logo_notification_image.png`;
+    const _icon = iconName ? `${_imageBaseUrl}images/${iconName}.png` : _vineLogo;
 
     if (Notification.permission === 'granted') {
         const _notification = new Notification(title, {
             body: message,
-            icon: !requireInteraction ? _vineLogo : _vineLogoImp,
+            icon: _icon,
             image: image || _defaultImage,
             tag: requireInteraction ? `ave-notify-${Math.round(Math.random() * 10000000)}` : 'ave-notify',
             requireInteraction: requireInteraction
@@ -5638,7 +5664,9 @@ function desktopNotifikation(title, message, image = null, requireInteraction = 
         Notification.requestPermission().then(function (permission) {
             if (permission === 'granted') {
                 console.log('Berechtigung für Benachrichtigungen erhalten!');
-                desktopNotifikation(title, message);
+                // NOTE: The arguments are given to the second call as well, so that
+                // the notification looks the same in both cases.
+                desktopNotifikation(title, message, image, requireInteraction, onClick, iconName);
             }
         });
     }

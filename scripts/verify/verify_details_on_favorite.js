@@ -35,6 +35,8 @@ const NEW_NAMES = [
     // Die Funktionen, die die Zeilen der Benachrichtigung bilden.
     'formatMatchLines',
     'formatTaxPrize',
+    // Die Funktion, die den Namen des Symbols der Benachrichtigung liefert.
+    'getMatchImageName',
     'normalizePriceInput',
     'parsePriceCondition',
     'parseKeywordConfig',

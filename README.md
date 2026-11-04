@@ -63,6 +63,11 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-04] - Version 0.15.0.42
+
+* New: the icon of the desktop notification shows at the first glance, which kind of a match the notification has - a ring with a **K** (keyword) in the top left corner, with a **C** (category) in the bottom left corner and with a **P** (price) in the bottom right corner, single or in every combination. The rings are transparent, so the logo stays visible through them.
+* The icons are loaded from the repository like the logo. A notification without a match ("new entries", "product drop") keeps the plain logo, so the icon of the older "important" logo with the red exclamation mark is not used any more.
+
 ##### [2026-11-03] - Version 0.15.0.41
 
 * The desktop notification and the message of Gotify name the reason for the hit in up to three lines now, instead of the single "Treffer:" line: `Keyword-Treffer: <keyword>`, `Preis-Treffer: <price>` and `Kategorie-Treffer: <name of the category>`. A line is only shown if that kind of a match happened, and the keyword is shown even if the entry has conditions as well.
