@@ -137,7 +137,7 @@ const I18N = {
             EnableBtnMarkAllAsSeen: 'Zeigt den Button „Alle als gesehen markieren“ an.',
             ShowFirstSeen: 'Zeigt das Datum des ersten statt des letzten Auftretens.',
             DesktopNotifikationKeywords:
-                'Keywords für Benachrichtigung und Auto-Favorit. Mehrere Wörter müssen alle vorkommen, die Reihenfolge ist egal. Preisbedingungen wie price>=10 laden den Preis jedes Treffers – ein unspezifisches Keyword wie "schwarz price>50" kann zu einer Sperre durch Amazon führen, darum lieber mehrere Wörter angeben. Kategoriebedingungen wie category~küche prüfen die Kategorie des Produkts. Die Bedingungen stehen ohne Klammern und sind immer ein eigenes Wort.',
+                'Keywords für Benachrichtigung und Auto-Favorit. Mehrere Wörter müssen alle vorkommen, die Reihenfolge ist egal. Preisbedingungen wie price>=10 laden den Preis jedes Treffers – ein unspezifisches Keyword wie "schwarz price>50" kann zu einer Sperre durch Amazon führen, darum lieber mehrere Wörter angeben. Kategoriebedingungen wie category~küche prüfen die Kategorie des Produkts. Die Bedingungen stehen ohne Klammern und sind immer ein eigenes Wort. Die Wörter dürfen abgekürzt werden: p oder pr für price, c oder cat für category – gespeichert wird immer das ganze Wort.',
             GotifyUrl: 'Adresse des Gotify-Servers, z. B. https://gotify.example.com',
             GotifyToken: 'Authentifizierungs-Token der Gotify-Anwendung.',
             BackGroundScanDelayPerPage: 'Min. Wartezeit pro Seite in Millisekunden.',
@@ -332,7 +332,7 @@ const I18N = {
             EnableBtnMarkAllAsSeen: 'Shows the "Mark all as seen" button.',
             ShowFirstSeen: 'Shows the date of the first appearance instead of the last one.',
             DesktopNotifikationKeywords:
-                'Keywords for the notification and the auto favorite. All words of a keyword have to occur, the order does not matter. Price conditions like price>=10 load the price of every match – an unspecific keyword like "black price>50" can get the account blocked by Amazon, so use several words. Category conditions like category~kitchen check the category of a product. The conditions are written without brackets and they are always a word of their own.',
+                'Keywords for the notification and the auto favorite. All words of a keyword have to occur, the order does not matter. Price conditions like price>=10 load the price of every match – an unspecific keyword like "black price>50" can get the account blocked by Amazon, so use several words. Category conditions like category~kitchen check the category of a product. The conditions are written without brackets and they are always a word of their own. The words can be shortened: p or pr for price, c or cat for category - the whole word is stored in every case.',
             GotifyUrl: 'Address of the Gotify server, e.g. https://gotify.example.com',
             GotifyToken: 'Authentication token of the Gotify application.',
             BackGroundScanDelayPerPage: 'Minimum wait time per page in milliseconds.',

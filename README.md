@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-04] - Version 0.15.0.45
+
+* The conditions of a keyword can be shortened: `p` or `pr` instead of `price` and `c` or `cat` instead of `category`, e.g. `kaffee p>=10 c~getränke`. The setting stores the whole word in every case, so the list of the keywords shows `price>=10` and `category~getränke`. The abbreviations work in the search bar as well.
+
 ##### [2026-11-04] - Version 0.15.0.44
 
 * A new keyword stands at the beginning of the list of the keywords now, so that it is right below the input field - before, it was added at the end, where it was only visible after scrolling through a long list. The list is still sorted alphabetically while the settings are built, so the keywords are in alphabetical order again after a reload.

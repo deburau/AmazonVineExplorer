@@ -15,6 +15,7 @@
  *   - ein neues Keyword steht an erster Stelle der Liste und wird gespeichert
  *   - mehrere neue Keywords auf einmal behalten ihre Reihenfolge oben
  *   - ein Keyword, das es schon gibt, wird nicht doppelt aufgenommen
+ *   - die Abkuerzungen der Bedingungen werden voll ausgeschrieben gespeichert
  *   - Leerzeichen und leere Zeilen werden ignoriert
  *   - die Reihenfolge der angezeigten Zeilen passt zum Feld index der Loeschen-Knoepfe
  *
@@ -46,6 +47,7 @@ function readSource(name) {
 const mainSrc = readSource('VineExplorer.user.js');
 
 const CODE = [
+    extractBody(mainSrc, 'aveExpandKeywordAbbreviations'),
     extractBody(mainSrc, 'createSettingsKeywordsElement'),
     extractBody(mainSrc, 'createSettingsKeywordsList'),
     extractBody(mainSrc, 'createSettingsKeywordsTableElement'),
@@ -248,17 +250,33 @@ const _existing = build(['apfel', 'zebra']);
 _existing.enter('zebra');
 check(['apfel', 'zebra'], _existing.keywords(), 'Ein vorhandenes Keyword wird nicht doppelt aufgenommen');
 
-// 5. Ein Keyword, das zweimal in der Eingabe steht, wird einmal aufgenommen.
+// 5. Die Abkuerzungen der Bedingungen werden voll ausgeschrieben gespeichert.
+const _short = build(['kaffee']);
+_short.enter('p>=10');
+check(['price>=10', 'kaffee'], _short.keywords(), 'Die Abkuerzung p wird zu price');
+_short.enter('c~getraenke');
+check(['category~getraenke', 'price>=10', 'kaffee'], _short.keywords(), 'Die Abkuerzung c wird zu category');
+check(
+    [
+        { text: 'category~getraenke', index: '0', button: 'category~getraenke' },
+        { text: 'price>=10', index: '1', button: 'price>=10' },
+        { text: 'kaffee', index: '2', button: 'kaffee' }
+    ],
+    _short.rows(),
+    'Die Liste zeigt die vollstaendigen Woerter'
+);
+
+// 6. Ein Keyword, das zweimal in der Eingabe steht, wird einmal aufgenommen.
 const _double = build(['apfel']);
 _double.enter('doppelt\ndoppelt');
 check(['doppelt', 'apfel'], _double.keywords(), 'Ein zweimal eingegebenes Keyword wird einmal aufgenommen');
 
-// 6. Leerzeichen und leere Zeilen werden ignoriert.
+// 7. Leerzeichen und leere Zeilen werden ignoriert.
 const _spaces = build(['apfel']);
 _spaces.enter('  \n  neu  \n   \n');
 check(['neu', 'apfel'], _spaces.keywords(), 'Leerzeichen und leere Zeilen werden ignoriert');
 
-// 7. Eine leere Eingabe aendert nichts.
+// 8. Eine leere Eingabe aendert nichts.
 const _empty = build(['apfel']);
 _empty.enter('   ');
 check(['apfel'], _empty.keywords(), 'Eine leere Eingabe aendert die Liste nicht');

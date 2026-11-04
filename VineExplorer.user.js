@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.44
+// @version      0.15.0.45
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -39,7 +39,8 @@
 /* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
-   addProductToKeywordSearch, aveMatchImageUrl, backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct,
+   addProductToKeywordSearch, aveExpandKeywordAbbreviations, aveMatchImageUrl, backGroundTileScanner,
+   btnEventhandlerClick, checkKeywordsForProduct,
    cleanUpDatabase, getPageCategoryText, hasCategoryCondition, matchCategoryConditions, matchesKeyword,
    matchesKeywordEntry, matchesPriceConditions, parseCategoryCondition,
    scanLoop, scanStepBackground,
@@ -2721,6 +2722,9 @@ function createSettingsKeywordsElement(dat, _elem, _labelName, _labelDescription
                 if (_key.length === 0) {
                     continue;
                 }
+                // NOTE: The abbreviations of the conditions are stored with the
+                // full words (see aveExpandKeywordAbbreviations()).
+                _key = aveExpandKeywordAbbreviations(_key);
                 if (!SETTINGS[dat.key].includes(_key) && !_added.includes(_key)) {
                     _added.push(_key);
                 }
@@ -5025,10 +5029,32 @@ function normalizePriceInput(value) {
 }
 
 /**
+ * Replaces the abbreviations of the conditions of a keyword with the full words.
+ *
+ * The user can write "p>=10" instead of "price>=10" and "c~kaffee" instead of
+ * "category~kaffee". A keyword of the settings is stored with the full words, so
+ * that the list always shows them. The abbreviations are understood as well (see
+ * parsePriceCondition() and parseCategoryCondition()), so that they work in the
+ * search bar and in a keyword that was stored before.
+ *
+ * NOTE: Only a word that stands directly in front of the operator is replaced,
+ * so that a keyword like "preis>=10" (the German word) stays a text.
+ *
+ * @param {string} text The keyword as it was entered
+ * @returns {string} The keyword with the full words
+ */
+function aveExpandKeywordAbbreviations(text) {
+    return String(text ?? '')
+        .replace(/\b(pr|p)\s*(?=[=!<>])/gi, 'price')
+        .replace(/\b(cat|c)\s*(?=~)/gi, 'category');
+}
+
+/**
  * Parses a price condition of the keyword configuration.
  *
  * The format of a condition is "price <operator> <value>", the spaces are
- * optional, e.g. "price>=10" and "price >= 10" are the same. The operator can
+ * optional, e.g. "price>=10" and "price >= 10" are the same. The word can be
+ * shortened to "pr" or "p" (see aveExpandKeywordAbbreviations()). The operator can
  * be "=" or "==" (one of the prices is equal), "!=" or "<>" (none of the prices
  * is equal), "<" or "<=" (the lowest price is lower), ">" or ">=" (the highest
  * price is higher).
@@ -5037,7 +5063,7 @@ function normalizePriceInput(value) {
  * @returns {object|null} The condition, or null if it is not valid
  */
 function parsePriceCondition(text) {
-    const _match = /^\s*price\s*(<=|>=|==|!=|<>|=|<|>)\s*(.+?)\s*$/i.exec(String(text ?? ''));
+    const _match = /^\s*(?:price|pr|p)\s*(<=|>=|==|!=|<>|=|<|>)\s*(.+?)\s*$/i.exec(String(text ?? ''));
     if (!_match) return null;
     const _price = normalizePriceInput(_match[2]);
     if (_price === null) return null;
@@ -5067,10 +5093,11 @@ function parseKeywordConfig(config) {
     const _text = String(config ?? '');
     const _result = { keyword: _text, conditions: [], categories: [], valid: true };
 
-    // NOTE: Only a keyword with a condition is parsed. The keywords can be
-    // regular expressions and they can contain the name of a field.
-    const _lowerText = _text.toLowerCase();
-    if (!_lowerText.includes('price') && !_lowerText.includes('category')) return _result;
+    // NOTE: Only a keyword with a condition is parsed. The keywords can be regular
+    // expressions and they can contain the name of a field, so it is checked if a
+    // field name stands directly in front of an operator. The field names can be
+    // shortened (see aveExpandKeywordAbbreviations()).
+    if (!/\b(?:price|pr|p|category|cat|c)\s*(?=[=!<>~])/i.test(_text)) return _result;
 
     // NOTE: A condition is a word of its own, the spaces around the operator are
     // optional ("price>=10" and "price >= 10" are the same). A condition of up to
@@ -5133,7 +5160,8 @@ function parseKeywordConfig(config) {
 /**
  * Parses a category condition of the keyword configuration.
  *
- * The format of a condition is "category~text", the spaces are optional. The
+ * The format of a condition is "category~text", the spaces are optional. The word
+ * can be shortened to "cat" or "c" (see aveExpandKeywordAbbreviations()). The
  * condition is fulfilled when the text occurs in the name of the category of the
  * product.
  *
@@ -5141,7 +5169,7 @@ function parseKeywordConfig(config) {
  * @returns {object|null} The condition, or null if it is not valid
  */
 function parseCategoryCondition(text) {
-    const _match = /^\s*category\s*~\s*(.+?)\s*$/i.exec(String(text ?? ''));
+    const _match = /^\s*(?:category|cat|c)\s*~\s*(.+?)\s*$/i.exec(String(text ?? ''));
     if (!_match) return null;
 
     const _text = _match[1].toLowerCase();

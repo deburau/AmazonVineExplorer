@@ -201,6 +201,47 @@ const KEYWORD_CASES = [
         expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
     },
     {
+        label: 'Die Abkuerzung p fuer price',
+        input: 'toaster p>=10',
+        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
+    },
+    {
+        label: 'Die Abkuerzung pr fuer price',
+        input: 'toaster pr < 20',
+        expected: { keyword: 'toaster', conditions: [{ op: '<', price: 20 }], categories: [], valid: true }
+    },
+    {
+        label: 'Die Abkuerzung c fuer category',
+        input: 'kaffee c~getraenke',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'getraenke' }], valid: true }
+    },
+    {
+        label: 'Die Abkuerzung cat fuer category',
+        input: 'kaffee cat ~ getraenke',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'getraenke' }], valid: true }
+    },
+    {
+        label: 'Beide Abkuerzungen zusammen',
+        input: 'p=0 c~getränke',
+        expected: { keyword: '', conditions: [{ op: '=', price: 0 }], categories: [{ text: 'getränke' }], valid: true }
+    },
+    {
+        // "preis" beginnt mit "pr" und "p", ist aber ein Text.
+        label: 'Ein Wort, das nur mit der Abkuerzung beginnt, bleibt Text',
+        input: 'preis>=10',
+        expected: { keyword: 'preis>=10', conditions: [], categories: [], valid: true }
+    },
+    {
+        label: 'Ein einzelnes p bleibt Text',
+        input: 'p',
+        expected: { keyword: 'p', conditions: [], categories: [], valid: true }
+    },
+    {
+        label: 'Ein einzelnes c bleibt Text',
+        input: 'c',
+        expected: { keyword: 'c', conditions: [], categories: [], valid: true }
+    },
+    {
         label: 'Ein Komma als Dezimaltrennzeichen',
         input: 'kaffee price>=10,50',
         expected: { keyword: 'kaffee', conditions: [{ op: '>=', price: 10.5 }], categories: [], valid: true }

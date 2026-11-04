@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.44` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.45` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 17 erfolgreich (`npm run verify`) |
@@ -27,6 +27,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.41 | Zeilen der Benachrichtigung (Keyword/Preis/Kategorie) | bestätigt |
 | 0.15.0.42 / 0.15.0.43 | Symbol der Desktop-Benachrichtigung + kleine Grafik in Gotify | **offen** |
 | 0.15.0.44 | Neues Keyword oben in der Liste | **offen** |
+| 0.15.0.45 | Abkürzungen `p`/`pr` und `c`/`cat` für die Bedingungen | **offen** |
 
 Alle für das Release 0.16.0 vorgesehenen Änderungen sind damit im Browser
 getestet.
@@ -221,6 +222,14 @@ Release erledigt und wurde geschlossen.
   **nicht** als Favorit markiert – es wird beim nächsten Scan erneut geprüft.
 * Neue Funktionen: `normalizePriceInput()`, `parsePriceCondition()`,
   `parseKeywordConfig()`, `matchPriceConditions()`, `loadProductDetails()`.
+* **Abkürzungen der Bedingungen**: `p`/`pr` für `price`, `c`/`cat` für
+  `category` (z. B. `kaffee p>=10 c~getränke`). Erkannt von `parsePriceCondition()`
+  und `parseCategoryCondition()` (Regex mit Alternativen) **und** vom Schnelltest
+  in `parseKeywordConfig()` (dort stand vorher ein `includes('price')`, das die
+  Abkürzungen ignoriert hätte). Beim Speichern schreibt
+  `aveExpandKeywordAbbreviations()` das ganze Wort in die Einstellung, damit die
+  Liste immer `price>=10` zeigt – die Abkürzung wird nur direkt vor einem Operator
+  bzw. der Tilde ersetzt, `preis>=10` bleibt also ein Text.
 * **Neue Keywords** in den Einstellungen stehen **oben** in der Liste
   (`SETTINGS[dat.key].unshift(...)` im change-Handler von
   `createSettingsKeywordsElement()`), damit sie direkt unter dem Eingabefeld
