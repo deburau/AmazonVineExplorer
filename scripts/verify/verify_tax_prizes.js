@@ -169,11 +169,9 @@ const DISPLAY_CASES = [
     },
     {
         label: 'Eine andere Waehrung: es wird kein Waehrungszeichen gezeigt',
-        // NOTE: Der Leerzeichen am Ende ist das bisherige Verhalten, es ist im
-        // Text nicht zu sehen.
         product: { data_estimated_tax_prices: [12.5], data_tax_currency: 'USD' },
         expectedPrizes: [12.5],
-        expected: '12.50 '
+        expected: '12.50'
     },
     {
         label: 'Der Preis des Produkts wird nicht mehr benutzt',

@@ -22,7 +22,9 @@ const I18N = {
             copyError: 'Fehler beim Kopieren in die Zwischenablage:',
             unseenItemsTitle: (version) => `Amazon Vine Explorer - ${version}`,
             unseenItemsBody: (count) => `Es wurden ${count} neue Eintraege gefunden`,
-            keywordMatch: (key) => `Treffer: ${key}`
+            keywordMatch: (keyword) => `Keyword-Treffer: ${keyword}`,
+            priceMatch: (price) => `Preis-Treffer: ${price}`,
+            categoryMatch: (category) => `Kategorie-Treffer: ${category}`
         },
         share: {
             myFSE: 'Mein FSE',
@@ -216,7 +218,9 @@ const I18N = {
             copyError: 'Error copying to clipboard:',
             unseenItemsTitle: (version) => `Amazon Vine Explorer - ${version}`,
             unseenItemsBody: (count) => `${count} new entries found`,
-            keywordMatch: (key) => `Match: ${key}`
+            keywordMatch: (keyword) => `Keyword match: ${keyword}`,
+            priceMatch: (price) => `Price match: ${price}`,
+            categoryMatch: (category) => `Category match: ${category}`
         },
         share: {
             myFSE: 'My FSE',

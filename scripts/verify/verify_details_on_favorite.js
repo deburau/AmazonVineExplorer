@@ -32,6 +32,9 @@ const NEW_NAMES = [
     'matchesPriceConditions',
     'parseCategoryCondition',
     'matchCategoryConditions',
+    // Die Funktionen, die die Zeilen der Benachrichtigung bilden.
+    'formatMatchLines',
+    'formatTaxPrize',
     'normalizePriceInput',
     'parsePriceCondition',
     'parseKeywordConfig',

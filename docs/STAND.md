@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.39` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.41` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 10 erfolgreich (`npm run verify`) |
@@ -211,9 +211,17 @@ Release erledigt und wurde geschlossen.
   auf einer deutschen Tastatur AltGr-Kombinationen und waren in einer
   Remote-Sitzung nicht tippbar). Der Name einer Kategorie ist **ein** Wort
   (`category~kaffee tee` → Kategorie "kaffee" + Text "tee").
+* Die Benachrichtigungen (**Desktop und Gotify**) nennen den Grund des Treffers
+  in **bis zu drei Zeilen**: `Keyword-Treffer: <keyword>`,
+  `Preis-Treffer: <Preis des Produkts, bei Varianten die Spanne>` und
+  `Kategorie-Treffer: <Name der Kategorie>`. Eine Zeile nur, wenn es die Art des
+  Treffers gab. Gebildet von `formatMatchLines()` (i18n `notifications`:
+  `keywordMatch`, `priceMatch`, `categoryMatch`, de/en).
 * Wächter `scripts/verify/verify_keyword_conditions.js` (75 Fälle: Preise,
   Kategorien, das Parsen und die Vergleiche, Klammern als Text),
-  `verify_search.js` (20 Fälle).
+  `verify_search.js` (20 Fälle) und `verify_match_lines.js` (10 Fälle: die Zeilen
+  der Benachrichtigung; zwei Textprüfungen zusätzlich in
+  `verify_new_products_btn.js`).
 * **Kategoriebedingungen** in den Keywords (`category~getränke`):
   `parseCategoryCondition()` + `matchCategoryConditions()` (Teilstring, klein
   geschrieben, alle Bedingungen müssen passen). Es muss ein **Keyword oder eine

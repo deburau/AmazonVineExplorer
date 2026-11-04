@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.40
+// @version      0.15.0.41
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -52,7 +52,7 @@
    setCategorySelected, toggleSettingsCategoryChildren, updateSettingsCategoryChildren,
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
-   favStarEventhandlerClick, fixProductImageUrl, formatTaxPrize, getContrastColor, getFastScanState,
+   favStarEventhandlerClick, fixProductImageUrl, formatMatchLines, formatTaxPrize, getContrastColor, getFastScanState,
    getFastScanIntervalSeconds, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
    getScanDelay, getTaxPrices,
    getTilesFromURL, getTurboScanCategories, getTurboScanIndex, getTurboScanIntervalSeconds,
@@ -1288,10 +1288,13 @@ function formatTaxPrize(prod) {
 
     let _currencySymbol = '';
     if (prod.data_tax_currency && prod.data_tax_currency == 'EUR') _currencySymbol = '€';
+    // NOTE: A currency that is not known has no symbol, then there is no space
+    // behind the price either.
+    const _currencySuffix = _currencySymbol ? ` ${_currencySymbol}` : '';
 
     const _format = (_prize) => Intl.NumberFormat(undefined, { minimumFractionDigits: 2 }).format(_prize);
 
-    if (_prizes.length === 1) return `${_format(_prizes[0])} ${_currencySymbol}`;
+    if (_prizes.length === 1) return `${_format(_prizes[0])}${_currencySuffix}`;
 
     let _minPrize = _prizes[0];
     let _maxPrize = _prizes[0];
@@ -1299,7 +1302,7 @@ function formatTaxPrize(prod) {
         if (_prize < _minPrize) _minPrize = _prize;
         if (_prize > _maxPrize) _maxPrize = _prize;
     }
-    return `${_format(_minPrize)} - ${_format(_maxPrize)} ${_currencySymbol}`;
+    return `${_format(_minPrize)} - ${_format(_maxPrize)}${_currencySuffix}`;
 }
 
 /**
@@ -5165,6 +5168,43 @@ async function matchesPriceConditions(entry, prod, currKey) {
 }
 
 /**
+ * Builds the lines that name the reasons for a notification.
+ *
+ * A product can match the text of a keyword, the price conditions and a search
+ * for a category. Every kind of match gets its own line, so a notification shows
+ * up to three lines:
+ *
+ *   Keyword-Treffer: <keyword>
+ *   Preis-Treffer: <price>
+ *   Kategorie-Treffer: <name of the category>
+ *
+ * @param {object} entry The parsed keyword of the settings
+ * @param {Product} prod The product of the notification
+ * @param {string} [categoryText] The name of the category of the product
+ * @returns {string[]} The lines in the order of the notification
+ */
+function formatMatchLines(entry, prod, categoryText = '') {
+    const _lines = [];
+
+    if (entry.keyword) {
+        _lines.push(translate('notifications', 'keywordMatch', `Keyword-Treffer: ${entry.keyword}`, entry.keyword));
+    }
+
+    // NOTE: The prices are known, because the conditions were checked before the
+    // notification is sent (matchesPriceConditions()).
+    if (entry.conditions.length > 0) {
+        const _price = formatTaxPrize(prod);
+        _lines.push(translate('notifications', 'priceMatch', `Preis-Treffer: ${_price}`, _price));
+    }
+
+    if (entry.categories.length > 0 && categoryText) {
+        _lines.push(translate('notifications', 'categoryMatch', `Kategorie-Treffer: ${categoryText}`, categoryText));
+    }
+
+    return _lines;
+}
+
+/**
  * Checks if the text and the category conditions of a keyword match a product.
  *
  * @param {object} entry The parsed keyword
@@ -5296,10 +5336,6 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
             continue;
         }
 
-        // The key of the keyword is shown in the notifications. An entry without a
-        // keyword (a search for a category) shows the entry of the settings.
-        const _matchLabel = _entry.keyword || _currKey;
-
         // The keyword matched. Only now the prices are loaded, if the keyword has
         // price conditions. The conditions are checked with the prices.
         if (!(await matchesPriceConditions(_entry, _prod, _currKey))) continue;
@@ -5327,13 +5363,16 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
             }
         }
 
+        // The reasons for the match are shown in the notifications, one line per
+        // kind of match (the keyword, the price and the category).
+        const _matchLines = formatMatchLines(_entry, _prod, categoryText);
+
         if (SETTINGS.EnableDesktopNotifikation) {
-            // NOTE: The key of the keyword is shown before the description of the
-            // product, because it is the reason for the notification.
-            const _matchText = translate('notifications', 'keywordMatch', `Treffer: ${_matchLabel}`, _matchLabel);
+            // NOTE: The reasons for the notification stand before the description
+            // of the product, one line per kind of match.
             desktopNotifikation(
                 `Amazon Vine Explorer - ${AVE_VERSION}`,
-                `${_matchText}\n${_prod.description_full}`,
+                `${_matchLines.join('\n')}\n${_prod.description_full}`,
                 fixProductImageUrl(_prod.data_img_url),
                 true,
                 function (event) {
@@ -5353,12 +5392,12 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
         if (SETTINGS.GotifyUrl) {
             if (_prod.link) {
                 gotifyNotification(
-                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \nMatched key: ${_matchLabel}`,
+                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \n${_matchLines.join('  \n')}`,
                     _prod
                 );
             } else {
                 gotifyNotification(
-                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \nMatched key: ${_matchLabel}`
+                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \n${_matchLines.join('  \n')}`
                 );
             }
         }

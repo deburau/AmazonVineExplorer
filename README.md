@@ -63,6 +63,11 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-03] - Version 0.15.0.41
+
+* The desktop notification and the message of Gotify name the reason for the hit in up to three lines now, instead of the single "Treffer:" line: `Keyword-Treffer: <keyword>`, `Preis-Treffer: <price>` and `Kategorie-Treffer: <name of the category>`. A line is only shown if that kind of a match happened, and the keyword is shown even if the entry has conditions as well.
+* A price that is not in Euro no longer gets a space behind it in the price of a tile (`12.50 ` became `12.50`), it was not visible in the text.
+
 ##### [2026-11-03] - Version 0.15.0.40
 
 * The conditions of the keywords and of the search are written **without square brackets** now: `price>=10`, `price<5`, `price=12.50`, `category~getränke`. The spaces around the operator are optional, so `price >= 10` works as well. The brackets are hard to type in a remote session (on a German keyboard they are on AltGr) and they are not needed.

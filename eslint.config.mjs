@@ -104,6 +104,7 @@ const mainFile = [
     'createSettingsMenuElement',
     'createShareElement',
     'findSettingsCategoryCheckbox',
+    'formatMatchLines',
     'createTaxInfoElement',
     'createTileFromProduct',
     'createTimeSeenElement',

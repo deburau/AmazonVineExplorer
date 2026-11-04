@@ -38,11 +38,14 @@ const NEW_NAMES = [
     'hasProductDetails',
     // Die Funktion, die die Preise des Produkts liefert.
     'getTaxPrices',
-    // Die Funktionen fuer die Preisbedingungen der Keywords.
+    // Die Funktionen fuer die Bedingungen der Keywords.
     'normalizePriceInput',
     'parsePriceCondition',
     'parseKeywordConfig',
     'matchPriceConditions',
+    // Die Funktionen, die die Zeilen der Benachrichtigung bilden.
+    'formatMatchLines',
+    'formatTaxPrize',
     // Die Funktion, die die Details laedt.
     'loadProductDetails',
     // Die Funktionen, die die Verzoegerungen zwischen den Requests berechnen.
@@ -129,8 +132,10 @@ function run(code, opts) {
         oldCountOfNewItems: opts.oldCount || 0,
         lastDesktopNotifikationTimestamp: opts.lastNotifTs || 0,
         AVE_VERSION: '1.0',
-        gotifyNotification: (msg, prod) => log.push(`gotify: ${String(msg).substring(0, 60)}${prod ? ' [withProd]' : ''}`),
-        desktopNotifikation: (title, msg) => log.push(`desktop: ${title} | ${String(msg).substring(0, 60)}`),
+        // NOTE: Der ganze Text wird protokolliert, damit die Zeilen der
+        // Benachrichtigung (Keyword/Preis/Kategorie) geprueft werden koennen.
+        gotifyNotification: (msg, prod) => log.push(`gotify: ${String(msg)}${prod ? ' [withProd]' : ''}`),
+        desktopNotifikation: (title, msg) => log.push(`desktop: ${title} | ${String(msg)}`),
         fixProductImageUrl: (u) => u,
         requestProductDetails: async (prod) => {
             log.push(`requestProductDetails ${prod.id}`);
@@ -317,6 +322,7 @@ const SCENARIOS = [
     {
         name: 'Kategorie-Suche: die Kategorie des Produkts passt',
         expectNotification: true,
+        expectText: 'Kategorie-Treffer: Lebensmittel & Getränke',
         opts: {
             desktop: true,
             keywords: ['category~getränke'],
@@ -378,6 +384,7 @@ const SCENARIOS = [
     },
     {
         name: 'Keyword-Treffer mit Desktop-Notification',
+        expectText: 'Keyword-Treffer: wichtig',
         opts: {
             desktop: true,
             keywords: ['wichtig'],
@@ -548,6 +555,11 @@ const SCENARIOS = [
         // Ein Keyword-Treffer muss eine Benachrichtigung ausloesen.
         if (_scenario.expectNotification && !_hasNotification) {
             _diffs.push('notification missing');
+        }
+
+        // Der Text der Benachrichtigung nennt die Gruende des Treffers.
+        if (_scenario.expectText && !_new.log.some((_l) => _l.includes(_scenario.expectText))) {
+            _diffs.push(`text missing: ${_scenario.expectText}`);
         }
 
         if (_diffs.length === 0) {
