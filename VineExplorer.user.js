@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.49
+// @version      0.15.0.50
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -3765,14 +3765,6 @@ async function scanLoop(baseUrl, state) {
 const CATEGORY_CACHE_MAX_AGE_SECONDS = 24 * 60 * 60;
 
 /**
- * The delay between two requests for the sub categories in milliseconds.
- *
- * NOTE: The pages of the sub categories are loaded one after the other with this
- * delay, so that the loading in the background is not a burst of requests.
- */
-const CATEGORY_REQUEST_DELAY = 1500;
-
-/**
  * The interval in seconds that checks if the stored categories are stale.
  */
 const CATEGORY_LOAD_CHECK_INTERVAL_SECONDS = 30 * 60;
@@ -4071,6 +4063,9 @@ function showCategoryLoadScreen(done, total) {
  * loaded (getVineCategoryParents() and getVineCategoryChildren() use the stored list
  * and do not load a page again that is fresh).
  *
+ * NOTE: The pages are loaded with the same pause as the pages of the background scan
+ * (see getScanDelay()), so that the loading looks like a normal scan for Amazon.
+ *
  * NOTE: The list has priority over the scan, the steps of the scan wait while it is
  * loaded (see scanLoop()), so that no two pages are loaded at the same time.
  *
@@ -4096,7 +4091,7 @@ async function loadCategoryListInBackground() {
             // The sub categories that are fresh are not loaded again.
             if (_cache.children[_parent.pn] && isCategoryCacheFresh(_cache.children[_parent.pn])) continue;
 
-            await delay(getRandomizedDelay(CATEGORY_REQUEST_DELAY));
+            await delay(getScanDelay());
             showCategoryLoadScreen(_index + 1, _parents.length);
             try {
                 await getVineCategoryChildren(_parent.pn);

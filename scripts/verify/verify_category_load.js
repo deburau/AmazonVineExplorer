@@ -12,7 +12,8 @@
  *
  * Geprueft werden:
  *   - eine vollstaendige, frische Liste: es passiert nichts (kein Request)
- *   - eine fehlende Liste: Hauptkategorien, dann jede Unterkategorie, mit Pause
+ *   - eine fehlende Liste: Hauptkategorien, dann jede Unterkategorie mit der Pause
+ *     des Hintergrund-Scans (getScanDelay())
  *   - Unterkategorien, die frisch sind, werden uebersprungen
  *   - die Meldung unten links erscheint und verschwindet wieder
  *   - ein vorhandener Bildschirm des Scans wird benutzt und nicht entfernt
@@ -49,7 +50,7 @@ function readSource(name) {
 const mainSrc = readSource('VineExplorer.user.js');
 
 const CODE = [
-    extractConstants(mainSrc, ['CATEGORY_CACHE_MAX_AGE_SECONDS', 'CATEGORY_REQUEST_DELAY', 'CATEGORY_LOAD_MAX_AGE_SECONDS']),
+    extractConstants(mainSrc, ['CATEGORY_CACHE_MAX_AGE_SECONDS', 'CATEGORY_LOAD_MAX_AGE_SECONDS']),
     extractBody(mainSrc, 'isCategoryCacheFresh'),
     extractBody(mainSrc, 'isCategoryCacheComplete'),
     extractBody(mainSrc, 'isCategoryListLoadRunning'),
@@ -103,9 +104,10 @@ function createSandbox(opts = {}) {
             _state.screenRemoved++;
         },
         translate: (category, key, fallback) => fallback,
-        // Die Pausen werden nur mitgeschrieben, damit der Test schnell bleibt.
+        // Die Pausen werden nur mitgeschrieben, damit der Test schnell bleibt. Die
+        // Wartezeit ist die des Hintergrund-Scans (getScanDelay()).
         delay: async (ms) => _log.push(`delay ${ms}`),
-        getRandomizedDelay: (base) => base,
+        getScanDelay: () => 7000,
         readCategoryCache: () => opts.cache || { parents: null, children: {} },
         getVineCategoryParents: async () => {
             _state.parentsCalls++;
@@ -195,7 +197,11 @@ function check(expected, actual, label) {
     await _missing.load();
     check(1, _missing.state.parentsCalls, 'Eine fehlende Liste: die Hauptkategorien werden geladen');
     check(['10925031', '340846031'], _missing.state.childrenCalls, 'Jede Hauptkategorie wird geladen');
-    check(['delay 1500', 'children 10925031', 'delay 1500', 'children 340846031'], _missing.log, 'Zwischen den Seiten wird gewartet');
+    check(
+        ['delay 7000', 'children 10925031', 'delay 7000', 'children 340846031'],
+        _missing.log,
+        'Zwischen den Seiten wird wie im Hintergrund-Scan gewartet'
+    );
     check(
         ['Kategorien werden geladen: 0 / 2', 'Kategorien werden geladen: 1 / 2', 'Kategorien werden geladen: 2 / 2'],
         _missing.state.screenTexts,
@@ -215,7 +221,7 @@ function check(expected, actual, label) {
     });
     await _partial.load();
     check(['340846031'], _partial.state.childrenCalls, 'Nur die veraltete Unterkategorie wird geladen');
-    check(['delay 1500', 'children 340846031'], _partial.log, 'Nur vor der einen Seite wird gewartet');
+    check(['delay 7000', 'children 340846031'], _partial.log, 'Nur vor der einen Seite wird gewartet');
 
     // 4. Ein vorhandener Bildschirm des Scans wird benutzt und nicht entfernt.
     const _scanScreen = createSandbox({ parents: PARENTS, cache: { parents: null, children: {} }, screenExists: true });

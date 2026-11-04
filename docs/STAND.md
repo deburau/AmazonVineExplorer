@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.49` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.50` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 18 erfolgreich (`npm run verify`) |
@@ -30,7 +30,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.45 / 0.15.0.46 | Abkürzungen der Bedingungen (jede Verkürzung) | **offen** |
 | 0.15.0.47 | Verbatim-Strings in doppelten Anführungszeichen | **offen** |
 | 0.15.0.48 | Kategoriename wird beim Speichern vervollständigt | **offen** |
-| 0.15.0.49 | Vollständige Kategorienliste im Hintergrund | **offen** |
+| 0.15.0.49 / 0.15.0.50 | Vollständige Kategorienliste im Hintergrund (Wartezeit wie der Scan) | **offen** |
 
 Alle für das Release 0.16.0 vorgesehenen Änderungen sind damit im Browser
 getestet.
@@ -228,8 +228,9 @@ Release erledigt und wurde geschlossen.
 * **Vollständige Kategorienliste im Hintergrund** (0.15.0.49):
   `loadCategoryListInBackground()` prüft über `isCategoryCacheComplete()`, ob die
   Hauptkategorien **und** die Unterkategorien aller Hauptkategorien frisch (24 h)
-  vorliegen; sonst werden die Seiten nacheinander mit `CATEGORY_REQUEST_DELAY`
-  (1500 ms, über `getRandomizedDelay()` gestreut) geladen. Aufruf am Ende von
+  vorliegen; sonst werden die Seiten nacheinander **mit der Wartezeit des
+  Hintergrund-Scans** (`getScanDelay()` = `BackGroundScanDelayPerPage` + Zufall)
+  geladen – eine eigene Konstante gibt es dafür nicht mehr (0.15.0.50). Aufruf am Ende von
   `completeDelayedInit()` und danach alle
   `CATEGORY_LOAD_CHECK_INTERVAL_SECONDS` (30 min). **Vorrang vor dem Scan**: in
   `scanLoop()` wird vor jedem Schritt `isCategoryListLoadRunning()` geprüft (Merker

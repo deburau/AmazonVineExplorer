@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-04] - Version 0.15.0.50
+
+* The pages of the list of the categories are loaded with the same pause as the pages of the background scan (`getScanDelay()`, by default 6 seconds plus up to 6 seconds of randomness) - the loading used its own pause of 1.5 seconds before. The loading therefore looks like a normal scan for Amazon, and the setting for the pause of the scan is used as well.
+
 ##### [2026-11-04] - Version 0.15.0.49
 
 * The whole list of the categories (the main categories and their sub categories) is loaded in the background now. After the start of the script and then every 30 minutes it is checked if the stored list is missing or older than a day; in that case the pages are loaded one after the other with a pause of about 1.5 seconds. Every list is stored at once, so an interruption (closing the tab) does not lose what was loaded - a sub category that is known is used for the conditions of the keywords right away.
