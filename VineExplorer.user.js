@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.43
+// @version      0.15.0.44
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2714,16 +2714,25 @@ function createSettingsKeywordsElement(dat, _elem, _labelName, _labelDescription
     _elem_keyword_input_input.addEventListener('change', (elm, ev) => {
         if (SETTINGS.DebugLevel > 1) console.log('EVENTHANDLER CHANGE:', elm, 'event:', ev);
         const _value = elm.target.value.trim();
+        const _added = [];
         if (_value && _value.length > 0) {
             for (let _key of _value.split('\n')) {
                 _key = _key.trim();
                 if (_key.length === 0) {
                     continue;
                 }
-                if (!SETTINGS[dat.key].includes(_key)) {
-                    SETTINGS[dat.key].push(_key);
+                if (!SETTINGS[dat.key].includes(_key) && !_added.includes(_key)) {
+                    _added.push(_key);
                 }
             }
+        }
+        // NOTE: The new keywords stand at the beginning of the list, so that the
+        // user sees them right below the input and does not have to scroll through
+        // a long list. The list is sorted alphabetically when the settings are
+        // built (see the beginning of this function), so the order on the screen is
+        // the sorted one again after a reload.
+        if (_added.length > 0) {
+            SETTINGS[dat.key].unshift(..._added);
         }
         SETTINGS.save();
         elm.target.value = '';

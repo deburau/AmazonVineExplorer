@@ -8,10 +8,10 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.43` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.44` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
-| Verifikationen | alle 16 erfolgreich (`npm run verify`) |
+| Verifikationen | alle 17 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
 
 ## Bestätigte Tests (vom Maintainer im Browser)
@@ -26,6 +26,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.38 / 0.15.0.39 | Kategoriebedingungen, Unterkategoriename beim Turbo-Scan | bestätigt |
 | 0.15.0.41 | Zeilen der Benachrichtigung (Keyword/Preis/Kategorie) | bestätigt |
 | 0.15.0.42 / 0.15.0.43 | Symbol der Desktop-Benachrichtigung + kleine Grafik in Gotify | **offen** |
+| 0.15.0.44 | Neues Keyword oben in der Liste | **offen** |
 
 Alle für das Release 0.16.0 vorgesehenen Änderungen sind damit im Browser
 getestet.
@@ -220,6 +221,14 @@ Release erledigt und wurde geschlossen.
   **nicht** als Favorit markiert – es wird beim nächsten Scan erneut geprüft.
 * Neue Funktionen: `normalizePriceInput()`, `parsePriceCondition()`,
   `parseKeywordConfig()`, `matchPriceConditions()`, `loadProductDetails()`.
+* **Neue Keywords** in den Einstellungen stehen **oben** in der Liste
+  (`SETTINGS[dat.key].unshift(...)` im change-Handler von
+  `createSettingsKeywordsElement()`), damit sie direkt unter dem Eingabefeld
+  sichtbar sind. Beim Aufbau der Einstellungen sortiert dieselbe Funktion die
+  Liste weiterhin alphabetisch – nach dem Neuladen gilt also wieder die Sortierung.
+  Wächter `scripts/verify/verify_keyword_order.js` (10 Fälle, mit einem kleinen
+  DOM-Mock: Sortierung beim Aufbau, neues Keyword oben, Reihenfolge mehrerer
+  Eingaben, keine Dubletten, Feld `index` der Zeilen).
 * Bedingungen stehen **ohne Klammern** und sind immer ein **eigenes Wort**
   (`price>=10`, `price >= 10`, `price<5`, `category~getränke`). Die Leerzeichen
   um den Operator sind optional (ein Tokenizer liest 1–3 Wörter,

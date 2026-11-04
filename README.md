@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-04] - Version 0.15.0.44
+
+* A new keyword stands at the beginning of the list of the keywords now, so that it is right below the input field - before, it was added at the end, where it was only visible after scrolling through a long list. The list is still sorted alphabetically while the settings are built, so the keywords are in alphabetical order again after a reload.
+
 ##### [2026-11-04] - Version 0.15.0.43
 
 * The message of Gotify shows the kind of the match as a small graphic as well: the ring icon (K/C/P) stands in the first line next to the image of the product. Gotify sets the icon of a notification in the application, not per message, so a small image inside the message is used - a 64 x 64 version of the icon, because markdown can not set the size of an image.
