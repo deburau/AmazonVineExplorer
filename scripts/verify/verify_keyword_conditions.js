@@ -180,10 +180,24 @@ const CATEGORY_MATCH_CASES = [
         expected: false
     },
     {
-        label: 'Der Name steht in einer Kette von Namen',
-        categories: [{ op: '=', text: 'kaffee' }],
-        categoryText: 'Getränke, Kaffee Tee > Kaffee',
+        label: 'Gross und klein spielt keine Rolle',
+        categories: [{ op: '=', text: 'garten' }],
+        categoryText: 'GARTEN',
         expected: true
+    },
+    {
+        // Ein Produkt hat eine Kategorie. Der Text der Seite kann ein Pfad sein,
+        // die Kategorie des Produkts ist der letzte Name.
+        label: 'Ein Pfad: der letzte Name ist die Kategorie',
+        categories: [{ op: '=', text: 'unter' }],
+        categoryText: 'Haupt > Unter',
+        expected: true
+    },
+    {
+        label: 'Ein Pfad: der erste Name ist nicht die Kategorie',
+        categories: [{ op: '=', text: 'haupt' }],
+        categoryText: 'Haupt > Unter',
+        expected: false
     },
     {
         label: 'Ein Name mit Leerzeichen in Anfuehrungszeichen',
@@ -222,22 +236,22 @@ const CATEGORY_MATCH_CASES = [
         expected: true
     },
     {
-        label: 'Der erste Name der Kette entscheidet bei kleiner',
-        categories: [{ op: '<', text: 'm' }],
-        categoryText: 'Garten > Zubehör',
-        expected: true
+        label: 'Alphabetisch danach (passt nicht)',
+        categories: [{ op: '>', text: 'z' }],
+        categoryText: 'Garten',
+        expected: false
     },
     {
-        label: 'Der letzte Name der Kette entscheidet bei groesser',
+        label: 'Bei einem Pfad zaehlt der letzte Name (kleiner)',
+        categories: [{ op: '<', text: 'm' }],
+        categoryText: 'Garten > Zubehör',
+        expected: false
+    },
+    {
+        label: 'Bei einem Pfad zaehlt der letzte Name (groesser)',
         categories: [{ op: '>', text: 'm' }],
         categoryText: 'Garten > Zubehör',
         expected: true
-    },
-    {
-        label: 'Der letzte Name der Kette ist nicht groesser',
-        categories: [{ op: '>', text: 'zzz' }],
-        categoryText: 'Garten > Zubehör',
-        expected: false
     },
     {
         label: 'Ohne Kategorie passt keine Bedingung',
@@ -248,8 +262,8 @@ const CATEGORY_MATCH_CASES = [
     {
         label: 'Beide Bedingungen muessen passen',
         categories: [
-            { op: '=', text: 'lebensmittel & getränke' },
-            { op: '>', text: 'kaffee' }
+            { op: '=', text: 'kaffee' },
+            { op: '>', text: 'a' }
         ],
         categoryText: 'Lebensmittel & Getränke > Kaffee',
         expected: true
@@ -257,7 +271,7 @@ const CATEGORY_MATCH_CASES = [
     {
         label: 'Eine von zwei Bedingungen passt nicht',
         categories: [
-            { op: '=', text: 'lebensmittel & getränke' },
+            { op: '=', text: 'kaffee' },
             { op: '=', text: 'blumen' }
         ],
         categoryText: 'Lebensmittel & Getränke > Kaffee',

@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-04] - Version 0.15.0.52
+
+* A product has exactly one category, so a condition is checked against a single name now: when the page shows the category as a path ("Lebensmittel & Getränke > Getränke, Kaffee & Tee"), the last name of it is the category of the product (the concrete one, not the main category). The comparison needs no minimum or maximum any more, the operators work exactly like the ones of a price.
+
 ##### [2026-11-04] - Version 0.15.0.51
 
 * The conditions of a keyword use the same operators for a category as for a price now: `=`, `==` (the name of the category is exactly the text), `!=`, `<>` (it is not), `<`, `<=` (the name stands before the text in the alphabet) and `>`, `>=` (it stands behind it). Examples: `category="kaffee tee"`, `category!=garten`, `category<kaffee`. The category of a product is a chain of names (e.g. "Lebensmittel & Getränke > Kaffee"), every name of the chain is checked.

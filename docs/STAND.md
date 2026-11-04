@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.51` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.52` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 18 erfolgreich (`npm run verify`) |
@@ -31,7 +31,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.47 | Verbatim-Strings in doppelten Anführungszeichen | **offen** |
 | 0.15.0.48 | Kategoriename wird beim Speichern vervollständigt | **offen** |
 | 0.15.0.49 / 0.15.0.50 | Vollständige Kategorienliste im Hintergrund (Wartezeit wie der Scan) | **offen** |
-| 0.15.0.51 | Kategorie-Operatoren wie beim Preis (`~` entfällt) | **offen** |
+| 0.15.0.51 / 0.15.0.52 | Kategorie-Operatoren wie beim Preis, eine Kategorie je Produkt | **offen** |
 
 Alle für das Release 0.16.0 vorgesehenen Änderungen sind damit im Browser
 getestet.
@@ -251,10 +251,11 @@ Release erledigt und wurde geschlossen.
   nichts geladen (der change-Handler ist dafür `async`).
 * **Kategorie-Operatoren wie beim Preis** (0.15.0.51): `parseCategoryCondition()`
   liest `<wort><operator><name>` mit `=`, `==`, `!=`, `<>`, `<`, `<=`, `>`, `>=`;
-  `matchCategoryConditions()` spiegelt `matchPriceConditions()`: `=` = ein Name der
-  Kette ist genau der Text, `!=` = keiner ist es, `<`/`<=` = der **erste** Name des
-  Alphabets davor/davor-oder-gleich, `>`/`>=` = der **letzte** dahinter/dahinter-oder-gleich
-  (die Kette wird an `>` getrennt, siehe `getPageCategoryText()`). Das `~` der
+  `matchCategoryConditions()` prüft **einen** Namen: **ein Produkt hat genau eine
+  Kategorie** (0.15.0.52). Ist der Text der Seite ein Pfad („Haupt > Unter", siehe
+  `getPageCategoryText()` / `getCategoryTextById()`), ist der **letzte** Name die
+  Kategorie des Produkts – kein min/max mehr, die Operatoren wirken direkt wie beim
+  Preis. Das `~` der
   älteren Versionen ist **kein Operator mehr** (eine solche Bedingung wird ein
   normaler Text, der nichts matcht) – im `aveExpandCategoryNames()` werden nur noch
   `=`, `==`, `!=`, `<>` vervollständigt, weil `<`/`>` eine Alphabet-Grenze und kein

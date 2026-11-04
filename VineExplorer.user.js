@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.51
+// @version      0.15.0.52
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -5593,12 +5593,14 @@ function matchesKeywordEntry(entry, descFull, categoryText) {
 /**
  * Checks the category conditions of a keyword against the category of a product.
  *
- * The category of a product can be a chain of names, e.g. "Lebensmittel & Getränke >
- * Getränke, Kaffee & Tee" (see getPageCategoryText()). Its names are checked one by
- * one with the same operators as the prices (see matchPriceConditions()): "=" is
- * fulfilled when one of the names is the text, "!=" when none of them is, "<" when
- * the first name of the alphabet stands before the text and ">" when the last one
- * stands behind it.
+ * A product has one category. The text of the page can be a path of more than one
+ * name ("Lebensmittel & Getränke > Getränke, Kaffee & Tee", see
+ * getPageCategoryText()), the category of the product is the last name of it.
+ *
+ * The operators are the same as the ones of a price condition (see
+ * parsePriceCondition()): "=" or "==" (the name of the category is exactly the text),
+ * "!=" or "<>" (it is not), "<" or "<=" (the name stands before the text in the
+ * alphabet) and ">" or ">=" (it stands behind it).
  *
  * NOTE: The category of a product is only known when it was seen on a page of a
  * category (e.g. by the turbo scan). A product whose category is not known can
@@ -5611,37 +5613,35 @@ function matchesKeywordEntry(entry, descFull, categoryText) {
 function matchCategoryConditions(categories, categoryText) {
     if (typeof categoryText !== 'string' || categoryText.length === 0) return false;
 
-    const _names = categoryText
+    const _parts = categoryText
         .toLowerCase()
         .split('>')
         .map((name) => name.trim())
         .filter((name) => name.length > 0);
-    if (_names.length === 0) return false;
-
-    const _first = _names.reduce((a, b) => (b < a ? b : a));
-    const _last = _names.reduce((a, b) => (a < b ? b : a));
+    if (_parts.length === 0) return false;
+    const _name = _parts[_parts.length - 1];
 
     for (const _category of categories) {
         switch (_category.op) {
             case '=':
             case '==':
-                if (!_names.includes(_category.text)) return false;
+                if (_name !== _category.text) return false;
                 break;
             case '!=':
             case '<>':
-                if (_names.includes(_category.text)) return false;
+                if (_name === _category.text) return false;
                 break;
             case '<':
-                if (!(_first < _category.text)) return false;
+                if (!(_name < _category.text)) return false;
                 break;
             case '<=':
-                if (!(_first <= _category.text)) return false;
+                if (!(_name <= _category.text)) return false;
                 break;
             case '>':
-                if (!(_last > _category.text)) return false;
+                if (!(_name > _category.text)) return false;
                 break;
             case '>=':
-                if (!(_last >= _category.text)) return false;
+                if (!(_name >= _category.text)) return false;
                 break;
             default:
                 return false;
