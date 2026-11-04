@@ -53,6 +53,7 @@ const mainSrc = readSource('VineExplorer.user.js');
 const CODE = [
     extractBody(mainSrc, 'normalizePriceInput'),
     extractBody(mainSrc, 'parsePriceCondition'),
+    extractBody(mainSrc, 'aveIsConditionWord'),
     extractBody(mainSrc, 'parseCategoryCondition'),
     extractBody(mainSrc, 'parseKeywordConfig'),
     extractBody(mainSrc, 'matchPriceConditions'),
@@ -224,6 +225,44 @@ const KEYWORD_CASES = [
         label: 'Beide Abkuerzungen zusammen',
         input: 'p=0 c~getränke',
         expected: { keyword: '', conditions: [{ op: '=', price: 0 }], categories: [{ text: 'getränke' }], valid: true }
+    },
+    {
+        label: 'Jede Verkuerzung von price: pri',
+        input: 'toaster pri>=10',
+        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
+    },
+    {
+        label: 'Jede Verkuerzung von price: pric',
+        input: 'toaster pric < 20',
+        expected: { keyword: 'toaster', conditions: [{ op: '<', price: 20 }], categories: [], valid: true }
+    },
+    {
+        label: 'Jede Verkuerzung von category: ca',
+        input: 'kaffee ca~getraenke',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'getraenke' }], valid: true }
+    },
+    {
+        label: 'Jede Verkuerzung von category: cate',
+        input: 'kaffee cate~getraenke',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'getraenke' }], valid: true }
+    },
+    {
+        label: 'Jede Verkuerzung von category: categ',
+        input: 'kaffee categ ~ tee',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'tee' }], valid: true }
+    },
+    {
+        // "ca" verkuerzt nur "category" - vor einem Preis-Operator ist das ein
+        // Fehler und das Keyword matcht nicht (wie bei jeder kaputten Bedingung).
+        label: 'Eine Verkuerzung von category vor einem Preis-Operator ist ungueltig',
+        input: 'ca>=10',
+        expected: { keyword: 'ca>=10', conditions: [], categories: [], valid: false }
+    },
+    {
+        // "pri" verkuerzt nur "price", eine Kategorie braucht "c", "ca", ...
+        label: 'Eine Verkuerzung von price ist keine Kategorie',
+        input: 'toaster pri~ x',
+        expected: { keyword: 'toaster pri~ x', conditions: [], categories: [], valid: false }
     },
     {
         // "preis" beginnt mit "pr" und "p", ist aber ein Text.

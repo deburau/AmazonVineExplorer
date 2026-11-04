@@ -127,6 +127,7 @@ const mainFile = [
     'getMatchImageName',
     'aveMatchImageUrl',
     'aveExpandKeywordAbbreviations',
+    'aveIsConditionWord',
     'getContrastColor',
     'getFastScanIntervalSeconds',
     'getFastScanState',

@@ -63,6 +63,11 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-04] - Version 0.15.0.46
+
+* Every shortening of the field names of a condition works now, not only `p`, `pr`, `c` and `cat`: `p`, `pr`, `pri`, `pric`, `price` and `c`, `ca`, `cat`, `cate`, `categ`, `catego`, `categor`, `category`. The whole word is stored in every case, the sort order of the list does not change and a word like `preis>=10` stays a normal text (only directly in front of an operator counts).
+* A word that names a field, but does not fit the operator (e.g. `ca>=10` or `pri~x`), makes the keyword invalid as before - it does not match products silently.
+
 ##### [2026-11-04] - Version 0.15.0.45
 
 * The conditions of a keyword can be shortened: `p` or `pr` instead of `price` and `c` or `cat` instead of `category`, e.g. `kaffee p>=10 c~getränke`. The setting stores the whole word in every case, so the list of the keywords shows `price>=10` and `category~getränke`. The abbreviations work in the search bar as well.

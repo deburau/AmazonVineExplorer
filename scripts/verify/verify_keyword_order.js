@@ -48,6 +48,7 @@ const mainSrc = readSource('VineExplorer.user.js');
 
 const CODE = [
     extractBody(mainSrc, 'aveExpandKeywordAbbreviations'),
+    extractBody(mainSrc, 'aveIsConditionWord'),
     extractBody(mainSrc, 'createSettingsKeywordsElement'),
     extractBody(mainSrc, 'createSettingsKeywordsList'),
     extractBody(mainSrc, 'createSettingsKeywordsTableElement'),
@@ -264,6 +265,14 @@ check(
     ],
     _short.rows(),
     'Die Liste zeigt die vollstaendigen Woerter'
+);
+_short.enter('pri>=5');
+check(['price>=5', 'category~getraenke', 'price>=10', 'kaffee'], _short.keywords(), 'Jede Verkuerzung wird ausgeschrieben (pri)');
+_short.enter('ca~tee');
+check(
+    ['category~tee', 'price>=5', 'category~getraenke', 'price>=10', 'kaffee'],
+    _short.keywords(),
+    'Jede Verkuerzung wird ausgeschrieben (ca)'
 );
 
 // 6. Ein Keyword, das zweimal in der Eingabe steht, wird einmal aufgenommen.

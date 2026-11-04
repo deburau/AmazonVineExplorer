@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.45
+// @version      0.15.0.46
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -39,8 +39,8 @@
 /* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
-   addProductToKeywordSearch, aveExpandKeywordAbbreviations, aveMatchImageUrl, backGroundTileScanner,
-   btnEventhandlerClick, checkKeywordsForProduct,
+   addProductToKeywordSearch, aveExpandKeywordAbbreviations, aveIsConditionWord, aveMatchImageUrl,
+   backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct,
    cleanUpDatabase, getPageCategoryText, hasCategoryCondition, matchCategoryConditions, matchesKeyword,
    matchesKeywordEntry, matchesPriceConditions, parseCategoryCondition,
    scanLoop, scanStepBackground,
@@ -5044,17 +5044,37 @@ function normalizePriceInput(value) {
  * @returns {string} The keyword with the full words
  */
 function aveExpandKeywordAbbreviations(text) {
-    return String(text ?? '')
-        .replace(/\b(pr|p)\s*(?=[=!<>])/gi, 'price')
-        .replace(/\b(cat|c)\s*(?=~)/gi, 'category');
+    return String(text ?? '').replace(/\b([a-z]+)\s*(?=[=!<>~])/gi, (_match, _word) => {
+        if (aveIsConditionWord(_word, 'price')) return 'price';
+        if (aveIsConditionWord(_word, 'category')) return 'category';
+        return _match;
+    });
+}
+
+/**
+ * Checks if a word is a shortening of the name of a field of a condition.
+ *
+ * Every shortening works: "p", "pr", "pri", "pric" and "price" as well as "c",
+ * "ca", "cat", "cate" and so on up to "category". That makes the conditions easier
+ * to type, especially in a remote session where single keys get lost.
+ *
+ * @param {string} word The word to check (e.g. "p" or "cat")
+ * @param {string} [field] The name of the field, if only one of them is allowed
+ * @returns {boolean} true if the word is a shortening of the name of the field
+ */
+function aveIsConditionWord(word, field = null) {
+    const _word = String(word ?? '').toLowerCase();
+    if (_word.length === 0) return false;
+    if (field) return String(field).toLowerCase().startsWith(_word);
+    return 'price'.startsWith(_word) || 'category'.startsWith(_word);
 }
 
 /**
  * Parses a price condition of the keyword configuration.
  *
  * The format of a condition is "price <operator> <value>", the spaces are
- * optional, e.g. "price>=10" and "price >= 10" are the same. The word can be
- * shortened to "pr" or "p" (see aveExpandKeywordAbbreviations()). The operator can
+ * optional, e.g. "price>=10" and "price >= 10" are the same. Every shortening of
+ * the word is allowed, e.g. "p", "pr" or "pri" (see aveIsConditionWord()). The operator can
  * be "=" or "==" (one of the prices is equal), "!=" or "<>" (none of the prices
  * is equal), "<" or "<=" (the lowest price is lower), ">" or ">=" (the highest
  * price is higher).
@@ -5063,11 +5083,13 @@ function aveExpandKeywordAbbreviations(text) {
  * @returns {object|null} The condition, or null if it is not valid
  */
 function parsePriceCondition(text) {
-    const _match = /^\s*(?:price|pr|p)\s*(<=|>=|==|!=|<>|=|<|>)\s*(.+?)\s*$/i.exec(String(text ?? ''));
+    const _match = /^\s*([a-z]+)\s*(<=|>=|==|!=|<>|=|<|>)\s*(.+?)\s*$/i.exec(String(text ?? ''));
     if (!_match) return null;
-    const _price = normalizePriceInput(_match[2]);
+    // NOTE: Every shortening of "price" is allowed (see aveIsConditionWord()).
+    if (!aveIsConditionWord(_match[1], 'price')) return null;
+    const _price = normalizePriceInput(_match[3]);
     if (_price === null) return null;
-    return { op: _match[1], price: _price };
+    return { op: _match[2], price: _price };
 }
 
 /**
@@ -5097,7 +5119,8 @@ function parseKeywordConfig(config) {
     // expressions and they can contain the name of a field, so it is checked if a
     // field name stands directly in front of an operator. The field names can be
     // shortened (see aveExpandKeywordAbbreviations()).
-    if (!/\b(?:price|pr|p|category|cat|c)\s*(?=[=!<>~])/i.test(_text)) return _result;
+    const _start = /\b([a-z]+)\s*(?=[=!<>~])/i.exec(_text);
+    if (!_start || !aveIsConditionWord(_start[1])) return _result;
 
     // NOTE: A condition is a word of its own, the spaces around the operator are
     // optional ("price>=10" and "price >= 10" are the same). A condition of up to
@@ -5146,7 +5169,9 @@ function parseKeywordConfig(config) {
 
     // NOTE: A word that names a field and cannot be read as a condition makes the
     // keyword invalid, so that a typo does not silently search for a text.
-    if (/(^|\s)price\s*(<=|>=|==|!=|<>|=|<|>)/i.test(_keyword) || /(^|\s)category\s*~/i.test(_keyword)) {
+    const _broken = _keyword.match(/(?:^|\s)([a-z]+)\s*(?=[=!<>~])/gi) || [];
+    // NOTE: The leading space is part of the match, so it is cut off before the check.
+    if (_broken.some((candidate) => aveIsConditionWord(candidate.trim()))) {
         _result.valid = false;
         console.warn(`The condition of the keyword "${_text}" is not valid.`);
     }
@@ -5160,19 +5185,21 @@ function parseKeywordConfig(config) {
 /**
  * Parses a category condition of the keyword configuration.
  *
- * The format of a condition is "category~text", the spaces are optional. The word
- * can be shortened to "cat" or "c" (see aveExpandKeywordAbbreviations()). The
- * condition is fulfilled when the text occurs in the name of the category of the
- * product.
+ * The format of a condition is "category~text", the spaces are optional. Every
+ * shortening of the word is allowed, e.g. "c", "ca" or "cat" (see
+ * aveIsConditionWord()). The condition is fulfilled when the text occurs in the
+ * name of the category of the product.
  *
  * @param {string} text The text of the condition
  * @returns {object|null} The condition, or null if it is not valid
  */
 function parseCategoryCondition(text) {
-    const _match = /^\s*(?:category|cat|c)\s*~\s*(.+?)\s*$/i.exec(String(text ?? ''));
+    const _match = /^\s*([a-z]+)\s*~\s*(.+?)\s*$/i.exec(String(text ?? ''));
     if (!_match) return null;
+    // NOTE: Every shortening of "category" is allowed (see aveIsConditionWord()).
+    if (!aveIsConditionWord(_match[1], 'category')) return null;
 
-    const _text = _match[1].toLowerCase();
+    const _text = _match[2].toLowerCase();
     if (_text.length === 0) return null;
     return { text: _text };
 }

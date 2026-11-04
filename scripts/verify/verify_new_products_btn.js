@@ -42,6 +42,8 @@ const NEW_NAMES = [
     'normalizePriceInput',
     'parsePriceCondition',
     'parseKeywordConfig',
+    // Die Funktion, die prueft, ob ein Wort eine Verkuerzung eines Feldnamens ist.
+    'aveIsConditionWord',
     'matchPriceConditions',
     // Die Funktionen, die die Zeilen der Benachrichtigung bilden.
     'formatMatchLines',

@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.45` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.46` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 17 erfolgreich (`npm run verify`) |
@@ -27,7 +27,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.41 | Zeilen der Benachrichtigung (Keyword/Preis/Kategorie) | bestätigt |
 | 0.15.0.42 / 0.15.0.43 | Symbol der Desktop-Benachrichtigung + kleine Grafik in Gotify | **offen** |
 | 0.15.0.44 | Neues Keyword oben in der Liste | **offen** |
-| 0.15.0.45 | Abkürzungen `p`/`pr` und `c`/`cat` für die Bedingungen | **offen** |
+| 0.15.0.45 / 0.15.0.46 | Abkürzungen der Bedingungen (jede Verkürzung) | **offen** |
 
 Alle für das Release 0.16.0 vorgesehenen Änderungen sind damit im Browser
 getestet.
@@ -222,7 +222,14 @@ Release erledigt und wurde geschlossen.
   **nicht** als Favorit markiert – es wird beim nächsten Scan erneut geprüft.
 * Neue Funktionen: `normalizePriceInput()`, `parsePriceCondition()`,
   `parseKeywordConfig()`, `matchPriceConditions()`, `loadProductDetails()`.
-* **Abkürzungen der Bedingungen**: `p`/`pr` für `price`, `c`/`cat` für
+* **Abkürzungen der Bedingungen**: **jede Verkürzung** der Feldnamen, also
+  `p`/`pr`/`pri`/`pric`/`price` und `c`/`ca`/`cat`/…/`category`. Geprüft von
+  `aveIsConditionWord(word, field)` (nutzt `String.startsWith()`); die Parser
+  `parsePriceCondition()`/`parseCategoryCondition()` lesen den Feldnamen als Wort
+  (`^([a-z]+)…`) und prüfen ihn damit, ebenso der Schnelltest und die
+  Ungültig-Prüfung in `parseKeywordConfig()`. Eine Verkürzung mit falschem
+  Operator (z. B. `ca>=10`) macht das Keyword ungültig, `preis>=10` bleibt Text.
+* **Abkürzungen der Bedingungen** (ursprünglich 0.15.0.45, nur `p`/`pr` und `c`/`cat`): `p`/`pr` für `price`, `c`/`cat` für
   `category` (z. B. `kaffee p>=10 c~getränke`). Erkannt von `parsePriceCondition()`
   und `parseCategoryCondition()` (Regex mit Alternativen) **und** vom Schnelltest
   in `parseKeywordConfig()` (dort stand vorher ein `includes('price')`, das die
