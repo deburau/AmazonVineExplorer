@@ -23,8 +23,11 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.36 | gruppiertes Einstellungsmenü | bestätigt |
 | 0.15.0.37 | Preissuche in der Suchleiste | bestätigt |
 | 0.15.0.40 | Bedingungen ohne Klammern | bestätigt |
-| 0.15.0.38 / 0.15.0.39 | Kategoriebedingungen, Unterkategoriename beim Turbo-Scan | **offen** |
-| 0.15.0.41 | Zeilen der Benachrichtigung (Keyword/Preis/Kategorie) | **offen** |
+| 0.15.0.38 / 0.15.0.39 | Kategoriebedingungen, Unterkategoriename beim Turbo-Scan | bestätigt |
+| 0.15.0.41 | Zeilen der Benachrichtigung (Keyword/Preis/Kategorie) | bestätigt |
+
+Alle für das Release 0.16.0 vorgesehenen Änderungen sind damit im Browser
+getestet.
 
 ## Was in dieser Session gemacht wurde
 
