@@ -271,11 +271,11 @@ console.log('='.repeat(70));
     const _short = build(['kaffee']);
     await _short.enter('p>=10');
     check(['price>=10', 'kaffee'], _short.keywords(), 'Die Abkuerzung p wird zu price');
-    await _short.enter('c~getraenke');
-    check(['category~getraenke', 'price>=10', 'kaffee'], _short.keywords(), 'Die Abkuerzung c wird zu category');
+    await _short.enter('c=getraenke');
+    check(['category=getraenke', 'price>=10', 'kaffee'], _short.keywords(), 'Die Abkuerzung c wird zu category');
     check(
         [
-            { text: 'category~getraenke', index: '0', button: 'category~getraenke' },
+            { text: 'category=getraenke', index: '0', button: 'category=getraenke' },
             { text: 'price>=10', index: '1', button: 'price>=10' },
             { text: 'kaffee', index: '2', button: 'kaffee' }
         ],
@@ -283,12 +283,12 @@ console.log('='.repeat(70));
         'Die Liste zeigt die vollstaendigen Woerter'
     );
     await _short.enter('pri>=5');
-    check(['price>=5', 'category~getraenke', 'price>=10', 'kaffee'], _short.keywords(), 'Jede Verkuerzung wird ausgeschrieben (pri)');
+    check(['price>=5', 'category=getraenke', 'price>=10', 'kaffee'], _short.keywords(), 'Jede Verkuerzung wird ausgeschrieben (pri)');
     // NOTE: Der Text "xyz" passt auf keinen Namen der Kategorien, hier wird also nur
     // die Verkuerzung des Feldnamens geprueft.
-    await _short.enter('ca~xyz');
+    await _short.enter('ca=xyz');
     check(
-        ['category~xyz', 'price>=5', 'category~getraenke', 'price>=10', 'kaffee'],
+        ['category=xyz', 'price>=5', 'category=getraenke', 'price>=10', 'kaffee'],
         _short.keywords(),
         'Jede Verkuerzung wird ausgeschrieben (ca)'
     );
@@ -305,23 +305,23 @@ console.log('='.repeat(70));
 
     // 8. Der Kategoriename wird beim Speichern vervollstaendigt.
     const _category = build(['kaffee']);
-    await _category.enter('cat~lebens');
-    check(['category~"Lebensmittel & Getränke"', 'kaffee'], _category.keywords(), 'Ein Teil des Namens wird vervollstaendigt (cat~lebens)');
-    await _category.enter('category~garten');
+    await _category.enter('cat=lebens');
+    check(['category="Lebensmittel & Getränke"', 'kaffee'], _category.keywords(), 'Ein Teil des Namens wird vervollstaendigt (cat=lebens)');
+    await _category.enter('category=garten');
     check(
-        ['category~"Garten"', 'category~"Lebensmittel & Getränke"', 'kaffee'],
+        ['category="Garten"', 'category="Lebensmittel & Getränke"', 'kaffee'],
         _category.keywords(),
         'Ein kurzer Name wird vervollstaendigt (garten)'
     );
-    await _category.enter('cat~"kaffee tee"');
+    await _category.enter('cat="kaffee tee"');
     check(
-        ['category~"Kaffee Tee Sorten"', 'category~"Garten"', 'category~"Lebensmittel & Getränke"', 'kaffee'],
+        ['category="Kaffee Tee Sorten"', 'category="Garten"', 'category="Lebensmittel & Getränke"', 'kaffee'],
         _category.keywords(),
         'Ein Name mit Leerzeichen wird vervollstaendigt'
     );
-    await _category.enter('category~xyz');
+    await _category.enter('category=xyz');
     check(
-        ['category~xyz', 'category~"Kaffee Tee Sorten"', 'category~"Garten"', 'category~"Lebensmittel & Getränke"', 'kaffee'],
+        ['category=xyz', 'category="Kaffee Tee Sorten"', 'category="Garten"', 'category="Lebensmittel & Getränke"', 'kaffee'],
         _category.keywords(),
         'Ein unbekannter Name bleibt wie er ist'
     );
@@ -331,7 +331,7 @@ console.log('='.repeat(70));
     check(0, _plain.categoryCalls(), 'Vor der Eingabe wurde die Kategorieliste nicht geladen');
     await _plain.enter('tee');
     check(0, _plain.categoryCalls(), 'Ohne Kategoriebedingung wird die Kategorieliste nicht geladen');
-    await _plain.enter('category~garten');
+    await _plain.enter('category=garten');
     check(1, _plain.categoryCalls(), 'Mit Kategoriebedingung wird die Kategorieliste geladen');
 
     // 10. Eine leere Eingabe aendert nichts.

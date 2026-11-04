@@ -334,7 +334,7 @@ const SCENARIOS = [
         expectText: 'Kategorie-Treffer: Lebensmittel & Getränke',
         opts: {
             desktop: true,
-            keywords: ['category~getränke'],
+            keywords: ['category="Lebensmittel & Getränke"'],
             categoryText: 'Lebensmittel & Getränke',
             entries: [
                 {
@@ -365,7 +365,7 @@ const SCENARIOS = [
         expectNoNotification: true,
         opts: {
             desktop: true,
-            keywords: ['category~getränke'],
+            keywords: ['category="Lebensmittel & Getränke"'],
             categoryText: 'Garten',
             entries: [
                 {

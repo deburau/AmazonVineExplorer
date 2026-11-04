@@ -63,6 +63,12 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-04] - Version 0.15.0.51
+
+* The conditions of a keyword use the same operators for a category as for a price now: `=`, `==` (the name of the category is exactly the text), `!=`, `<>` (it is not), `<`, `<=` (the name stands before the text in the alphabet) and `>`, `>=` (it stands behind it). Examples: `category="kaffee tee"`, `category!=garten`, `category<kaffee`. The category of a product is a chain of names (e.g. "Lebensmittel & Getränke > Kaffee"), every name of the chain is checked.
+* The operator `~` of the earlier versions is not understood any more: a keyword like `category~kaffee` becomes a normal text that matches nothing. Such keywords have to be rewritten (e.g. to `category=kaffee`).
+* A condition for a category is only completed with the whole name while it is stored for the operators `=`, `==`, `!=` and `<>` - behind `<` or `>` the text is a boundary of the alphabet and not the name of a category.
+
 ##### [2026-11-04] - Version 0.15.0.50
 
 * The pages of the list of the categories are loaded with the same pause as the pages of the background scan (`getScanDelay()`, by default 6 seconds plus up to 6 seconds of randomness) - the loading used its own pause of 1.5 seconds before. The loading therefore looks like a normal scan for Amazon, and the setting for the pause of the scan is used as well.

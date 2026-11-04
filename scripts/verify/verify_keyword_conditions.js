@@ -6,7 +6,7 @@
  *
  * Ein Keyword kann Preisbedingungen enthalten, z. B.
  * "toaster price>=10 price<20", und Kategoriebedingungen, z. B.
- * "category~getraenke". Ein Text oder eine Kategorie muss angegeben sein, nur
+ * "category=getraenke". Ein Text oder eine Kategorie muss angegeben sein, nur
  * Preisbedingungen koennen nie matchen.
  *
  * NOTE: Die Bedingungen stehen ohne Klammern und sind immer ein eigenes Wort,
@@ -135,14 +135,26 @@ const CONDITION_CASES = [
  * Die erwarteten Ergebnisse des Parsens einer Kategoriebedingung.
  */
 const CATEGORY_CONDITION_CASES = [
-    { label: 'Eine Kategorie', input: 'category~getraenke', expected: { text: 'getraenke' } },
-    { label: 'Eine Kategorie mit Leerzeichen', input: 'category ~ Lebensmittel', expected: { text: 'lebensmittel' } },
-    { label: 'Eine Kategorie ohne Text', input: 'category~', expected: null },
-    { label: 'Eine Kategorie ohne Tilde', input: 'category=getraenke', expected: null },
-    { label: 'Ein unbekanntes Feld', input: 'kategorie~getraenke', expected: null },
-    { label: 'Eine Kategorie in Anfuehrungszeichen', input: 'category~"kaffee tee"', expected: { text: 'kaffee tee' } },
-    { label: 'Eine Kategorie in Anfuehrungszeichen mit Leerzeichen', input: 'c ~ "kaffee & tee"', expected: { text: 'kaffee & tee' } },
-    { label: 'Leere Anfuehrungszeichen', input: 'category~""', expected: null }
+    { label: 'Eine Kategorie', input: 'category=getraenke', expected: { op: '=', text: 'getraenke' } },
+    { label: 'Eine Kategorie mit Leerzeichen', input: 'category = Lebensmittel', expected: { op: '=', text: 'lebensmittel' } },
+    { label: 'Die Abkuerzung c', input: 'c=kaffee', expected: { op: '=', text: 'kaffee' } },
+    { label: 'Ungleich', input: 'category!=garten', expected: { op: '!=', text: 'garten' } },
+    { label: 'Ungleich (zwei Zeichen)', input: 'category<>garten', expected: { op: '<>', text: 'garten' } },
+    { label: 'Alphabetisch davor', input: 'category<kaffee', expected: { op: '<', text: 'kaffee' } },
+    { label: 'Alphabetisch davor oder gleich', input: 'category<=kaffee', expected: { op: '<=', text: 'kaffee' } },
+    { label: 'Alphabetisch danach', input: 'category>kaffee', expected: { op: '>', text: 'kaffee' } },
+    { label: 'Alphabetisch danach oder gleich', input: 'category>=kaffee', expected: { op: '>=', text: 'kaffee' } },
+    { label: 'Eine Kategorie in Anfuehrungszeichen', input: 'category="kaffee tee"', expected: { op: '=', text: 'kaffee tee' } },
+    {
+        label: 'Eine Kategorie in Anfuehrungszeichen mit Leerzeichen',
+        input: 'c = "kaffee & tee"',
+        expected: { op: '=', text: 'kaffee & tee' }
+    },
+    { label: 'Eine Kategorie ohne Text', input: 'category=', expected: null },
+    { label: 'Leere Anfuehrungszeichen', input: 'category=""', expected: null },
+    { label: 'Eine Kategorie ohne Operator', input: 'category getraenke', expected: null },
+    { label: 'Die Tilde ist kein Operator mehr', input: 'category~getraenke', expected: null },
+    { label: 'Ein unbekanntes Feld', input: 'kategorie=getraenke', expected: null }
 ];
 
 /**
@@ -150,51 +162,105 @@ const CATEGORY_CONDITION_CASES = [
  */
 const CATEGORY_MATCH_CASES = [
     {
-        label: 'Ein Name mit Leerzeichen kommt so vor (verbatim)',
-        categories: [{ text: 'kaffee tee' }],
-        categoryText: 'Getränke, Kaffee Tee',
+        label: 'Der Name ist genau der gesuchte',
+        categories: [{ op: '=', text: 'garten' }],
+        categoryText: 'Garten',
         expected: true
     },
     {
-        label: 'Ein Name mit Leerzeichen kommt nicht vor',
-        categories: [{ text: 'kaffee tee' }],
-        categoryText: 'Kaffee und Tee',
+        label: 'Der Name ist ein anderer',
+        categories: [{ op: '=', text: 'garten' }],
+        categoryText: 'Lebensmittel & Getränke',
         expected: false
     },
     {
-        label: 'Der Name kommt in der Kategorie vor',
-        categories: [{ text: 'getränke' }],
+        label: 'Ein Teil des Namens ist nicht der Name',
+        categories: [{ op: '=', text: 'garten' }],
+        categoryText: 'Gartendeko',
+        expected: false
+    },
+    {
+        label: 'Der Name steht in einer Kette von Namen',
+        categories: [{ op: '=', text: 'kaffee' }],
+        categoryText: 'Getränke, Kaffee Tee > Kaffee',
+        expected: true
+    },
+    {
+        label: 'Ein Name mit Leerzeichen in Anfuehrungszeichen',
+        categories: [{ op: '=', text: 'kaffee tee' }],
+        categoryText: 'Getränke > Kaffee Tee',
+        expected: true
+    },
+    {
+        label: 'Der Name kommt nicht vor (ungleich passt)',
+        categories: [{ op: '!=', text: 'garten' }],
         categoryText: 'Lebensmittel & Getränke',
         expected: true
     },
     {
-        label: 'Der Name kommt nicht vor',
-        categories: [{ text: 'getränke' }],
+        label: 'Der Name kommt vor (ungleich passt nicht)',
+        categories: [{ op: '!=', text: 'garten' }],
         categoryText: 'Garten',
         expected: false
     },
     {
-        label: 'Der Name kommt auch in einer Unterkategorie vor',
-        categories: [{ text: 'kaffee' }],
-        categoryText: 'Lebensmittel & Getränke > Getränke, Kaffee & Tee',
+        label: 'Alphabetisch davor',
+        categories: [{ op: '<', text: 'kaffee' }],
+        categoryText: 'Garten',
         expected: true
     },
     {
+        label: 'Alphabetisch davor (passt nicht)',
+        categories: [{ op: '<', text: 'a' }],
+        categoryText: 'Garten',
+        expected: false
+    },
+    {
+        label: 'Alphabetisch danach',
+        categories: [{ op: '>', text: 'kaffee' }],
+        categoryText: 'Lebensmittel & Getränke',
+        expected: true
+    },
+    {
+        label: 'Der erste Name der Kette entscheidet bei kleiner',
+        categories: [{ op: '<', text: 'm' }],
+        categoryText: 'Garten > Zubehör',
+        expected: true
+    },
+    {
+        label: 'Der letzte Name der Kette entscheidet bei groesser',
+        categories: [{ op: '>', text: 'm' }],
+        categoryText: 'Garten > Zubehör',
+        expected: true
+    },
+    {
+        label: 'Der letzte Name der Kette ist nicht groesser',
+        categories: [{ op: '>', text: 'zzz' }],
+        categoryText: 'Garten > Zubehör',
+        expected: false
+    },
+    {
         label: 'Ohne Kategorie passt keine Bedingung',
-        categories: [{ text: 'getränke' }],
+        categories: [{ op: '=', text: 'getränke' }],
         categoryText: '',
         expected: false
     },
     {
         label: 'Beide Bedingungen muessen passen',
-        categories: [{ text: 'lebensmittel' }, { text: 'tee' }],
-        categoryText: 'Lebensmittel & Getränke > Getränke, Kaffee & Tee',
+        categories: [
+            { op: '=', text: 'lebensmittel & getränke' },
+            { op: '>', text: 'kaffee' }
+        ],
+        categoryText: 'Lebensmittel & Getränke > Kaffee',
         expected: true
     },
     {
         label: 'Eine von zwei Bedingungen passt nicht',
-        categories: [{ text: 'lebensmittel' }, { text: 'blumen' }],
-        categoryText: 'Lebensmittel & Getränke > Getränke, Kaffee & Tee',
+        categories: [
+            { op: '=', text: 'lebensmittel & getränke' },
+            { op: '=', text: 'blumen' }
+        ],
+        categoryText: 'Lebensmittel & Getränke > Kaffee',
         expected: false
     }
 ];
@@ -235,18 +301,18 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Die Abkuerzung c fuer category',
-        input: 'kaffee c~getraenke',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'getraenke' }], valid: true }
+        input: 'kaffee c=getraenke',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], valid: true }
     },
     {
         label: 'Die Abkuerzung cat fuer category',
-        input: 'kaffee cat ~ getraenke',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'getraenke' }], valid: true }
+        input: 'kaffee cat = getraenke',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], valid: true }
     },
     {
         label: 'Beide Abkuerzungen zusammen',
-        input: 'p=0 c~getränke',
-        expected: { keyword: '', conditions: [{ op: '=', price: 0 }], categories: [{ text: 'getränke' }], valid: true }
+        input: 'p=0 c=getränke',
+        expected: { keyword: '', conditions: [{ op: '=', price: 0 }], categories: [{ op: '=', text: 'getränke' }], valid: true }
     },
     {
         label: 'Jede Verkuerzung von price: pri',
@@ -260,31 +326,31 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Jede Verkuerzung von category: ca',
-        input: 'kaffee ca~getraenke',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'getraenke' }], valid: true }
+        input: 'kaffee ca=getraenke',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], valid: true }
     },
     {
         label: 'Jede Verkuerzung von category: cate',
-        input: 'kaffee cate~getraenke',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'getraenke' }], valid: true }
+        input: 'kaffee cate=getraenke',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], valid: true }
     },
     {
         label: 'Jede Verkuerzung von category: categ',
-        input: 'kaffee categ ~ tee',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'tee' }], valid: true }
+        input: 'kaffee categ = tee',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'tee' }], valid: true }
     },
     {
-        // "ca" verkuerzt nur "category" - vor einem Preis-Operator ist das ein
-        // Fehler und das Keyword matcht nicht (wie bei jeder kaputten Bedingung).
-        label: 'Eine Verkuerzung von category vor einem Preis-Operator ist ungueltig',
+        // "ca" verkuerzt "category", der Operator ist der eines Preises: der Name
+        // der Kategorie wird alphabetisch mit "10" verglichen.
+        label: 'Eine Verkuerzung von category mit einem Ordnungs-Operator',
         input: 'ca>=10',
-        expected: { keyword: 'ca>=10', conditions: [], categories: [], valid: false }
+        expected: { keyword: '', conditions: [], categories: [{ op: '>=', text: '10' }], valid: true }
     },
     {
-        // "pri" verkuerzt nur "price", eine Kategorie braucht "c", "ca", ...
-        label: 'Eine Verkuerzung von price ist keine Kategorie',
+        // Die Tilde ist kein Operator mehr, der Text bleibt also ein Keyword.
+        label: 'Die Tilde macht keine Bedingung mehr',
         input: 'toaster pri~ x',
-        expected: { keyword: 'toaster pri~ x', conditions: [], categories: [], valid: false }
+        expected: { keyword: 'toaster pri~ x', conditions: [], categories: [], valid: true }
     },
     {
         // "preis" beginnt mit "pr" und "p", ist aber ein Text.
@@ -344,22 +410,25 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Ein Keyword mit einer Kategoriebedingung',
-        input: 'kaffee category~getraenke',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'getraenke' }], valid: true }
+        input: 'kaffee category=getraenke',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], valid: true }
     },
     {
         // Der Ausdruck der Anforderung: ein Preis ohne Keyword, nur mit Kategorie.
         label: 'Nur Bedingungen ohne Keyword',
-        input: 'price=0 category~getränke',
-        expected: { keyword: '', conditions: [{ op: '=', price: 0 }], categories: [{ text: 'getränke' }], valid: true }
+        input: 'price=0 category=getränke',
+        expected: { keyword: '', conditions: [{ op: '=', price: 0 }], categories: [{ op: '=', text: 'getränke' }], valid: true }
     },
     {
         label: 'Zwei Kategoriebedingungen',
-        input: 'category~lebensmittel category~tee',
+        input: 'category=lebensmittel category=tee',
         expected: {
             keyword: '',
             conditions: [],
-            categories: [{ text: 'lebensmittel' }, { text: 'tee' }],
+            categories: [
+                { op: '=', text: 'lebensmittel' },
+                { op: '=', text: 'tee' }
+            ],
             valid: true
         }
     },
@@ -370,8 +439,8 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Ein verbatim-String als Kategoriename',
-        input: 'category~"kaffee tee" kaffee',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'kaffee tee' }], valid: true }
+        input: 'category="kaffee tee" kaffee',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'kaffee tee' }], valid: true }
     },
     {
         label: 'Ein verbatim-String neben einer Preisbedingung',
@@ -385,8 +454,8 @@ const KEYWORD_CASES = [
     },
     {
         label: 'Eine kaputte Kategoriebedingung macht das Keyword ungueltig',
-        input: 'kaffee category~',
-        expected: { keyword: 'kaffee category~', conditions: [], categories: [], valid: false }
+        input: 'kaffee category=',
+        expected: { keyword: 'kaffee category=', conditions: [], categories: [], valid: false }
     },
     {
         label: 'Ein Keyword mit dem Wort price, aber ohne Bedingung',

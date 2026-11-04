@@ -176,8 +176,8 @@ async function check(queryText, expected, label) {
     await check('[price>=0]', [], 'Auch eine Preisbedingung in Klammern sucht nur den Text');
 
     // Die Kategorie ist nicht in der Datenbank, die Suche kann sie nicht pruefen.
-    const _category = await search('kaffee category~getränke');
-    await check('kaffee category~getränke', [], 'Eine Kategoriebedingung liefert kein Ergebnis');
+    const _category = await search('kaffee category=getränke');
+    await check('kaffee category=getränke', [], 'Eine Kategoriebedingung liefert kein Ergebnis');
     _checks++;
     if (_category.warnings.length === 0) {
         _errors++;

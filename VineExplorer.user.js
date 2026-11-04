@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.50
+// @version      0.15.0.51
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2733,10 +2733,9 @@ function createSettingsKeywordsElement(dat, _elem, _labelName, _labelDescription
             // NOTE: The names of the categories are loaded once for all lines and
             // only if a line really has a condition for a category, so that a plain
             // keyword does not load the list of the categories.
-            const _hasCategory = _value.split('\n').some((line) => {
-                const _match = /\b([a-z]+)\s*~/i.exec(line);
-                return _match && aveIsConditionWord(_match[1], 'category');
-            });
+            const _hasCategory = _value
+                .split('\n')
+                .some((line) => [...line.matchAll(/\b([a-z]+)\s*[=!<>]/gi)].some((match) => aveIsConditionWord(match[1], 'category')));
             const _categoryNames = _hasCategory ? await aveGetCategoryNames() : [];
 
             for (let _key of _value.split('\n')) {
@@ -5191,8 +5190,8 @@ function normalizePriceInput(value) {
 /**
  * Replaces the abbreviations of the conditions of a keyword with the full words.
  *
- * The user can write "p>=10" instead of "price>=10" and "c~kaffee" instead of
- * "category~kaffee". A keyword of the settings is stored with the full words, so
+ * The user can write "p>=10" instead of "price>=10" and "c=kaffee" instead of
+ * "category=kaffee". A keyword of the settings is stored with the full words, so
  * that the list always shows them. The abbreviations are understood as well (see
  * parsePriceCondition() and parseCategoryCondition()), so that they work in the
  * search bar and in a keyword that was stored before.
@@ -5204,7 +5203,7 @@ function normalizePriceInput(value) {
  * @returns {string} The keyword with the full words
  */
 function aveExpandKeywordAbbreviations(text) {
-    return String(text ?? '').replace(/\b([a-z]+)\s*(?=[=!<>~])/gi, (_match, _word) => {
+    return String(text ?? '').replace(/\b([a-z]+)\s*(?=[=!<>])/gi, (_match, _word) => {
         if (aveIsConditionWord(_word, 'price')) return 'price';
         if (aveIsConditionWord(_word, 'category')) return 'category';
         return _match;
@@ -5239,11 +5238,15 @@ async function aveGetCategoryNames() {
 /**
  * Replaces the name of a condition for a category with the whole name.
  *
- * The user can write a part of the name (e.g. category~lebens). The setting stores
- * the whole name (category~"Lebensmittel & Getränke"), so that the list of the
+ * The user can write a part of the name (e.g. category=lebens). The setting stores
+ * the whole name (category="Lebensmittel & Getränke"), so that the list of the
  * keywords shows which category is meant. The name is taken from the list of the
  * categories (see aveGetCategoryNames()), the first name that contains the typed
  * text wins. A text that matches nothing stays as it is.
+ *
+ * NOTE: Only the operators "=", "==", "!=" and "<>" are completed, because they
+ * compare the name itself. A text behind "<" or ">" is a boundary of the alphabet
+ * and not the name of a category (see matchCategoryConditions()).
  *
  * @param {string} text The keyword as it was entered
  * @param {string[]} names The names of the categories
@@ -5252,7 +5255,7 @@ async function aveGetCategoryNames() {
 function aveExpandCategoryNames(text, names) {
     if (!Array.isArray(names) || names.length === 0) return String(text ?? '');
 
-    return String(text ?? '').replace(/\b([a-z]+)\s*~\s*("[^"]*"|\S+)/gi, (_match, _word, _value) => {
+    return String(text ?? '').replace(/\b([a-z]+)\s*(==|!=|<>|=)\s*("[^"]*"|\S+)/gi, (_match, _word, _operator, _value) => {
         if (!aveIsConditionWord(_word, 'category')) return _match;
 
         const _typed = aveUnquoteKeywordPart(_value).toLowerCase();
@@ -5260,7 +5263,7 @@ function aveExpandCategoryNames(text, names) {
 
         const _name = names.find((name) => String(name).toLowerCase().includes(_typed));
         if (!_name) return _match;
-        return `${_word}~"${_name}"`;
+        return `${_word}${_operator}"${_name}"`;
     });
 }
 
@@ -5375,7 +5378,7 @@ function parseKeywordConfig(config) {
     // expressions and they can contain the name of a field, so it is checked if a
     // field name stands directly in front of an operator. The field names can be
     // shortened (see aveExpandKeywordAbbreviations()).
-    const _start = /\b([a-z]+)\s*(?=[=!<>~])/i.exec(_text);
+    const _start = /\b([a-z]+)\s*(?=[=!<>])/i.exec(_text);
     if (!_start || !aveIsConditionWord(_start[1])) return _result;
 
     // NOTE: A condition is a word of its own, the spaces around the operator are
@@ -5427,7 +5430,7 @@ function parseKeywordConfig(config) {
 
     // NOTE: A word that names a field and cannot be read as a condition makes the
     // keyword invalid, so that a typo does not silently search for a text.
-    const _broken = _keyword.match(/(?:^|\s)([a-z]+)\s*(?=[=!<>~])/gi) || [];
+    const _broken = _keyword.match(/(?:^|\s)([a-z]+)\s*(?=[=!<>])/gi) || [];
     // NOTE: The leading space is part of the match, so it is cut off before the check.
     if (_broken.some((candidate) => aveIsConditionWord(candidate.trim()))) {
         _result.valid = false;
@@ -5443,24 +5446,30 @@ function parseKeywordConfig(config) {
 /**
  * Parses a category condition of the keyword configuration.
  *
- * The format of a condition is "category~text", the spaces are optional. Every
- * shortening of the word is allowed, e.g. "c", "ca" or "cat" (see
- * aveIsConditionWord()). The condition is fulfilled when the text occurs in the
- * name of the category of the product.
+ * The format of a condition is "category<operator>name", the spaces are optional,
+ * e.g. "category=kaffee". Every shortening of the word "category" is allowed, e.g.
+ * "c", "ca" or "cat" (see aveIsConditionWord()).
+ *
+ * NOTE: The operators are the same as the ones of a price condition (see
+ * parsePriceCondition()): "=" or "==" (the name of the category is exactly the text),
+ * "!=" or "<>" (it is not), "<" or "<=" (the name stands before the text in the
+ * alphabet) and ">" or ">=" (it stands behind it). The operator "~" of the older
+ * versions is not used any more.
+ *
+ * NOTE: A name in double quotes can contain spaces, e.g. category="kaffee tee".
  *
  * @param {string} text The text of the condition
  * @returns {object|null} The condition, or null if it is not valid
  */
 function parseCategoryCondition(text) {
-    const _match = /^\s*([a-z]+)\s*~\s*(.+?)\s*$/i.exec(String(text ?? ''));
+    const _match = /^\s*([a-z]+)\s*(<=|>=|==|!=|<>|=|<|>)\s*(.+?)\s*$/i.exec(String(text ?? ''));
     if (!_match) return null;
     // NOTE: Every shortening of "category" is allowed (see aveIsConditionWord()).
     if (!aveIsConditionWord(_match[1], 'category')) return null;
 
-    // NOTE: A name in double quotes can contain spaces, e.g. category~"kaffee tee".
-    const _text = aveUnquoteKeywordPart(_match[2]).toLowerCase();
+    const _text = aveUnquoteKeywordPart(_match[3]).toLowerCase();
     if (_text.length === 0) return null;
-    return { text: _text };
+    return { op: _match[2], text: _text };
 }
 
 /**
@@ -5584,6 +5593,13 @@ function matchesKeywordEntry(entry, descFull, categoryText) {
 /**
  * Checks the category conditions of a keyword against the category of a product.
  *
+ * The category of a product can be a chain of names, e.g. "Lebensmittel & Getränke >
+ * Getränke, Kaffee & Tee" (see getPageCategoryText()). Its names are checked one by
+ * one with the same operators as the prices (see matchPriceConditions()): "=" is
+ * fulfilled when one of the names is the text, "!=" when none of them is, "<" when
+ * the first name of the alphabet stands before the text and ">" when the last one
+ * stands behind it.
+ *
  * NOTE: The category of a product is only known when it was seen on a page of a
  * category (e.g. by the turbo scan). A product whose category is not known can
  * not fulfil a category condition.
@@ -5595,9 +5611,41 @@ function matchesKeywordEntry(entry, descFull, categoryText) {
 function matchCategoryConditions(categories, categoryText) {
     if (typeof categoryText !== 'string' || categoryText.length === 0) return false;
 
-    const _lowerText = categoryText.toLowerCase();
+    const _names = categoryText
+        .toLowerCase()
+        .split('>')
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0);
+    if (_names.length === 0) return false;
+
+    const _first = _names.reduce((a, b) => (b < a ? b : a));
+    const _last = _names.reduce((a, b) => (a < b ? b : a));
+
     for (const _category of categories) {
-        if (!_lowerText.includes(_category.text)) return false;
+        switch (_category.op) {
+            case '=':
+            case '==':
+                if (!_names.includes(_category.text)) return false;
+                break;
+            case '!=':
+            case '<>':
+                if (_names.includes(_category.text)) return false;
+                break;
+            case '<':
+                if (!(_first < _category.text)) return false;
+                break;
+            case '<=':
+                if (!(_first <= _category.text)) return false;
+                break;
+            case '>':
+                if (!(_last > _category.text)) return false;
+                break;
+            case '>=':
+                if (!(_last >= _category.text)) return false;
+                break;
+            default:
+                return false;
+        }
     }
     return true;
 }
