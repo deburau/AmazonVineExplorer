@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.42
+// @version      0.15.0.43
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -39,7 +39,7 @@
 /* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
-   addProductToKeywordSearch, backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct,
+   addProductToKeywordSearch, aveMatchImageUrl, backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct,
    cleanUpDatabase, getPageCategoryText, hasCategoryCondition, matchCategoryConditions, matchesKeyword,
    matchesKeywordEntry, matchesPriceConditions, parseCategoryCondition,
    scanLoop, scanStepBackground,
@@ -5226,6 +5226,21 @@ function getMatchImageName(entry) {
 }
 
 /**
+ * Returns the URL of an icon of the notifications.
+ *
+ * The images are loaded from the main branch of the repository, so that every
+ * user gets them (the images are not changed any more).
+ *
+ * @param {string} name The name of the icon (see getMatchImageName())
+ * @param {boolean} [small] true for the small version. A message of Gotify needs
+ *                          it, because markdown can not set the size of an image.
+ * @returns {string} The URL of the image
+ */
+function aveMatchImageUrl(name, small = false) {
+    return `https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/images/${name}${small ? '_small' : ''}.png`;
+}
+
+/**
  * Checks if the text and the category conditions of a keyword match a product.
  *
  * @param {object} entry The parsed keyword
@@ -5385,8 +5400,10 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
         }
 
         // The reasons for the match are shown in the notifications, one line per
-        // kind of match (the keyword, the price and the category).
+        // kind of match (the keyword, the price and the category). The icon of the
+        // notification shows the kinds of the match as well.
         const _matchLines = formatMatchLines(_entry, _prod, categoryText);
+        const _matchImageName = getMatchImageName(_entry);
 
         if (SETTINGS.EnableDesktopNotifikation) {
             // NOTE: The reasons for the notification stand before the description
@@ -5408,19 +5425,23 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
                     )}`;
                     window.open(newUrl, '_blank');
                 },
-                // The icon of the notification shows the kinds of the match.
-                getMatchImageName(_entry)
+                _matchImageName
             );
         }
         if (SETTINGS.GotifyUrl) {
+            // NOTE: The icon of the application can not be set per message in
+            // Gotify, so the kinds of the match are shown as a small image in the
+            // first line of the message. It is the small version of the icon,
+            // because markdown can not set the size of an image.
+            const _matchIcon = `![](${aveMatchImageUrl(_matchImageName, true)})`;
             if (_prod.link) {
                 gotifyNotification(
-                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \n${_matchLines.join('  \n')}`,
+                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link}) ${_matchIcon}  \n${_prod.description_full}  \n${_matchLines.join('  \n')}`,
                     _prod
                 );
             } else {
                 gotifyNotification(
-                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \n${_matchLines.join('  \n')}`
+                    `![](${fixProductImageUrl(_prod.data_img_url)}) ${_matchIcon}  \n${_prod.description_full}  \n${_matchLines.join('  \n')}`
                 );
             }
         }
@@ -5648,7 +5669,7 @@ function desktopNotifikation(title, message, image = null, requireInteraction = 
     const _imageBaseUrl = 'https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/';
     const _vineLogo = `${_imageBaseUrl}vine_logo.png`;
     const _defaultImage = `${_imageBaseUrl}vine_logo_notification_image.png`;
-    const _icon = iconName ? `${_imageBaseUrl}images/${iconName}.png` : _vineLogo;
+    const _icon = iconName ? aveMatchImageUrl(iconName) : _vineLogo;
 
     if (Notification.permission === 'granted') {
         const _notification = new Notification(title, {

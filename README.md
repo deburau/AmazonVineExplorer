@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-04] - Version 0.15.0.43
+
+* The message of Gotify shows the kind of the match as a small graphic as well: the ring icon (K/C/P) stands in the first line next to the image of the product. Gotify sets the icon of a notification in the application, not per message, so a small image inside the message is used - a 64 x 64 version of the icon, because markdown can not set the size of an image.
+
 ##### [2026-11-04] - Version 0.15.0.42
 
 * New: the icon of the desktop notification shows at the first glance, which kind of a match the notification has - a ring with a **K** (keyword) in the top left corner, with a **C** (category) in the bottom left corner and with a **P** (price) in the bottom right corner, single or in every combination. The rings are transparent, so the logo stays visible through them.

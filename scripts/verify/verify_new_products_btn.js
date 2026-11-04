@@ -48,6 +48,8 @@ const NEW_NAMES = [
     'formatTaxPrize',
     // Die Funktion, die den Namen des Symbols der Benachrichtigung liefert.
     'getMatchImageName',
+    // Die Funktion, die die URL eines Symbols liefert.
+    'aveMatchImageUrl',
     // Die Funktion, die die Details laedt.
     'loadProductDetails',
     // Die Funktionen, die die Verzoegerungen zwischen den Requests berechnen.

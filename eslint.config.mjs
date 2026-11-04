@@ -125,6 +125,7 @@ const mainFile = [
     'getCategoryId',
     'getCategoryTextById',
     'getMatchImageName',
+    'aveMatchImageUrl',
     'getContrastColor',
     'getFastScanIntervalSeconds',
     'getFastScanState',
