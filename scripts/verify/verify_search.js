@@ -49,6 +49,8 @@ const CODE = [
     extractBody(mainSrc, 'normalizePriceInput'),
     extractBody(mainSrc, 'parsePriceCondition'),
     extractBody(mainSrc, 'aveIsConditionWord'),
+    extractBody(mainSrc, 'aveSplitQuotedWords'),
+    extractBody(mainSrc, 'aveUnquoteKeywordPart'),
     extractBody(mainSrc, 'parseCategoryCondition'),
     extractBody(mainSrc, 'parseKeywordConfig'),
     extractBody(mainSrc, 'getTaxPrices'),
@@ -163,6 +165,10 @@ async function check(queryText, expected, label) {
     } else {
         console.log('  OK   Eine ungueltige Preisbedingung wird gemeldet');
     }
+
+    // Ein Teil in doppelten Anfuehrungszeichen: die Anfuehrungszeichen werden
+    // entfernt, gesucht wird der Text mit seinen Leerzeichen.
+    await check('"kaffee bohnen"', ['p4'], 'Ein verbatim-String in der Suche');
 
     // Die Klammern sind kein Teil der Syntax mehr: der Text wird gesucht.
     await check('[kaffee]', [], 'Ein Text in Klammern ist kein Treffer, wenn er nicht im Text steht');

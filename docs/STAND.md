@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.46` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.47` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 17 erfolgreich (`npm run verify`) |
@@ -28,6 +28,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.42 / 0.15.0.43 | Symbol der Desktop-Benachrichtigung + kleine Grafik in Gotify | **offen** |
 | 0.15.0.44 | Neues Keyword oben in der Liste | **offen** |
 | 0.15.0.45 / 0.15.0.46 | Abkürzungen der Bedingungen (jede Verkürzung) | **offen** |
+| 0.15.0.47 | Verbatim-Strings in doppelten Anführungszeichen | **offen** |
 
 Alle für das Release 0.16.0 vorgesehenen Änderungen sind damit im Browser
 getestet.
@@ -222,6 +223,15 @@ Release erledigt und wurde geschlossen.
   **nicht** als Favorit markiert – es wird beim nächsten Scan erneut geprüft.
 * Neue Funktionen: `normalizePriceInput()`, `parsePriceCondition()`,
   `parseKeywordConfig()`, `matchPriceConditions()`, `loadProductDetails()`.
+* **Verbatim-Strings**: ein Teil eines Keywords in **doppelten
+  Anführungszeichen** wird genau so gesucht (mit Leerzeichen), z. B. `"kaffee
+  bohnen"`; ohne Anführungszeichen müssen wie bisher nur alle Wörter irgendwo
+  vorkommen (`a b` passt auf `a x b`, `"a b"` nicht). Zerlegt von
+  `aveSplitQuotedWords()` (Anführungszeichen bleiben im Wort), verglichen mit
+  `aveUnquoteKeywordPart()` in `matchesKeyword()`. Für Kategorienamen gilt es
+  ebenso (`category~"kaffee tee"` – der Parser entfernt die Anführungszeichen),
+  und in der Suche werden die Wörter ohne Anführungszeichen an `database.query()`
+  gegeben, weil dessen `includes()` genau die Verbatim-Semantik hat.
 * **Abkürzungen der Bedingungen**: **jede Verkürzung** der Feldnamen, also
   `p`/`pr`/`pri`/`pric`/`price` und `c`/`ca`/`cat`/…/`category`. Geprüft von
   `aveIsConditionWord(word, field)` (nutzt `String.startsWith()`); die Parser

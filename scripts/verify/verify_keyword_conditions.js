@@ -57,11 +57,17 @@ const CODE = [
     extractBody(mainSrc, 'parseCategoryCondition'),
     extractBody(mainSrc, 'parseKeywordConfig'),
     extractBody(mainSrc, 'matchPriceConditions'),
-    extractBody(mainSrc, 'matchCategoryConditions')
+    extractBody(mainSrc, 'matchCategoryConditions'),
+    // Das Zerlegen in Woerter und verbatim-Strings und der Textvergleich.
+    extractBody(mainSrc, 'aveSplitQuotedWords'),
+    extractBody(mainSrc, 'aveUnquoteKeywordPart'),
+    extractBody(mainSrc, 'stringToRegex'),
+    extractBody(mainSrc, 'matchesKeyword')
 ].join('\n\n');
 
 const sandbox = {
     console: { log: () => {}, warn: () => {}, error: () => {} },
+    SETTINGS: { DebugLevel: 0 },
     Math,
     Number,
     Array,
@@ -79,6 +85,7 @@ const parsePriceCondition = vm.runInContext('parsePriceCondition', ctx);
 const parseKeywordConfig = vm.runInContext('parseKeywordConfig', ctx);
 const matchPriceConditions = vm.runInContext('matchPriceConditions', ctx);
 const parseCategoryCondition = vm.runInContext('parseCategoryCondition', ctx);
+const matchesKeyword = vm.runInContext('matchesKeyword', ctx);
 const matchCategoryConditions = vm.runInContext('matchCategoryConditions', ctx);
 
 /**
@@ -132,13 +139,28 @@ const CATEGORY_CONDITION_CASES = [
     { label: 'Eine Kategorie mit Leerzeichen', input: 'category ~ Lebensmittel', expected: { text: 'lebensmittel' } },
     { label: 'Eine Kategorie ohne Text', input: 'category~', expected: null },
     { label: 'Eine Kategorie ohne Tilde', input: 'category=getraenke', expected: null },
-    { label: 'Ein unbekanntes Feld', input: 'kategorie~getraenke', expected: null }
+    { label: 'Ein unbekanntes Feld', input: 'kategorie~getraenke', expected: null },
+    { label: 'Eine Kategorie in Anfuehrungszeichen', input: 'category~"kaffee tee"', expected: { text: 'kaffee tee' } },
+    { label: 'Eine Kategorie in Anfuehrungszeichen mit Leerzeichen', input: 'c ~ "kaffee & tee"', expected: { text: 'kaffee & tee' } },
+    { label: 'Leere Anfuehrungszeichen', input: 'category~""', expected: null }
 ];
 
 /**
  * Die erwarteten Ergebnisse des Vergleichs der Kategorie.
  */
 const CATEGORY_MATCH_CASES = [
+    {
+        label: 'Ein Name mit Leerzeichen kommt so vor (verbatim)',
+        categories: [{ text: 'kaffee tee' }],
+        categoryText: 'Getränke, Kaffee Tee',
+        expected: true
+    },
+    {
+        label: 'Ein Name mit Leerzeichen kommt nicht vor',
+        categories: [{ text: 'kaffee tee' }],
+        categoryText: 'Kaffee und Tee',
+        expected: false
+    },
     {
         label: 'Der Name kommt in der Kategorie vor',
         categories: [{ text: 'getränke' }],
@@ -342,6 +364,21 @@ const KEYWORD_CASES = [
         }
     },
     {
+        label: 'Ein verbatim-String bleibt im Keyword erhalten',
+        input: 'kaffee "bohnen extra"',
+        expected: { keyword: 'kaffee "bohnen extra"', conditions: [], categories: [], valid: true }
+    },
+    {
+        label: 'Ein verbatim-String als Kategoriename',
+        input: 'category~"kaffee tee" kaffee',
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ text: 'kaffee tee' }], valid: true }
+    },
+    {
+        label: 'Ein verbatim-String neben einer Preisbedingung',
+        input: '"kaffee bohnen" p>=10',
+        expected: { keyword: '"kaffee bohnen"', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
+    },
+    {
         label: 'Eine kaputte Preisbedingung macht das Keyword ungueltig',
         input: 'toaster price > abc',
         expected: { keyword: 'toaster price > abc', conditions: [], categories: [], valid: false }
@@ -510,6 +547,26 @@ const MATCH_CASES = [
     }
 ];
 
+/**
+ * Die erwarteten Ergebnisse des Textvergleichs (matchesKeyword()).
+ *
+ * Ein Wort muss irgendwo im Text vorkommen, ein Teil in doppelten Anfuehrungszeichen
+ * dagegen genau so (mit seinen Leerzeichen).
+ */
+const KEYWORD_MATCH_CASES = [
+    { label: 'Zwei Woerter in beliebiger Reihenfolge', keyword: 'a b', descFull: 'a x b', expected: true },
+    { label: 'Ein verbatim-String passt nicht auf getrennte Woerter', keyword: '"a b"', descFull: 'a x b', expected: false },
+    { label: 'Ein verbatim-String passt, wenn er genau so vorkommt', keyword: '"a b"', descFull: 'a b c', expected: true },
+    { label: 'Ein verbatim-String mit doppeltem Leerzeichen passt nicht', keyword: '"a b"', descFull: 'a  b', expected: false },
+    { label: 'Ein verbatim-String mit mehreren Woertern', keyword: '"kaffee bohnen"', descFull: 'kaffee bohnen 1 kg', expected: true },
+    { label: 'Wort und verbatim-String zusammen', keyword: 'kaffee "bohnen extra"', descFull: 'kaffee bohnen extra stark', expected: true },
+    { label: 'Wort und verbatim-String: das Wort fehlt', keyword: 'tee "bohnen extra"', descFull: 'kaffee bohnen extra', expected: false },
+    { label: 'Ein verbatim-String ist kein regulaerer Ausdruck', keyword: '"a.b"', descFull: 'a.b c', expected: true },
+    { label: 'Ein Punkt im verbatim-String passt auf kein anderes Zeichen', keyword: '"a.b"', descFull: 'axb', expected: false },
+    { label: 'Ein regulaerer Ausdruck im Keyword', keyword: '/a.c/', descFull: 'abc', expected: true },
+    { label: 'Ein leerer Text passt nicht', keyword: 'kaffee', descFull: '', expected: false }
+];
+
 console.log('Bedingungen der Keywords pruefen (Preis und Kategorie)');
 console.log('='.repeat(70));
 
@@ -552,13 +609,18 @@ for (const _case of MATCH_CASES) {
     check(_case.expected, matchPriceConditions(_case.conditions, _case.prices), _case.label);
 }
 
+for (const _case of KEYWORD_MATCH_CASES) {
+    check(_case.expected, matchesKeyword(_case.descFull, _case.keyword), _case.label);
+}
+
 const _total =
     PRICE_CASES.length +
     CONDITION_CASES.length +
     CATEGORY_CONDITION_CASES.length +
     KEYWORD_CASES.length +
     CATEGORY_MATCH_CASES.length +
-    MATCH_CASES.length;
+    MATCH_CASES.length +
+    KEYWORD_MATCH_CASES.length;
 if (_errors === 0) {
     console.log(`  alle ${_total} Faelle sind ok`);
 } else {

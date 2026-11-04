@@ -63,6 +63,10 @@ details.
 
 ## Changelog Deburau
 
+##### [2026-11-04] - Version 0.15.0.47
+
+* A part of a keyword in double quotes is a verbatim string: `"kaffee bohnen"` matches only if that text stands in the description as it is, spaces included. Without the quotes the words are matched as before, so `a b` matches the text "a x b" and `"a b"` does not. The same works for the name of a category: `category~"kaffee tee"` checks the whole name with its spaces, and in the search bar both forms work as well.
+
 ##### [2026-11-04] - Version 0.15.0.46
 
 * Every shortening of the field names of a condition works now, not only `p`, `pr`, `c` and `cat`: `p`, `pr`, `pri`, `pric`, `price` and `c`, `ca`, `cat`, `cate`, `categ`, `catego`, `categor`, `category`. The whole word is stored in every case, the sort order of the list does not change and a word like `preis>=10` stays a normal text (only directly in front of an operator counts).

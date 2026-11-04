@@ -128,6 +128,8 @@ const mainFile = [
     'aveMatchImageUrl',
     'aveExpandKeywordAbbreviations',
     'aveIsConditionWord',
+    'aveSplitQuotedWords',
+    'aveUnquoteKeywordPart',
     'getContrastColor',
     'getFastScanIntervalSeconds',
     'getFastScanState',

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.46
+// @version      0.15.0.47
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -40,7 +40,8 @@
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
    addProductToKeywordSearch, aveExpandKeywordAbbreviations, aveIsConditionWord, aveMatchImageUrl,
-   backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct,
+   aveSplitQuotedWords, aveUnquoteKeywordPart, backGroundTileScanner, btnEventhandlerClick,
+   checkKeywordsForProduct,
    cleanUpDatabase, getPageCategoryText, hasCategoryCondition, matchCategoryConditions, matchesKeyword,
    matchesKeywordEntry, matchesPriceConditions, parseCategoryCondition,
    scanLoop, scanStepBackground,
@@ -5052,6 +5053,49 @@ function aveExpandKeywordAbbreviations(text) {
 }
 
 /**
+ * Splits a text into its words.
+ *
+ * A part in double quotes counts as one word, even if it contains spaces, so that a
+ * verbatim string like "kaffee bohnen" stays together. The quotes are kept, so that
+ * the caller can see which part is a verbatim string (see aveUnquoteKeywordPart()).
+ *
+ * @param {string} text The text to split
+ * @returns {string[]} The words (without empty ones)
+ */
+function aveSplitQuotedWords(text) {
+    const _words = [];
+    let _current = '';
+    let _inQuotes = false;
+
+    for (const _character of String(text ?? '')) {
+        if (_character === '"') {
+            _inQuotes = !_inQuotes;
+            _current += _character;
+        } else if (!_inQuotes && /\s/.test(_character)) {
+            if (_current.length > 0) _words.push(_current);
+            _current = '';
+        } else {
+            _current += _character;
+        }
+    }
+
+    if (_current.length > 0) _words.push(_current);
+    return _words;
+}
+
+/**
+ * Removes the double quotes around a part of a keyword.
+ *
+ * @param {string} part The part of a keyword, e.g. "kaffee bohnen"
+ * @returns {string} The text without the quotes
+ */
+function aveUnquoteKeywordPart(part) {
+    const _part = String(part ?? '');
+    if (_part.length > 1 && _part.startsWith('"') && _part.endsWith('"')) return _part.slice(1, -1);
+    return _part;
+}
+
+/**
  * Checks if a word is a shortening of the name of a field of a condition.
  *
  * Every shortening works: "p", "pr", "pri", "pric" and "price" as well as "c",
@@ -5131,7 +5175,9 @@ function parseKeywordConfig(config) {
     const _conditions = [];
     const _categories = [];
     const _keywordWords = [];
-    const _words = _text.split(/\s+/).filter((word) => word.length > 0);
+    // NOTE: A part in double quotes is one word, so that a verbatim string like
+    // "kaffee bohnen" stays together (see aveSplitQuotedWords()).
+    const _words = aveSplitQuotedWords(_text);
 
     /**
      * Reads a condition from the words of the keyword.
@@ -5199,7 +5245,8 @@ function parseCategoryCondition(text) {
     // NOTE: Every shortening of "category" is allowed (see aveIsConditionWord()).
     if (!aveIsConditionWord(_match[1], 'category')) return null;
 
-    const _text = _match[2].toLowerCase();
+    // NOTE: A name in double quotes can contain spaces, e.g. category~"kaffee tee".
+    const _text = aveUnquoteKeywordPart(_match[2]).toLowerCase();
     if (_text.length === 0) return null;
     return { text: _text };
 }
@@ -5534,8 +5581,11 @@ function matchesKeyword(descFull, keyword) {
     }
 
     if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Search Product Description for Keyword: ${keyword}`);
-    const _words = keyword.split(/\s+/).filter((word) => word.length > 0);
-    return _words.length > 0 && _words.every((word) => descFull.includes(word));
+    // NOTE: A part in double quotes is a verbatim string and has to occur with its
+    // spaces: "a b" does not match the text "a x b". Without the quotes every word
+    // has to occur somewhere in the text, the order does not matter.
+    const _parts = aveSplitQuotedWords(keyword);
+    return _parts.length > 0 && _parts.every((part) => descFull.includes(aveUnquoteKeywordPart(part)));
 }
 
 /**
@@ -6422,7 +6472,12 @@ async function searchProducts(queryText) {
         return [];
     }
 
-    const _words = _entry.keyword.split(/\s+/).filter((word) => word.length > 0);
+    // NOTE: A part in double quotes is a verbatim string. The quotes are removed, so
+    // that the search of the database looks for the text with its spaces (query()
+    // checks every word with includes()).
+    const _words = aveSplitQuotedWords(_entry.keyword)
+        .map((word) => aveUnquoteKeywordPart(word))
+        .filter((word) => word.length > 0);
     // NOTE: getAll() is used when the search has no text at all, because query()
     // is meant for a text search.
     const _products = _words.length > 0 ? await database.query(_words) : await database.getAll();
