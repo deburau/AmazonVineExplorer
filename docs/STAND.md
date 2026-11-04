@@ -376,7 +376,9 @@ oft der Pfad lief.
 |---|---|
 | `VineExplorer.user.js` (~4900 Zeilen) | Hauptdatei, alle Funktionen |
 | `globals.js` | Konstanten, Settings, Session-Management |
-| `scripts/verify/` | 10 Verifikationsskripte für die Refactorings und die Features |
+| `scripts/verify/` | Verifikationsskripte für die Refactorings und die Features |
+| `vine_logo*.png` (Wurzel) | Projekt-Logos. Sie bleiben **im Wurzelverzeichnis**: die veröffentlichten Versionen laden `main/vine_logo.png` und `main/vine_logo_notification_image.png` zur Laufzeit, ein Umzug nach `images/` würde bei noch nicht aktualisierten Clients ein fehlendes Benachrichtigungssymbol erzeugen (Raw-URLs leiten nicht weiter). Beschlossen am 2026-11-04. |
+| `images/` | die **generierten** Ring-Bilder für die Benachrichtigungen (`vine_logo_match_<kombi>.png` in 512×512 und `<…>_small.png` in 64×64) |
 | `scripts/check_css_syntax.js` | prüft die CSS auf Kommentare mit falscher Syntax |
 | `scripts/check_settings_keys.js` | prüft die Schlüssel der Einstellungen und dass alle Text-Kategorien in jeder Sprache die gleichen Schlüssel haben |
 | `scripts/check_state_keys.js` | prüft, dass jeder localStorage-Schlüssel in `AVE_LOCAL_STORAGE_KEYS` steht |
