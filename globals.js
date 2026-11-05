@@ -76,11 +76,18 @@ class AVE_EVENTHANDLER {
     constructor() {}
 
     /**
-     * Fire out an Event
-     * @param {string} eventName Thats the Name of the Event u want to fire
+     * Fires an event.
+     *
+     * A detail can be given with the event, e.g. the number of the records that were
+     * written and the number of the new products (see fireDataChangedEvent() of the
+     * DB_HANDLER). The listener gets it as event.detail.
+     *
+     * @param {string} eventName The name of the event to fire
+     * @param {object} [detail] The data of the event
      */
-    emit(eventName) {
-        unsafeWindow.dispatchEvent(new Event(eventName));
+    emit(eventName, detail = null) {
+        if (detail === null) unsafeWindow.dispatchEvent(new Event(eventName));
+        else unsafeWindow.dispatchEvent(new CustomEvent(eventName, { detail }));
     }
 
     /**

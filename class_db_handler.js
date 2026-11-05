@@ -6,7 +6,11 @@ class DB_HANDLER {
     #storeName;
     #db;
     #eventDelayTimeout;
-    #pendingNewProduct = false;
+    // The write operations of the running window of the change event. The numbers are
+    // handed over with the event, so that a listener can log what happened (see
+    // fireDataChangedEvent()).
+    #pendingWrites = 0;
+    #pendingNewProducts = 0;
 
     /**
      * Db Handler to easy use of IndexedDB Object Store Databases
@@ -173,20 +177,29 @@ class DB_HANDLER {
      * If a new product was added, the Event ave-new-product-added is fired as well.
      * The two events are debounced together, so that a burst of write operations
      * results in only one event.
+     *
+     * The change event carries the number of the write operations of the window and
+     * the number of the new products in it, so that a listener can log what happened.
+     *
+     * @param {boolean} [isNewProduct] true if the record was added and not updated
      */
     // Debounced change event to avoid flooding listeners on batch writes.
     #fireDataChangedEvent(isNewProduct = false) {
-        if (isNewProduct) this.#pendingNewProduct = true;
+        this.#pendingWrites++;
+        if (isNewProduct) this.#pendingNewProducts++;
         if (this.#eventDelayTimeout) clearTimeout(this.#eventDelayTimeout);
         this.#eventDelayTimeout = setTimeout(() => {
+            // NOTE: The numbers are taken and reset before the events are fired, so that
+            // the write operations of a listener belong to the next window.
+            const _detail = { writes: this.#pendingWrites, newProducts: this.#pendingNewProducts };
+            this.#pendingWrites = 0;
+            this.#pendingNewProducts = 0;
+            this.#eventDelayTimeout = null;
+
             // NOTE: The event for a new product comes first, so that the listener of the
             // change event can already know that a new product was added.
-            if (this.#pendingNewProduct) {
-                this.#pendingNewProduct = false;
-                ave_eventhandler.emit('ave-new-product-added');
-            }
-            ave_eventhandler.emit('ave-database-changed');
-            this.#eventDelayTimeout = null;
+            if (_detail.newProducts > 0) ave_eventhandler.emit('ave-new-product-added');
+            ave_eventhandler.emit('ave-database-changed', _detail);
         }, 250);
     }
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.55
+// @version      0.15.0.56
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -324,8 +324,16 @@ ave_eventhandler.on('ave-new-product-added', () => {
     newProductWasAdded = true;
 });
 
-ave_eventhandler.on('ave-database-changed', () => {
-    if (SETTINGS.DebugLevel > 1) console.info('EVENT - Database has new Data for us! we should look what has changed');
+ave_eventhandler.on('ave-database-changed', (event) => {
+    // The event carries the number of the write operations and the number of the new
+    // products of the window it belongs to (see DB_HANDLER.fireDataChangedEvent()).
+    if (SETTINGS.DebugLevel > 1) {
+        const _writes = event?.detail?.writes ?? '?';
+        const _newProducts = event?.detail?.newProducts ?? '?';
+        console.info(
+            `EVENT - database changed (${_writes} write${_writes === 1 ? '' : 's'}, ${_newProducts} new product${_newProducts === 1 ? '' : 's'})`
+        );
+    }
     updateNewProductsBtn();
     updateFavoritesBtn();
 

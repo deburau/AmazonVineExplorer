@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.55` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.56` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 18 erfolgreich (`npm run verify`) |
@@ -298,6 +298,13 @@ Release erledigt und wurde geschlossen.
   auf einer deutschen Tastatur AltGr-Kombinationen und waren in einer
   Remote-Sitzung nicht tippbar). Der Name einer Kategorie ist **ein** Wort
   (`category~kaffee tee` → Kategorie "kaffee" + Text "tee").
+* **Meldung des Datenbank-Events** (0.15.0.56): `DB_HANDLER.#fireDataChangedEvent()`
+  zählt die Schreibvorgänge und die neuen Produkte des Entprellfensters (250 ms) und
+  gibt sie als `detail` mit `ave-database-changed` mit (`ave_eventhandler.emit(name,
+  detail)` → `CustomEvent`); der Zuhörer loggt
+  `EVENT - database changed (12 writes, 1 new product)` bei `DebugLevel > 1`. Die
+  Zähler werden **vor** dem Feuern zurückgesetzt, damit die Schreibvorgänge eines
+  Zuhörers zum nächsten Fenster gehören.
 * Die Benachrichtigungen (**Desktop und Gotify**) nennen den Grund des Treffers
   in **bis zu drei Zeilen vor der Beschreibung des Produkts** (0.15.0.55; in der
   Gotify-Nachricht stehen sie damit an derselben Stelle wie in der
