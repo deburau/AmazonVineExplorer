@@ -73,6 +73,34 @@ for (const _lang of Object.keys(i18n)) {
     }
 }
 
+// Jede Kategorie der Texte hat in jeder Sprache die gleichen Schluessel. Fehlt
+// einer, wird im Skript der Fallback des Aufrufers benutzt und die Konsole
+// meldet "No translation for ...".
+console.log('\n########## Die Schluessel der Texte ##########');
+
+const _languages = Object.keys(i18n);
+const _categories = [...new Set(_languages.flatMap((_lang) => Object.keys(i18n[_lang])))].sort();
+
+for (const _category of _categories) {
+    const _keysPerLanguage = _languages.map((_lang) => ({ lang: _lang, keys: Object.keys(i18n[_lang][_category] || {}) }));
+    const _allKeys = [...new Set(_keysPerLanguage.flatMap((_entry) => _entry.keys))].sort();
+    const _problems = [];
+
+    for (const _entry of _keysPerLanguage) {
+        const _missing = _allKeys.filter((_key) => !_entry.keys.includes(_key));
+        if (_missing.length > 0) _problems.push(`${_entry.lang}: fehlt ${_missing.join(', ')}`);
+    }
+
+    if (_problems.length === 0) {
+        console.log(`  ${_category}: ${_allKeys.length} Schluessel in ${_languages.length} Sprachen`);
+        continue;
+    }
+
+    _allOk = false;
+    console.log(`  ${_category}: FEHLER`);
+    for (const _problem of _problems) console.log(`    ${_problem}`);
+}
+
 console.log('');
 if (_allOk) {
     console.log('>>> ERGEBNIS: alle Schluessel passen');

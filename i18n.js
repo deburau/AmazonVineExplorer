@@ -22,7 +22,10 @@ const I18N = {
             copyError: 'Fehler beim Kopieren in die Zwischenablage:',
             unseenItemsTitle: (version) => `Amazon Vine Explorer - ${version}`,
             unseenItemsBody: (count) => `Es wurden ${count} neue Eintraege gefunden`,
-            keywordMatch: (key) => `Treffer: ${key}`
+            keywordMatch: (keyword) => `Keyword-Treffer: ${keyword}`,
+            priceMatch: (price) => `Preis-Treffer: ${price}`,
+            categoryMatch: (category) => `Kategorie-Treffer: ${category}`,
+            loadingCategories: (done, total) => `Kategorien werden geladen: ${done} / ${total}`
         },
         share: {
             myFSE: 'Mein FSE',
@@ -32,7 +35,10 @@ const I18N = {
         },
         settings: {
             header: (title, version) => `Einstellungen ${title} - Version ${version}`,
-            languageLabel: 'Sprache'
+            languageLabel: 'Sprache',
+            categoriesLoading: 'Kategorien werden geladen ...',
+            categoriesError:
+                'Die Kategorien konnten nicht geladen werden. Öffne die Einstellungen einmal auf einer normalen Vine-Seite (vine/vine-items).'
         },
         settingsLabels: {
             UI_LANGUAGE: 'Sprache',
@@ -48,6 +54,7 @@ const I18N = {
             EnableTopLogoChange: 'Top-Logo ändern aktivieren',
             EnableBtnAll: 'Button Alle Produkte aktivieren',
             EnablePaginationTop: 'Paginierung oben aktivieren',
+            TITLE_BACKGROUND_SCAN: 'Background-Scan',
             EnableBackgroundScan: 'Background Scan aktivieren',
             EnableInfiniteScrollLiveQuerry: 'Infinite Scroll Live-Query aktivieren',
             EnableInfiniteSpinnerFix: 'Endloses Laden bei Varianten beheben',
@@ -62,8 +69,18 @@ const I18N = {
             GotifyToken: 'Gotify Anwendungstoken',
             BackGroundScanDelayPerPage: 'Background Scan Min. Delay pro Seite (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness pro Seite (ms)',
+            TITLE_FAST_SCAN: 'Fast-Scan',
+            EnableFastScan: 'Fast-Scan aktivieren',
+            FastScanIntervalSeconds: 'Fast-Scan-Takt (Sek.)',
+            TITLE_TURBO: 'Turbo-Scan',
+            EnableTurboScan: 'Turbo-Scan aktivieren',
+            TurboScanIntervalSeconds: 'Turbo-Scan Takt (Sek.)',
+            TurboScanCategories: 'Kategorien für den Turbo-Scan',
+            TITLE_DELAYS: 'Wartezeiten und Grenzen',
             DesktopNotifikationDelay: 'Desktop-Benachrichtigung Delay (Sek.)',
             SearchBarInputDelay: 'Suchleiste Verzögerung (ms)',
+            VariationRequestDelay: 'Verzögerung zwischen den Requests der Varianten (ms)',
+            ProductDetailsRequestDelay: 'Pause zwischen zwei Produkten der Detail-Queue (ms)',
             IdlePeriodAfterScan: 'Wartezeit nach Scan (Min.)',
             HoursBeforeCleanup: 'Stunden bis Cleanup',
             MaxItemsPerPage: 'Maximale Items pro Seite',
@@ -90,6 +107,7 @@ const I18N = {
             TITLE_COLORS: 'Farben und Styles',
             TITLE_SHOPPING: 'Amazon Shopping',
             TITLE_DEV: 'Einstellungen für Entwickler und Tester',
+            BUTTON_SCAN_RESTART: 'Neuen Background Scan starten',
             BUTTON_RESET_SETTINGS: 'Einstellungen zurücksetzen',
             BUTTON_DB_EXPORT: 'Datenbank exportieren >>>',
             BUTTON_DB_IMPORT: 'Datenbank importieren <<<',
@@ -109,6 +127,7 @@ const I18N = {
             EnableTopLogoChange: 'Ersetzt das Amazon-Logo durch das AVE-Logo.',
             EnableBtnAll: 'Zeigt den Button „Alle Produkte“ an.',
             EnablePaginationTop: 'Zeigt die Paginierung oben an (nur ZA-Seite).',
+            TITLE_BACKGROUND_SCAN: 'Background-Scan',
             EnableBackgroundScan: 'Aktiviert den Scan im Hintergrund.',
             EnableInfiniteScrollLiveQuerry: 'Lädt die Produkte direkt von Amazon statt aus der Datenbank.',
             EnableInfiniteSpinnerFix: 'Behebt fehlerhafte Variantendaten.',
@@ -118,13 +137,31 @@ const I18N = {
             EnableCleanupFavorites: 'Entfernt beim Cleanup auch die Favoriten.',
             EnableBtnMarkAllAsSeen: 'Zeigt den Button „Alle als gesehen markieren“ an.',
             ShowFirstSeen: 'Zeigt das Datum des ersten statt des letzten Auftretens.',
-            DesktopNotifikationKeywords: 'Keywords für Benachrichtigung und Auto-Favorit.',
+            DesktopNotifikationKeywords:
+                'Keywords für Benachrichtigung und Auto-Favorit. Mehrere Wörter müssen alle vorkommen, die Reihenfolge ist egal. Preisbedingungen wie price>=10 laden den Preis jedes Treffers – ein unspezifisches Keyword wie "schwarz price>50" kann zu einer Sperre durch Amazon führen, darum lieber mehrere Wörter angeben. Kategoriebedingungen prüfen den Namen der Kategorie mit denselben Operatoren wie beim Preis: = und == (der Name ist es genau), != und <> (er ist es nicht), < und <= (alphabetisch davor), > und >= (danach), z. B. category="kaffee tee" oder category!=garten. Ein Produkt hat genau eine Kategorie; ist die Kategorie der Seite ein Pfad (Haupt > Unter), zählt der letzte Name. Die Bedingungen stehen ohne Klammern und sind immer ein eigenes Wort. Die Wörter dürfen abgekürzt werden – jedes Stück zählt: p, pr, pri … für price und c, ca, cat … für category. Gespeichert wird immer das ganze Wort. Ein Teil in doppelten Anführungszeichen wird genau so gesucht, mit Leerzeichen: "kaffee bohnen" passt nur, wenn das so im Text steht – ohne Anführungszeichen müssen nur alle Wörter irgendwo vorkommen. Für Kategorienamen gilt das genauso: category="kaffee tee". Ein Kategoriename wird beim Speichern vervollständigt (bei = und !=), sofern er in der Kategorieliste steht: aus category=lebens wird category="Lebensmittel & Getränke".',
             GotifyUrl: 'Adresse des Gotify-Servers, z. B. https://gotify.example.com',
             GotifyToken: 'Authentifizierungs-Token der Gotify-Anwendung.',
             BackGroundScanDelayPerPage: 'Min. Wartezeit pro Seite in Millisekunden.',
             BackGroundScannerRandomness: 'Max. zufällige Wartezeit pro Seite in Millisekunden.',
+            FastScanIntervalSeconds:
+                'Mindestzeit zwischen zwei Fast-Scans. Der Fast-Scan prüft die ersten Seiten, um einen Produkt-Drop früh zu erkennen. Die Zeit zählt ab dem Ende des letzten Fast-Scans und ändert die Wartezeit pro Seite des Background Scans nicht.',
+            TITLE_FAST_SCAN: 'Fast-Scan',
+            EnableFastScan:
+                'Prüft die ersten Seiten der Produktliste immer wieder, damit ein möglicher Produkt-Drop früh erkannt wird. Nach dem Ende macht der Background Scan bei der Seite weiter, bei der der Fast-Scan gestartet ist.',
+            TITLE_TURBO: 'Turbo-Scan',
+            EnableTurboScan:
+                'Prüft die erste Seite der ausgewählten Kategorien immer wieder, damit neue Produkte dieser Kategorien innerhalb einer Minute gefunden werden.',
+            TITLE_DELAYS: 'Wartezeiten und Grenzen',
+            TurboScanIntervalSeconds:
+                'Zeit zwischen zwei Durchläufen des Turbo-Scans. Pro Durchlauf wird jede Kategorie einmal geladen, der Wert muss also größer sein als die Anzahl der Kategorien.',
+            TurboScanCategories:
+                'Die Kategorien, die der Turbo-Scan beobachtet. Mit dem Pfeil lässt sich eine Kategorie öffnen, um eine Unterkategorie auszuwählen. Gespeichert werden nur die Nummern.',
             DesktopNotifikationDelay: 'Min. Zeit zwischen Benachrichtigungen in Sekunden (0 = aus).',
             SearchBarInputDelay: 'Wartezeit bis zur Suche in Millisekunden.',
+            VariationRequestDelay:
+                'Wartezeit zwischen zwei Requests für die Varianten eines Produkts. Der echte Abstand liegt zufällig zwischen 50 % und 150 % des Werts. Kleine Werte laden die Preise schneller, aber Amazon kann den Account sperren. Die Pause zwischen zwei Produkten wird davon nicht verändert.',
+            ProductDetailsRequestDelay:
+                'Pause zwischen zwei Produkten, deren Preisdetails nacheinander geladen werden. Die echte Pause liegt zufällig zwischen 50 % und 150 % des Werts. Das ist nicht die Verzögerung des Background Scans, die wird mit den Einstellungen für den Background Scan gesetzt.',
             IdlePeriodAfterScan: 'Wartezeit bis zum nächsten Scan in Minuten (0 = sofort).',
             HoursBeforeCleanup: 'Stunden ohne gesehen zu werden bis zum Löschen (0 = sofort).',
             MaxItemsPerPage: 'Maximale Anzahl der Produkte pro Seite.',
@@ -134,6 +171,8 @@ const I18N = {
             NewItemsNotificationRepititionMinutes: 'Wartezeit zwischen den Benachrichtigungen in Minuten.',
             DisableFooterShopping: 'Blendet die Fußzeile der Shopping-Seite aus.',
             DisableSuggestionsShopping: 'Blendet die Vorschläge der Shopping-Seite aus.',
+            BUTTON_SCAN_RESTART:
+                'Startet den Background Scan von vorne: ein laufender Scan wird auf Seite 1 zurückgesetzt, ein wartender neu gestartet. Ohne die Einstellung Background Scan aktivieren ist der Button nicht verfügbar.',
             BUTTON_RESET_SETTINGS: 'Setzt alle Einstellungen zurück.',
             BUTTON_DB_EXPORT: 'Lädt die Datenbank als Datei herunter.',
             BUTTON_DB_IMPORT: 'Löscht die Datenbank und importiert eine Datei.',
@@ -180,7 +219,10 @@ const I18N = {
             copyError: 'Error copying to clipboard:',
             unseenItemsTitle: (version) => `Amazon Vine Explorer - ${version}`,
             unseenItemsBody: (count) => `${count} new entries found`,
-            keywordMatch: (key) => `Match: ${key}`
+            keywordMatch: (keyword) => `Keyword match: ${keyword}`,
+            priceMatch: (price) => `Price match: ${price}`,
+            categoryMatch: (category) => `Category match: ${category}`,
+            loadingCategories: (done, total) => `Loading the categories: ${done} / ${total}`
         },
         share: {
             myFSE: 'My FSE',
@@ -190,7 +232,9 @@ const I18N = {
         },
         settings: {
             header: (title, version) => `Settings ${title} - Version ${version}`,
-            languageLabel: 'Language'
+            languageLabel: 'Language',
+            categoriesLoading: 'Loading the categories ...',
+            categoriesError: 'The categories could not be loaded. Open the settings once on a normal Vine page (vine/vine-items).'
         },
         settingsLabels: {
             UI_LANGUAGE: 'Language',
@@ -206,6 +250,7 @@ const I18N = {
             EnableTopLogoChange: 'Enable Top Logo Change',
             EnableBtnAll: 'Enable Button All Products',
             EnablePaginationTop: 'Enable Pagination on top',
+            TITLE_BACKGROUND_SCAN: 'Background scan',
             EnableBackgroundScan: 'Enable Background Scan',
             EnableInfiniteScrollLiveQuerry: 'Enable Infinite Scroll Live Query',
             EnableInfiniteSpinnerFix: 'Enable Infinite Spinner Fix',
@@ -220,8 +265,18 @@ const I18N = {
             GotifyToken: 'Gotify application token',
             BackGroundScanDelayPerPage: 'Background Scan Per Page Min Delay (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness per Page (ms)',
+            TITLE_FAST_SCAN: 'Fast scan',
+            EnableFastScan: 'Enable the fast scan',
+            FastScanIntervalSeconds: 'Fast scan interval (Seconds)',
+            TITLE_TURBO: 'Turbo scan',
+            EnableTurboScan: 'Enable the turbo scan',
+            TurboScanIntervalSeconds: 'Turbo scan interval (Seconds)',
+            TurboScanCategories: 'Categories of the turbo scan',
+            TITLE_DELAYS: 'Delays and limits',
             DesktopNotifikationDelay: 'Desktop Notification Delay (Seconds)',
             SearchBarInputDelay: 'Search Bar Input Delay (ms)',
+            VariationRequestDelay: 'Delay between the requests of the variations (ms)',
+            ProductDetailsRequestDelay: 'Pause between two products of the details queue (ms)',
             IdlePeriodAfterScan: 'Idle period after a scan',
             HoursBeforeCleanup: 'Hours before cleanup',
             MaxItemsPerPage: 'Maximum items per page',
@@ -248,6 +303,7 @@ const I18N = {
             TITLE_COLORS: 'Colors and Styles',
             TITLE_SHOPPING: 'Amazon Shopping',
             TITLE_DEV: 'Settings for Developers and Testers',
+            BUTTON_SCAN_RESTART: 'Start a new background scan',
             BUTTON_RESET_SETTINGS: 'RESET SETTINGS TO DEFAULT',
             BUTTON_DB_EXPORT: 'DATABASE EXPORT >>>',
             BUTTON_DB_IMPORT: 'DATABASE IMPORT <<<',
@@ -267,6 +323,7 @@ const I18N = {
             EnableTopLogoChange: 'Replaces the Amazon logo with the AVE logo.',
             EnableBtnAll: 'Shows the "All Products" button.',
             EnablePaginationTop: 'Shows the pagination on top (ZA page only).',
+            TITLE_BACKGROUND_SCAN: 'Background scan',
             EnableBackgroundScan: 'Enables the scan in the background.',
             EnableInfiniteScrollLiveQuerry: 'Loads the products directly from Amazon instead of the database.',
             EnableInfiniteSpinnerFix: 'Repairs faulty variant data.',
@@ -276,13 +333,31 @@ const I18N = {
             EnableCleanupFavorites: 'Removes the favorites during the cleanup as well.',
             EnableBtnMarkAllAsSeen: 'Shows the "Mark all as seen" button.',
             ShowFirstSeen: 'Shows the date of the first appearance instead of the last one.',
-            DesktopNotifikationKeywords: 'Keywords for the notification and the auto favorite.',
+            DesktopNotifikationKeywords:
+                'Keywords for the notification and the auto favorite. All words of a keyword have to occur, the order does not matter. Price conditions like price>=10 load the price of every match – an unspecific keyword like "black price>50" can get the account blocked by Amazon, so use several words. Category conditions check the name of the category with the same operators as a price: = and == (the name is exactly the text), != and <> (it is not), < and <= (before the text in the alphabet), > and >= (behind it), e.g. category="kaffee tee" or category!=garden. A product has exactly one category; when the category of the page is a path (main > sub), the last name counts. The conditions are written without brackets and they are always a word of their own. The words can be shortened - every beginning works: p, pr, pri ... for price and c, ca, cat ... for category. The whole word is stored in every case. A part in double quotes is searched as it is, spaces included: "kaffee bohnen" matches only if that text stands in the description - without the quotes all words have to occur somewhere. The same works for the name of a category: category="kaffee tee". While a keyword is stored, a category name is completed (= and != only) if it is in the list of the categories: category=lebens becomes category="Lebensmittel & Getränke".',
             GotifyUrl: 'Address of the Gotify server, e.g. https://gotify.example.com',
             GotifyToken: 'Authentication token of the Gotify application.',
             BackGroundScanDelayPerPage: 'Minimum wait time per page in milliseconds.',
             BackGroundScannerRandomness: 'Maximum random wait time per page in milliseconds.',
+            FastScanIntervalSeconds:
+                'Minimum time between two fast scans. A fast scan looks at the first pages, so that a possible product drop is found early. The time is counted from the end of the last fast scan and does not change the delay per page of the background scan.',
+            TITLE_FAST_SCAN: 'Fast scan',
+            TITLE_TURBO: 'Turbo scan',
+            EnableFastScan:
+                'Looks at the first pages of the product list again and again, so that a possible product drop is found early. When it stopped, the background scan continues at the page where the fast scan started.',
+            TITLE_DELAYS: 'Delays and limits',
+            EnableTurboScan:
+                'Looks at the first page of the selected categories again and again, so that new products of those categories are found within a minute.',
+            TurboScanIntervalSeconds:
+                'The time between two rounds of the turbo scan. Every category is loaded once in a round, so the value has to be larger than the number of the categories.',
+            TurboScanCategories:
+                'The categories that are watched by the turbo scan. Open a category with the arrow to select one of its sub categories. Only the numbers of the categories are stored.',
             DesktopNotifikationDelay: 'Minimum time between notifications in seconds (0 = off).',
             SearchBarInputDelay: 'Wait time until the search starts in milliseconds.',
+            VariationRequestDelay:
+                'Wait time between two requests for the variations of a product. The real delay is random between 50 percent and 150 percent of the value. Low values load the prices faster, but Amazon can block the account. The pause between two products is not affected by this setting.',
+            ProductDetailsRequestDelay:
+                'Pause between two products, whose price details are loaded one after the other. The real pause is random between 50 percent and 150 percent of the value. It is not the delay of the background scan, that one is set with the settings for the background scan.',
             IdlePeriodAfterScan: 'Wait time until the next scan in minutes (0 = immediately).',
             HoursBeforeCleanup: 'Hours without being seen before it is removed (0 = immediately).',
             MaxItemsPerPage: 'Maximum number of products per page.',
@@ -292,6 +367,8 @@ const I18N = {
             NewItemsNotificationRepititionMinutes: 'Wait time between the notifications in minutes.',
             DisableFooterShopping: 'Hides the footer of the shopping page.',
             DisableSuggestionsShopping: 'Hides the suggestions of the shopping page.',
+            BUTTON_SCAN_RESTART:
+                'Starts the background scan from its beginning: a running scan is set back to the first page, a waiting scan is started again. The button is not available without the setting Enable Background Scan.',
             BUTTON_RESET_SETTINGS: 'Resets all settings.',
             BUTTON_DB_EXPORT: 'Downloads the database as a file.',
             BUTTON_DB_IMPORT: 'Deletes the database and imports a file.',

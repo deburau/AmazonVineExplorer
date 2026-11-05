@@ -59,7 +59,9 @@ let AVE_IS_THIS_SESSION_MASTER = false;
 // storage of the userscript manager, so these constants are needed.
 const DATABASE_NAME = 'VineVoiceExplorer';
 const DATABASE_OBJECT_STORE_NAME = `${DATABASE_NAME}_Objects`;
-const DATABASE_VERSION = 4;
+// NOTE: Every change of the data model of the products needs a new version of
+// the database and a migration in the upgrade of the database (class_db_handler.js).
+const DATABASE_VERSION = 5;
 
 // Make some things accessible from console
 unsafeWindow.ave = {};
@@ -74,11 +76,18 @@ class AVE_EVENTHANDLER {
     constructor() {}
 
     /**
-     * Fire out an Event
-     * @param {string} eventName Thats the Name of the Event u want to fire
+     * Fires an event.
+     *
+     * A detail can be given with the event, e.g. the number of the records that were
+     * written and the number of the new products (see fireDataChangedEvent() of the
+     * DB_HANDLER). The listener gets it as event.detail.
+     *
+     * @param {string} eventName The name of the event to fire
+     * @param {object} [detail] The data of the event
      */
-    emit(eventName) {
-        unsafeWindow.dispatchEvent(new Event(eventName));
+    emit(eventName, detail = null) {
+        if (detail === null) unsafeWindow.dispatchEvent(new Event(eventName));
+        else unsafeWindow.dispatchEvent(new CustomEvent(eventName, { detail }));
     }
 
     /**
@@ -421,12 +430,6 @@ SETTINGS_USERCONFIG_DEFINES.push({
     name: 'Enable Pagination on top',
     description: 'Enable Pagination to be displayed on top for ZA page'
 });
-SETTINGS_USERCONFIG_DEFINES.push({
-    key: 'EnableBackgroundScan',
-    type: 'bool',
-    name: 'Enable Background Scan',
-    description: 'Enables the Background scan, if disabled you will find a Button for Autoscan on the Vine Website'
-});
 // NOTE: 'EnableInfiniteScrollLiveQuerry' is a known typo for '...Query'. It is used
 //   consistently in globals.js and VineExplorer.user.js and is part of the persisted
 //   settings, so renaming it would invalidate existing user configurations.
@@ -499,6 +502,26 @@ SETTINGS_USERCONFIG_DEFINES.push({
     name: 'Gotify application token',
     description: 'The authenticatin token of your Gotify application'
 });
+SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Background scan', description: '', key: 'TITLE_BACKGROUND_SCAN' });
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableBackgroundScan',
+    type: 'bool',
+    name: 'Enable Background Scan',
+    description: 'Enables the Background scan, if disabled you will find a Button for Autoscan on the Vine Website'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    type: 'button',
+    key: 'BUTTON_SCAN_RESTART',
+    name: 'Start a new background scan',
+    bgColor: 'rgb(255, 200, 0)',
+    description:
+        'Starts the background scan from its beginning. A running scan is set back to the first page, a waiting scan is started again.',
+    // The button needs the background scan, so it is not available without it.
+    btnEnabled: () => SETTINGS.EnableBackgroundScan !== false,
+    btnClick: () => {
+        restartBackgroundScan();
+    }
+});
 SETTINGS_USERCONFIG_DEFINES.push({
     key: 'BackGroundScanDelayPerPage',
     type: 'number',
@@ -515,6 +538,48 @@ SETTINGS_USERCONFIG_DEFINES.push({
     name: 'Background Scan Randomness per Page(Milliseconds)',
     description: 'A Value that gives the maximal range for the Randomy added delay per page load'
 });
+SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Fast scan', description: '', key: 'TITLE_FAST_SCAN' });
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableFastScan',
+    type: 'bool',
+    name: 'Enable the fast scan',
+    description:
+        'A fast scan looks at the first pages of the product list again and again, so that a possible product drop is found early. The background scan continues at the page where the fast scan started when it stopped.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'FastScanIntervalSeconds',
+    type: 'number',
+    min: 30,
+    max: 3600,
+    name: 'Fast scan interval (Seconds)',
+    description:
+        'The minimum time between two fast scans. A fast scan looks at the first pages of the product list, so that a possible product drop is found early. The waiting time is counted from the end of the last fast scan, so it does not change the delay per page of the background scan.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Turbo scan', description: '', key: 'TITLE_TURBO' });
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableTurboScan',
+    type: 'bool',
+    name: 'Enable the turbo scan',
+    description:
+        'Looks at the first page of the selected categories again and again, so that new products of those categories are found within a minute.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'TurboScanIntervalSeconds',
+    type: 'number',
+    min: 10,
+    max: 3600,
+    name: 'Turbo scan interval (Seconds)',
+    description:
+        'The time between two rounds of the turbo scan. Every category is loaded once in a round, so the value has to be larger than the number of the categories.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'TurboScanCategories',
+    type: 'categories',
+    name: 'Categories of the turbo scan',
+    description:
+        'The categories that are watched by the turbo scan. Open a category with the arrow to select one of its sub categories. Only the numbers of the categories are stored.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Delays and limits', description: '', key: 'TITLE_DELAYS' });
 SETTINGS_USERCONFIG_DEFINES.push({
     key: 'DesktopNotifikationDelay',
     type: 'number',
@@ -531,6 +596,24 @@ SETTINGS_USERCONFIG_DEFINES.push({
     max: 1000,
     name: 'Search Bar Input Delay until auto search(Milliseconds)',
     description: 'When typing in the search bar, start searching when no key pressed this long milliseconds'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'VariationRequestDelay',
+    type: 'number',
+    min: 0,
+    max: 10000,
+    name: 'Delay between the requests of the variations (Milliseconds)',
+    description:
+        'The wait time between two requests for the details of the variations of a product. The real delay is random between 50 percent and 150 percent of this value. A low value makes the loading of the prices faster, but Amazon can block the account temporarily, if too many requests are made in a short time. The pause between two products is not affected by this setting.'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'ProductDetailsRequestDelay',
+    type: 'number',
+    min: 0,
+    max: 60000,
+    name: 'Pause between two products of the queue of the details (Milliseconds)',
+    description:
+        'The pause between two products, whose price details are loaded one after the other. The real pause is random between 50 percent and 150 percent of this value. It is not the delay of the background scan, that one is set with the settings for the background scan.'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
     key: 'IdlePeriodAfterScan',
@@ -671,7 +754,17 @@ SETTINGS_USERCONFIG_DEFINES.push({
     description: 'A USER DOES NOT NEED TO DO THIS ! ITS ONLY FOR DEVELOPMENT PURPOSES',
     key: 'BUTTON_DB_DELETE',
     btnClick: () => {
+        // NOTE: The scan is stopped and the connection is closed, because the
+        // open connection of this page blocks the delete of the database.
+        stopBackgroundScan();
+        database.closeDatabase();
+
         database.deleteDatabase().then(() => {
+            // NOTE: The state of AVE (the stage and the page of the scan and so
+            // on) is kept in the local storage. Without clearing it the new scan
+            // would continue at the page where the deleted database stopped
+            // instead of starting at the beginning.
+            clearAVEState();
             /* eslint-disable-next-line no-self-assign */
             window.location.href = window.location.href;
         });
@@ -701,6 +794,8 @@ class SETTINGS_DEFAULT {
     EnableDesktopNotifikation = false;
     EnableAutoMarkFavorite = false;
     EnableDetailsOnFavorite = true;
+    VariationRequestDelay = 500;
+    ProductDetailsRequestDelay = 1500;
     EnableCleanupFavorites = false;
     EnableBtnAll = true;
     EnablePaginationTop = true;
@@ -735,6 +830,11 @@ class SETTINGS_DEFAULT {
     FetchRetryMaxTime = 5000;
     BackGroundScanDelayPerPage = 6000;
     BackGroundScannerRandomness = 6000;
+    EnableFastScan = true;
+    FastScanIntervalSeconds = 300;
+    EnableTurboScan = false;
+    TurboScanIntervalSeconds = 30;
+    TurboScanCategories = [];
     DesktopNotifikationDelay = 60;
     SearchBarInputDelay = 500;
     IdlePeriodAfterScan = 180;
@@ -798,6 +898,8 @@ const AVE_LOCAL_STORAGE_KEYS = [
     'AVE_BACKGROUND_SCAN_PAGE_CURRENT',
     'AVE_BACKGROUND_SCAN_PAGE_MAX',
     'AVE_BACKGROUND_SCAN_STAGE',
+    'AVE_CATEGORY_CACHE',
+    'AVE_CATEGORY_LOAD_IS_RUNNING',
     'AVE_CLEANUP_LAST_TIME',
     'AVE_FAST_SCAN_IS_RUNNING',
     'AVE_FAST_SCAN_LAST_TIME',
@@ -809,6 +911,8 @@ const AVE_LOCAL_STORAGE_KEYS = [
     'AVE_NEW_COUNT',
     'AVE_OPEN_SETTINGS_TAB',
     'AVE_SESSIONS',
+    'AVE_TURBO_SCAN_CATEGORY_INDEX',
+    'AVE_TURBO_SCAN_LAST_TIME',
     'ave-share-details'
 ];
 

@@ -61,7 +61,72 @@ npm run verify            # compare the baseline with the current state
 The verification scripts are in `scripts/verify/`. See `AGENTS.md` for the
 details.
 
+## Too many requests can block your account
+
+Some features of AVE load the details of a product from Amazon, e.g. its price and the
+prices of its variations. Every single page is a request to Amazon, and Amazon blocks
+an account temporarily when too many requests are made in a short time. A blocked
+account does not only stop the price details, it also stops the other requests of the
+script, e.g. the pages of the scan.
+
+The conditions for a price are the dangerous part: a keyword with a price condition
+loads the price of **every** product whose text matches the keyword. An unspecific
+keyword like `black price>50` matches hundreds of products, so hundreds of pages are
+loaded one after the other. Please
+
+* use keywords that are as specific as possible - a keyword with several words only matches if all of them occur in the description, a regular expression works as well,
+* watch the messages in the console, the script logs every request as `AVE: Loading the details of ...`,
+* increase the pauses in the settings (`ProductDetailsRequestDelay` and `VariationRequestDelay`, see the tooltips) or remove the price conditions from the keywords if the console shows a long list.
+
+This is not a theoretical warning: a blocked account was the reason for the change that
+only the products that were just added to the database are checked by the keywords.
+
 ## Changelog Deburau
+
+##### [2026-11-05] - Version 0.16.0
+
+**Prices of the variations**
+
+* The tiles of products with variations show the range from the lowest to the highest price, the currency is shown once at the end of the range. Products without a variation show their price, products without a known price show none.
+* The prices of all variations are stored in the database. A product of an older version keeps its price, it is not requested from Amazon again.
+* The pause between two products of the queue of the price details and the pause between the requests for the variations of one product are settings (`ProductDetailsRequestDelay`, default 1500 milliseconds, and `VariationRequestDelay`, default 500 milliseconds). Both are random between 50 and 150 percent of the value, so that the requests do not have a fixed rhythm.
+
+**Conditions in the keywords**
+
+* A keyword can contain conditions, e.g. `toaster price>=10 price<20` or `kaffee category="Kaffee Tee"`. A condition is written without brackets and is a word of its own, the spaces around the operator are optional.
+* The operators are the same for a price and for a category: `=` and `==` (equal), `!=` and `<>` (not equal), `<` and `<=` (lower or before), `>` and `>=` (higher or behind). A price can use the dot or the comma as the decimal separator.
+* A price condition is checked against the price and the prices of the variations of a product. A condition for a category is checked against the name of the category with the alphabet - a product has exactly one category, and when the page shows a path ("Lebensmittel & Getränke > Kaffee"), the last name of it is the category of the product.
+* The names of the fields can be shortened to every beginning: `p`, `pr`, `pri`, `pric` or `price` and `c`, `ca`, `cat` and so on up to `category`. The whole word is stored, so the list of the keywords always shows it.
+* A part in double quotes is a verbatim string: `"kaffee bohnen"` matches only if that text stands in the description with its spaces (`"a b"` does not match the text "a x b"). Without the quotes all words of the keyword have to occur somewhere in the description, the order and the distance do not matter.
+* The price of a product is only loaded after the keyword matched its text, and the notification is sent after the prices were loaded, so that the price is known when it arrives. A keyword that only has price conditions never matches.
+* The category of a product is read from the page it was found on, it is not stored in the database. A product of the unfiltered list gets its category when a scan of that category sees it, it is checked once more then.
+* **Warning:** a keyword with a price condition loads the price of **every** product whose text matches it. Please read "Too many requests can block your account" above - an unspecific keyword can block the account.
+
+**The search**
+
+* The search bar searches the products of the database with the same conditions as the keywords, e.g. `kaffee price>=10` or `price<5` (a price can be searched without a text). Only the products whose price is known are part of the result. A condition for a category can not be used in the search, because the category of a product is not stored in the database.
+
+**Notifications**
+
+* The desktop notification and the message of Gotify name the reason for the match in up to three lines above the description of the product: `Keyword-Treffer: …`, `Preis-Treffer: …` and `Kategorie-Treffer: …` (one line per kind of a match).
+
+**Scans and settings**
+
+* New: the turbo scan. It loads the first page of the categories that are selected in the settings again and again (default every 30 seconds), so that a new product of one of those categories is found within a minute. A main category selects all of its sub categories, so that no product is loaded twice. The turbo scan runs in the same loop as the background scan, one page at a time.
+* New: a button in the settings starts the background scan from its beginning. While the background scan is switched off the button is greyed out.
+* The fast scan has its own interval (the setting "Fast scan interval", default 5 minutes) and can be switched off - a fast scan that is running stops then.
+* The whole list of the categories (the main categories and their sub categories) is loaded in the background: after the start and then every 30 minutes it is checked if the list is missing or older than a day, and if it is, the pages are loaded one after the other with the pause of the background scan. A message in the lower left corner shows the progress, and the steps of the scan wait while the categories are loaded, so that no two pages of Amazon are loaded at the same time.
+* The settings menu is grouped with headings ("Amazon Vine", "Background scan", "Fast scan", "Turbo scan", the delays and the limits), so that every switch stands next to the values it controls. Every tooltip explains what the setting does.
+* The debug message `Called updateNewProductsBtn()` is `Called processNewItems()` now, because the function does more than updating the button: it also updates the badge and the title, shows the notifications and runs the search for the new products. The messages inside the search name the function they come from as well.
+* The message in the console about a change of the database (DebugLevel > 1) names the number of the records that were written and how many of them were new products, e.g. `EVENT - database changed (12 writes, 1 new product)`. The message is only written once per burst of write operations (the events are debounced by 250 milliseconds).
+* A new keyword stands at the beginning of the list of the keywords, so that it is right below the input field. The list is sorted alphabetically while the settings are built, so the keywords are in alphabetical order again after a reload.
+
+**Fixes**
+
+* The script did not start with a database that was created by an older version of AVE.
+* If the database was deleted with the button in the settings while the scan was running, the scan continued at the page where the deleted database stopped, e.g. at page 67. The state of AVE is cleared now, so that it starts at the beginning, and the delete does not hang while the scan is running either.
+* A keyword with several words matches if all of the words occur in the description, the order and the distance do not matter. Before, the words had to stand next to each other in the given order, so `toaster white` did not find "a nice toaster and a white cable".
+* The search for the keywords only checks the products that were just added to the database. Before, it checked all new products after every scanned page, so the details of a product were requested again and again - that could block the account for a while.
 
 ##### [2026-11-01] - Version 0.15.0
 
@@ -69,63 +134,44 @@ details.
 * Fix: the userscript was not activated on the Vine pages of Firefox. Firefox puts the language of the browser into the URL, e.g. "https://www.amazon.de/-/de/vine/vine-items" or "https://www.amazon.de/-/en/vine/vine-items". The detection of the Vine pages expected the path "/vine/" directly after the domain, so the script did not recognize the page and stayed inactive. The language segment is now ignored by the detection.
 * Fix: the pages of the infinite scroll and of the background scan are not loaded at all if the URL contains the language segment. The base URL of the Vine pages was searched with a pattern that did not allow the segment, so the search returned nothing and the script stopped with an error. The base URL is now searched with a helper function that returns null instead of throwing an error, if no Vine URL is found.
 * The images of the desktop notifications were loaded from an old fork of the project and from a branch that does not exist any more. They are now loaded from the main branch of the repository of the project.
-* The script `scripts/verify/verify_site_detection.js` checks the detection of the Vine pages against 16 different URLs. It is part of `npm run verify`.
 
 ##### [2026-10-29] - Version 0.14.0
 
-* New: the price details of a product are now loaded from the Vine API when the product is marked as favorite, both when the star is clicked and when a product is marked as favorite automatically because of a keyword match. The new setting "Load the price details when a product is marked as favorite" turns the behaviour on and off, it is on by default. The details are not loaded during the scan, because Amazon blocks the account temporarily if too many requests are made in a short time. The requests are queued and made one after the other with a delay of 1.5 seconds.
-* New: the requests for the details of the button "more details" now run through the same queue, so that all the requests are made one after the other.
-* Fix: the recommendation id of a product contains a # as a separator. It was not encoded in the URL of the request for the details of a product with a parent ASIN, so that only the part before the # reached the server and the request failed with "No recommendation found for recommendation id". The id is now encoded like it already was for the other requests.
-* Fix: a product with a parent ASIN has no price of its own, the Vine API returns the variations for it. The details of every variation are now loaded (one request after the other), so that the price of the product is known. The price of the product is the highest price of its variations.
-* Fix: the price of a product is now written as a whole into the tile, so that the currency and the number of decimal places are correct after the details were loaded. Before, only the placeholder was replaced by the raw number.
-* Fix: all the tiles of a product are updated when the details arrive, not only the first one. A product can be shown in more than one list, e.g. in the list of the new entries and in the list of all products.
-* Fix: the loading of the details is not stopped anymore if the update of a tile fails.
-* Fix: the error of a failed request is now reported with its message, if it has no exception type. Before the console only showed "null".
-* Fix: the tooltips of the settings were not shown anymore. The comments of the CSS of the settings menu used the JavaScript syntax "//" instead of the CSS syntax "/* */". The browser discards the whole rule of such a line without any error message, so all the rules of the tooltips were lost.
-* Fix: the fallback of the translation function was ignored. If a translation does not exist, the key was shown instead of the text of the caller.
-* Fix: the setting for the price details is switched on for every value that is not false. A setting that is not part of the stored settings of an older version, or that was changed to a value that is not a boolean, therefore does not switch the feature off silently.
-* Fix: the key of the description of the setting for the waiting time between the notifications was spelled wrong, so that the tooltip of the setting showed the name of the setting instead of its description.
+* New: the price of a product is loaded from the Vine API, when the product is marked as favorite. That happens when you click on the star and also when a new product is marked as favorite automatically, because of a keyword match. The new setting "Load the price details when a product is marked as favorite" turns this on and off, it is on by default. The prices are not loaded during the scan, because Amazon blocks the account temporarily, if too many requests are made in a short time. The requests are made one after the other, with a pause of 1.5 seconds.
+* New: the button "more details" waits now for the requests of the other products, so that all the requests are made one after the other.
+* Fix: the price of the products with variants was not loaded at all. The request to Amazon failed with "No recommendation found for recommendation id".
+* Fix: the products with variants show now the price of their most expensive variant.
+* Fix: the price is shown on the tile with the currency and with two decimal places. Before, only the placeholder was replaced by the raw number.
+* Fix: all the tiles of a product are updated, when the price arrives. A product can be shown in more than one list, e.g. in the list of the new entries and in the list of all products.
+* Fix: a single product with an error does not stop the loading of the prices of the other products anymore.
+* Fix: the console showed "null" instead of the error message, if a request failed.
+* Fix: the tooltips of the settings are shown again. They were all lost, because a comment in the CSS of the settings menu hid the rules of the tooltips.
+* Fix: if a translation is missing, the text of the setting is shown instead of the name of the translation key.
+* Fix: the loading of the prices stays switched on, even if the stored setting has an unexpected value.
+* Fix: the tooltip of the setting for the waiting time between the notifications showed the name of the setting instead of its description.
 * The tooltips of the settings were rewritten in German and English. They now describe the effect of the setting, name the unit of the number fields and explain what the value 0 does. They are 320 pixels wide, so that the text is mostly on one line and a long word, e.g. a URL, is not cut off.
-* The auto scan was removed. It could never be executed, because the flag that started it was never set to true. The background scan does the same job and has its own cleanup of the database.
-* The setting for the color of the "Update Database" button was removed. The button belonged to the auto scan, which was never used. The setting had no effect.
-* The script `scripts/check_css_syntax.js` checks the CSS of the project for comments with the wrong syntax. It is part of `npm run check`.
-* The script `scripts/check_settings_keys.js` checks that every setting has a label and a description in every language and that the keys are spelled the same way everywhere. It is part of `npm run check`.
+* The auto scan and its setting were removed. The auto scan could never be executed, the background scan does the same job.
+* The setting for the color of the "Update Database" button was removed. The button belonged to the auto scan and had no effect.
 
 ##### [2026-10-28] - Version 0.13.0
 
-* Fix: the background scan reused a single iframe for all scanned pages. The frame accumulated a session history with one entry per navigation and the renderer kept the documents of those entries in memory, so the memory usage grew by about 270 MB per hour until the container ran out of memory. The iframe is now created for every scanned page and removed again after the page was scanned, which reduces the memory usage by about 670 MB (measured). The scanned document is also no longer kept in `unsafeWindow.ave.backGroundIFrame` outside of the debug mode.
-* Fix: a Vine page that was loaded with a trailing slash (`https://www.amazon.de/vine/vine-items/`) broke all relative links of Amazon. The navigation button "Für Sie empfohlen" pointed to `vine-items?queue=potluck`, which was resolved against the directory `/vine/vine-items/` and therefore led to the error page `/vine/vine-items/vine-items?queue=potluck`. The trailing slash is now removed from the URL and the relative links of the navigation and of the pagination are made absolute. The auto scan and the "Gelesen ->" pagination button use absolute URLs as well.
-* Fix: clicking on a parent-ASIN product that was removed from the Vine enrollment caused a TypeError, because `requestProductDetails()` set `forceRemove = true` but continued to access `res.result` afterwards.
-* Fix: the branding turned red for up to ~10 seconds after navigating inside the same tab, because a new session id was generated on every page load and the old ghost session blocked the master role until the timeout expired. The session id is now persisted in sessionStorage and reused across reloads and stale entries with the same id are cleaned up on init.
-* Fix: the heartbeat interval passed a fallback `'[]'` as the second argument to `localStorage.getItem()`, which only accepts one parameter. If the key was missing, `JSON.parse(null)` was called and the interval threw a TypeError on `_sessions.length`.
-* Fix: the generation of the session id could produce strings longer than intended, because `Math.round(Math.random() * 36).toString(36)` could yield two characters (`"10"`).
-* Fix: the database handler stops the request when the input is invalid instead of continuing after the error, the error messages of the methods are correct now and the database import updates the badge and the title.
-* Fix: the database cleanup does not hang anymore if a write to the database fails, the symbol of the running cleanup is removed in every case and the writes to the database are no longer left unhandled.
-* Fix: the search for the keywords is only done if a new product was really added and not after every update of an existing product, which made the background scan unnecessarily slow.
-* Fix: the products that could not be processed are reported on every page instead of being lost silently, and a failed product no longer leaves the page unfinished.
-* Fix: the background scan waits for the requested page instead of reading the dom of the previous page, so that the last page of a scan is not skipped anymore. The promise for waiting for an element no longer stays pending forever if the wait fails, so that a single broken product cannot stop the background scan anymore.
-* Fix: the diagnostic output of the background scan can no longer throw an error, which had stopped the scan in an endless loop.
-* Fix: a nearly white button of the navigation bar does not glare anymore in the dark mode and the text of the buttons in the navigation bar is always readable, because it uses a contrast color that fits to the background of the button.
-* Fix: the "all products" button had the same id as the "favorites" button, so the wrong button was highlighted when the favorites were opened.
-* Fix: the button "mark all as seen" updates the tiles of the current page right away, so that the "new" frame disappears without a reload. The callback of "mark the current site as seen" is now always called, so that the pagination does not get stuck anymore, and the callback of "mark all products as seen" is called again, because the database update returns a promise and not a callback.
-* Fix: the settings are also read if they were stored as a JSON string, they were silently ignored before. The reset of the settings removes the state information of AVE too (the state of the scan, the current page, the sessions), so that AVE behaves like after a fresh installation, and the settings do not register a new listener for every reset.
-* Fix: the helpers of globals.js (e.g. addBranding) were lost, because the object for the console was replaced.
+* Fix: the background scan used about 270 MB of memory per hour, until the browser ran out of memory. The scanned pages are released now after every page, that reduces the memory usage by about 670 MB (measured).
+* Fix: the links of the navigation and of the pagination did not work on the Vine pages that were opened with a trailing slash, they led to an error page.
+* Fix: clicking on a product that was removed from the Vine enrollment caused an error and stopped the script.
+* Fix: the branding turned red for up to 10 seconds after a click inside the same tab. The logo keeps its color now.
+* Fix: the background scan stopped with an error, if the list of the sessions was missing.
+* Fix: the database could stop working, if a write to it failed. The cleanup does not hang anymore, the symbol of the running cleanup disappears in every case and the products that could not be processed are reported on every page instead of being lost silently.
+* Fix: the search for the keywords was done after every update of a product, which made the background scan unnecessarily slow. It is done now only, if a new product was really added.
+* Fix: the background scan read sometimes the page of the previous scan, so that the last page of a scan was skipped. It waits for the requested page now, and a single broken product can no longer stop the scan.
+* Fix: a nearly white button of the navigation bar does not glare anymore in the dark mode and the text of the buttons in the navigation bar is always readable.
+* Fix: the "all products" button had the same id as the "favorites" button, so that the wrong button was highlighted, when the favorites were opened.
+* Fix: the button "mark all as seen" updates the tiles of the current page right away, so that the "new" frame disappears without a reload. The pagination does not get stuck anymore.
+* Fix: the settings were silently ignored, if they were stored as a JSON string. The reset of the settings removes the state of AVE too now, so that AVE behaves like after a fresh installation.
+* Fix: the helpers of AVE (e.g. addBranding) were lost in the browser console.
 * Fix: if an other tab takes over the master role, the background scan of this tab is stopped, so that only one tab scans. A tab in the background does not lose its session anymore, because the browser throttles its timers. A tab on a shopping page does not take over the master role anymore, the background scan crashed there.
-* Fix: the branding is not shown on the pages that are not vine pages anymore and it is not red there, because there is no master and no slave on those pages.
-* Fix: the unload handler does not overwrite the handler of the page anymore and does not crash if the session list is not readable. The heartbeat does not crash anymore if the own session is missing from the session list.
-* Fix: the error "AmazonVineExplorer: running inside a frame - aborted" is not shown anymore and the script does not run in frames anymore (e.g. in the hidden iframe of the background scan).
-* Fix: the timeout warnings of the optional style changes (Amazon navbar, footer, buttons, ...) are not shown anymore and the warning "Timeout: element .vvp-no-offers-msg not found" is not shown anymore on every page with products. The badges of a product are only waited for 3 seconds, they are optional.
-* Fix: `waitForHtmlElement()` no longer calls the callback a second time with null after the element was found.
-* Debug: the background scan logs the requested url and the url that is really loaded in the iframe, to check whether the scanner reads the dom of the previous page. The helper "ave.storeSettingsAsJsonString()" in the browser console stores the settings as a JSON string.
-* Refactoring: the background scan was split into small functions, one per responsibility (`initBackgroundScan`, `initBackgroundScanStorage`, `getBackgroundScanStageZeroSites`, `backgroundScanLoop`, `prepareFastScan`, `prepareScanIteration`, `scanStageZero` … `scanStageIdle`, `backgroundScanFinished` and `formatDuration`). The state that has to survive the iterations of the scan loop is kept in a `BackgroundScanState` object.
-* Refactoring: the fast scan of the background scan was split up. The five conditions for starting a fast scan in `prepareFastScan()` are now one combined expression, and `backgroundScanFinished()` was split into `handleFastScanFinished()`, `shouldStopFastScan()`, `stopFastScan()` and `notifyAboutProductDrop()`.
-* Refactoring: the database helpers `markAllCurrentSiteProductsAsSeen()`, `markAllCurrentDatabaseProductsAsSeen()` and `cleanUpDatabase()` now use promises and `async`/`await` instead of callbacks. `cleanUpDatabase()` was split into `cleanUpDatabase()` and `cleanUpDatabaseEntry()`, so that the checks for a single entry live in their own function.
-* Refactoring: `updateNewProductsBtn()` was split up. The notification about the number of unseen products moved into `notifyAboutUnseenItems()`, the notification about the number of new products into `notifyAboutNewProducts()`, the keyword search into `searchKeywordsInProducts()` and the check of a single product into `checkKeywordsForProduct()`.
-* Refactoring: the settings UI was split up. The CSS of the settings menu moved into the constant `AVE_SETTINGS_CSS` and `createSettingsMenuElement()` was split into one function per setting type, which are called by a switch statement.
-* Refactoring: `init()` was split up. The parsing of the tiles moved into `initTileParsing()`, the buttons for the product sites into `initNavigationButtons()`, the search bar into `initSearchBar()` and the manipulation of the pagination into `initPagination()`.
-* Tooling: all source files are formatted uniformly with Prettier and the ESLint configuration was reworked, so the linter reports real issues instead of hundreds of false positives. The linter now runs without any warning. The verification scripts of the refactorings are part of the repository under `scripts/verify/`, with the npm scripts `npm run verify` and `npm run verify:baseline`.
-* Docs: all comments are written in English and follow a uniform style. Every function whose purpose is not obvious got a JSDoc block and the known issues that are intentionally not fixed are documented in the source code. The `AGENTS.md` documents the working style, the rules for the comments and the procedure of a refactoring, the `HANDOVER.md` explains how to move the project to another system.
-* Cleanup: added "exported" headers to all files, to document the shared global scope of the userscript.
+* Fix: the branding is not shown on the pages that are not Vine pages anymore and it is not red there, because there is no master and no slave on those pages.
+* Fix: the script does not run in frames anymore (e.g. in the hidden iframe of the background scan) and the error "AmazonVineExplorer: running inside a frame - aborted" is not shown anymore.
+* Fix: the warnings in the console about missing elements of the page are not shown anymore. The badges of a product are optional, they are only waited for 3 seconds.
 
 ##### [2026-10-09] - Version 0.12.1
 

@@ -232,7 +232,11 @@ function run(code, opts) {
         },
         addStyleToTile: (tile, prod) => log.push(`addStyleToTile ${prod.id}`),
         addLeftSideButtons: () => log.push('addLeftSideButtons'),
-        updateNewProductsBtn: () => log.push('updateNewProductsBtn'),
+        // NOTE: Die Funktion heisst in der neuen Version processNewItems(). Beide Namen
+        // schreiben dasselbe Etikett, damit der Vergleich der Initialisierung die
+        // Umbenennung nicht als Unterschied zeigt.
+        updateNewProductsBtn: () => log.push('processNewItems'),
+        processNewItems: () => log.push('processNewItems'),
         updateFavoritesBtn: () => log.push('updateFavoritesBtn'),
         markAllCurrentSiteProductsAsSeen: () => Promise.resolve(),
         aveResolveUrl: (href) => 'https://www.amazon.de/vine/vine-items?page=2',

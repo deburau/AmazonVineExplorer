@@ -86,6 +86,14 @@ change the behaviour. See the section "Verifying a refactoring".
   `VineExplorer.user.js` (patch level, e.g. `0.13.0` -> `0.13.1`).
 - Every change gets an entry in the `Changelog Deburau` section of `README.md`.
   The heading is `##### [YYYY-MM-DD] - Version <version>` followed by a short bullet list.
+- The entries of the patch versions of a development branch are consolidated
+  into one entry, that describes the final state. The intermediate steps are not
+  interesting for the users.
+- **The entries describe only what the users notice.** The internal
+  implementation (the names of the fields, the version of the database, the
+  names of the functions, the steps of a migration) does not belong into the
+  changelog. A fix is described by its symptom, e.g. "the script did not
+  start, if the database was created with an older version of AVE".
 - A release consolidates all the entries of the patch versions of a minor
   version into one entry of the new minor version (e.g. all entries of
   `0.12.1.1` to `0.12.1.49` become one entry of `0.13.0`).
@@ -227,8 +235,18 @@ script `scripts/check_css_syntax.js` checks that and is part of `npm run check`.
 
 **NOTE:** Every setting of `SETTINGS_USERCONFIG_DEFINES` needs a label and a
 description in every language of the `I18N`. The key of the setting has to be
-spelled the same way in all three places. The script
-`scripts/check_settings_keys.js` checks that and is part of `npm run check`.
+spelled the same way in all three places. It is checked as well that every
+category of the texts (e.g. `settings`) has the same keys in every language,
+because `translate()` falls back to the text of the caller when a translation is
+missing. The script `scripts/check_settings_keys.js` checks that and is part of
+`npm run check`.
+
+**NOTE:** Every key that AVE writes to the `localStorage` has to be listed in
+`AVE_LOCAL_STORAGE_KEYS` in `globals.js`. `clearAVEState()` removes exactly this
+list, it is used by the reset of the settings and by the button that deletes the
+database. A missing key would survive both, e.g. the scan would continue at the
+page where it stopped although the database is empty. The script
+`scripts/check_state_keys.js` checks that and is part of `npm run check`.
 
 A function whose purpose is not obvious **must** have a JSDoc block that
 explains what it does, what the parameters are and what it returns. A
@@ -260,6 +278,11 @@ try {
 - Always use the `DB_HANDLER` class for IndexedDB operations
 - Use async/await patterns for all database calls
 - Database operations return Promises that resolve to data or null
+- The database is versioned (`DATABASE_VERSION` in `globals.js`). Every new
+  field of the products needs a new version and a migration in the upgrade of
+  the database (`onupgradeneeded` in `class_db_handler.js`). The migration of
+  the version 5 is `migrateProductToVersion5()`. The migration has to run
+  inside the transaction of the upgrade, otherwise the changes are not written.
 
 ```javascript
 // Correct pattern
@@ -373,7 +396,11 @@ state that has to survive the single iterations of the scan loop is kept in a
 | `initBackgroundScan()` | Starts the scan and the pagination wait loop |
 | `initBackgroundScanStorage()` | Writes the initial values to the local storage |
 | `getBackgroundScanStageZeroSites()` | The queues of the first stage |
-| `backgroundScanLoop()` | One iteration of the loop, it selects the stage |
+| `scanLoop()` | The endless loop: it waits and then makes one step |
+| `scanStepBackground()` | One step: one page of the stage that is due |
+| `getScanDelay()` | The waiting time between two pages |
+| `getFastScanState()` | Reads if a fast scan is running or has to be started |
+| `startFastScan()` | Remembers the position and sets the scan to its beginning |
 | `prepareFastScan()` | Decides if a fast scan is started |
 | `prepareScanIteration()` | Determines the stage and the sub stage |
 | `scanStageZero()` … `scanStageIdle()` | The five stages of the scan |

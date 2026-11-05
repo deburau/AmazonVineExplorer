@@ -8,11 +8,32 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.1` |
+| Version im User-Script | `0.15.0.57` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
-| Verifikationen | alle 7 erfolgreich (`npm run verify`) |
+| Verifikationen | alle 18 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
+
+## Bestätigte Tests (vom Maintainer im Browser)
+
+| Version | Feature | Stand |
+|---|---|---|
+| 0.14.0.2 | Sprachsegment der URL (Firefox) | bestätigt |
+| 0.15.0 | Keyword in der Benachrichtigung, Bilder (Issue #68) | bestätigt |
+| 0.15.0.36 | gruppiertes Einstellungsmenü | bestätigt |
+| 0.15.0.37 | Preissuche in der Suchleiste | bestätigt |
+| 0.15.0.40 | Bedingungen ohne Klammern | bestätigt |
+| 0.15.0.38 / 0.15.0.39 | Kategoriebedingungen, Unterkategoriename beim Turbo-Scan | bestätigt |
+| 0.15.0.41 | Zeilen der Benachrichtigung (Keyword/Preis/Kategorie) | bestätigt |
+| 0.15.0.44 | Neues Keyword oben in der Liste | **offen** |
+| 0.15.0.45 / 0.15.0.46 | Abkürzungen der Bedingungen (jede Verkürzung) | **offen** |
+| 0.15.0.47 | Verbatim-Strings in doppelten Anführungszeichen | **offen** |
+| 0.15.0.48 | Kategoriename wird beim Speichern vervollständigt | **offen** |
+| 0.15.0.49 / 0.15.0.50 | Vollständige Kategorienliste im Hintergrund (Wartezeit wie der Scan) | **offen** |
+| 0.15.0.51 / 0.15.0.52 | Kategorie-Operatoren wie beim Preis, eine Kategorie je Produkt | **offen** |
+
+Alle für das Release 0.16.0 vorgesehenen Änderungen sind damit im Browser
+getestet.
 
 ## Was in dieser Session gemacht wurde
 
@@ -123,18 +144,321 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 Das Release ist veröffentlicht (Merge-Commit `75bb04b`). Issue #68 ist mit dem
 Release erledigt und wurde geschlossen.
 
+### Feature: Preise der Varianten (Release 0.16.0)
+
+* Die Produkte haben eine neue Spalte `data_estimated_tax_prices` mit der Liste
+  der Preise **aller** Varianten. Produkte ohne Varianten haben dort ein Array
+  mit einem Element. Das Feld `data_estimated_tax_prize` wird **nicht mehr
+  geschrieben** (es bleibt bis zu einem späteren Release in der Datenbank).
+* Die **Datenbank hat die Version 5**. Der Upgrade migriert die vorhandenen
+  Produkte: der Preis des Produkts wird aus `data_estimated_tax_prize`
+  übernommen, die Preise der Varianten aus den Varianten (`data_childs`). Die
+  Produkte müssen also **nicht** neu bei Amazon angefragt werden.
+* Der **Upgrade-Pfad wurde repariert**: Die Duplikat-Prüfung für den
+  ASIN-Index benutzte das Datenbank-Objekt, das während des Upgrades noch nicht
+  existiert (Ausnahme → das Upgrade bricht ab). Die Prüfung läuft jetzt im
+  Cursor der Upgrade-Transaktion und prüft die **ASINs** statt der IDs.
+* Die **Tiles** zeigen den Bereich vom kleinsten bis zum größten Preis
+  („12,34 - 25,00 €"), die Währung steht einmal am Ende. Ohne Variantenpreise
+  bleibt es wie bisher (ein Preis bzw. „--.--"). Die Preise werden **nur** aus
+  `data_estimated_tax_prices` gelesen.
+* neuer Wächter `scripts/verify/verify_tax_prizes.js` (12 Fälle: Migration und
+  Anzeige), `verify_details_on_favorite.js` prüft zusätzlich die gespeicherten
+  Variantenpreise.
+
+### Beschleunigung der Preisdetails (Release 0.16.0)
+
+* Die Verzögerung zwischen den Requests der Preisdetails war fest **1500 ms**.
+  Bei einem Produkt mit 20 Varianten dauerte das Nachladen deshalb rund
+  **30 Sekunden** (19 × 1,5 s + Request-Zeit), das Tile wurde erst am Ende
+  aktualisiert.
+* Die Verzögerung **zwischen den Varianten** ist jetzt die Einstellung
+  **`VariationRequestDelay`** (Default **500 ms**). Der echte Abstand ist
+  **zufällig zwischen 50 % und 150 %** des Werts, damit die Requests nicht in
+  einem festen Rhythmus kommen. 20 Varianten brauchen damit ca. 3 s.
+  Die Einstellung steht im Menü bei den anderen Zahlenwerten (oben sind nur
+  die Toggles).
+* Die Verzögerung **zwischen den Produkten** der Queue ist jetzt die Einstellung
+  **`ProductDetailsRequestDelay`** (Default **1500 ms**), ebenfalls mit ±50 %
+  Zufall. Die Requests laufen während des Scans also nicht schneller als
+  vorher. Das ist **nicht** die Verzögerung des Background Scans (die kommt aus
+  `BackGroundScanDelayPerPage`).
+* Risiko: Ein zu kleiner Wert kann zu einer temporären Sperre des Accounts
+  durch Amazon führen. Der Wert ist darum bis 10.000 ms einstellbar.
+* neuer Wächter `scripts/verify/verify_request_delay.js` (11 Fälle).
+
+### Reihenfolge beim Keyword-Treffer (Release 0.16.0)
+
+* Die Benachrichtigung bei einem Keyword-Treffer wird jetzt **nach** dem Laden
+  der Preise gesendet: **Produkt matcht Keyword → Preise abfragen → Desktop-
+  und/oder Gotify-Benachrichtigung**. Vorher kam die Benachrichtigung sofort,
+  die Preise wurden danach im Hintergrund geladen.
+* Die Preise werden nur für die Produkte geladen, die **automatisch als Favorit
+  markiert** werden (`EnableAutoMarkFavorite`). Ohne Auto-Favorit gibt es keine
+  Preisanfrage und die Benachrichtigung geht sofort raus.
+* `checkKeywordsForProduct()` und `searchKeywordsInProducts()` sind deshalb
+  **asynchron** geworden, `processNewItems()` wartet auf die Suche.
+* Das Produkt wird **vor** dem Laden der Preise gespeichert (`isNotified = 1`),
+  damit es bei einem zweiten Suchlauf nicht doppelt benachrichtigt wird.
+
+### Preisbedingungen in den Keywords (Release 0.16.0)
+
+* Ein Keyword kann **Preisbedingungen** enthalten:
+  `toaster [price >= 10] [price < 20]`
+* Der Ablauf ist: **Keyword-Match → Preise abrufen → Preis-Match → Aktionen**.
+  Eine Preisbedingung **ohne** Keyword matcht nie. Die Preise werden **erst
+  nach einem erfolgreichen Keyword-Match** geladen – passt das Keyword nicht,
+  wird kein einziger Request für die Preise gemacht (wird von
+  `verify_details_on_favorite.js` geprüft).
+* Die Preise werden für die **Preisbedingungen unabhängig** von der Einstellung
+  `EnableDetailsOnFavorite` geladen (die Bedingung kann sonst nicht geprüft
+  werden). Die Einstellung entscheidet nur, ob die Preise bei einem Keyword
+  **ohne** Preisbedingung geladen werden (Auto-Favorit). Der Benutzer kann
+  die Preise immer über „Weitere Details“ laden.
+* Operatoren: `=`/`==` (ein Preis ist gleich), `!=`/`<>` (kein Preis ist gleich),
+  `<`/`<=` (der kleinste Preis ist kleiner), `>`/`>=` (der größte Preis ist
+  größer).
+* Die Zahl darf nur ein Trennzeichen (`.` oder `,`) haben. Sind beide
+  vorhanden, ist das letzte das Dezimaltrennzeichen, die anderen sind
+  Tausendertrennzeichen und werden entfernt.
+* Passt die Preisbedingung nicht, wird das Produkt **nicht** benachrichtigt und
+  **nicht** als Favorit markiert – es wird beim nächsten Scan erneut geprüft.
+* Neue Funktionen: `normalizePriceInput()`, `parsePriceCondition()`,
+  `parseKeywordConfig()`, `matchPriceConditions()`, `loadProductDetails()`.
+* **Vollständige Kategorienliste im Hintergrund** (0.15.0.49):
+  `loadCategoryListInBackground()` prüft über `isCategoryCacheComplete()`, ob die
+  Hauptkategorien **und** die Unterkategorien aller Hauptkategorien frisch (24 h)
+  vorliegen; sonst werden die Seiten nacheinander **mit der Wartezeit des
+  Hintergrund-Scans** (`getScanDelay()` = `BackGroundScanDelayPerPage` + Zufall)
+  geladen – eine eigene Konstante gibt es dafür nicht mehr (0.15.0.50). Aufruf am Ende von
+  `completeDelayedInit()` und danach alle
+  `CATEGORY_LOAD_CHECK_INTERVAL_SECONDS` (30 min). **Vorrang vor dem Scan**: in
+  `scanLoop()` wird vor jedem Schritt `isCategoryListLoadRunning()` geprüft (Merker
+  `AVE_CATEGORY_LOAD_IS_RUNNING` mit 5-Minuten-Timeout, damit ein geschlossener Tab
+  nicht blockt) – der Scan wartet also. Während des Ladens steht die Meldung unten
+  links (`showCategoryLoadScreen()` auf dem Element des Scan-Bildschirms, i18n
+  `notifications.loadingCategories`). Jede Liste wird sofort in den Cache
+  geschrieben, ein Abbruch verliert nichts. Wächter
+  `scripts/verify/verify_category_load.js` (25 Fälle mit gemockten
+  Kategoriefunktionen, `delay` und local storage).
+* **Kategoriename beim Speichern vervollständigt**: `aveExpandCategoryNames(text,
+  names)` ersetzt den getippten Teil durch den ganzen Namen aus der Kategorieliste
+  (`aveGetCategoryNames()`), gespeichert wird `category~"Lebensmittel & Getränke"`.
+  Die Namen kommen aus `getVineCategoryParents()` (lädt die Liste höchstens einmal,
+  24 h Cache) und aus den **bereits gecachten** Unterkategorien
+  (`readCategoryCache().children`) – für ein Keyword ohne Kategoriebedingung wird
+  nichts geladen (der change-Handler ist dafür `async`).
+* **Kategorie-Operatoren wie beim Preis** (0.15.0.51): `parseCategoryCondition()`
+  liest `<wort><operator><name>` mit `=`, `==`, `!=`, `<>`, `<`, `<=`, `>`, `>=`;
+  `matchCategoryConditions()` prüft **einen** Namen: **ein Produkt hat genau eine
+  Kategorie** (0.15.0.52). Ist der Text der Seite ein Pfad („Haupt > Unter", siehe
+  `getPageCategoryText()` / `getCategoryTextById()`), ist der **letzte** Name die
+  Kategorie des Produkts – kein min/max mehr, die Operatoren wirken direkt wie beim
+  Preis. Das `~` der
+  älteren Versionen ist **kein Operator mehr** (eine solche Bedingung wird ein
+  normaler Text, der nichts matcht) – im `aveExpandCategoryNames()` werden nur noch
+  `=`, `==`, `!=`, `<>` vervollständigt, weil `<`/`>` eine Alphabet-Grenze und kein
+  Name sind.
+* **Verbatim-Strings**: ein Teil eines Keywords in **doppelten
+  Anführungszeichen** wird genau so gesucht (mit Leerzeichen), z. B. `"kaffee
+  bohnen"`; ohne Anführungszeichen müssen wie bisher nur alle Wörter irgendwo
+  vorkommen (`a b` passt auf `a x b`, `"a b"` nicht). Zerlegt von
+  `aveSplitQuotedWords()` (Anführungszeichen bleiben im Wort), verglichen mit
+  `aveUnquoteKeywordPart()` in `matchesKeyword()`. Für Kategorienamen gilt es
+  ebenso (`category~"kaffee tee"` – der Parser entfernt die Anführungszeichen),
+  und in der Suche werden die Wörter ohne Anführungszeichen an `database.query()`
+  gegeben, weil dessen `includes()` genau die Verbatim-Semantik hat.
+* **Abkürzungen der Bedingungen**: **jede Verkürzung** der Feldnamen, also
+  `p`/`pr`/`pri`/`pric`/`price` und `c`/`ca`/`cat`/…/`category`. Geprüft von
+  `aveIsConditionWord(word, field)` (nutzt `String.startsWith()`); die Parser
+  `parsePriceCondition()`/`parseCategoryCondition()` lesen den Feldnamen als Wort
+  (`^([a-z]+)…`) und prüfen ihn damit, ebenso der Schnelltest und die
+  Ungültig-Prüfung in `parseKeywordConfig()`. Eine Verkürzung mit falschem
+  Operator (z. B. `ca>=10`) macht das Keyword ungültig, `preis>=10` bleibt Text.
+* **Abkürzungen der Bedingungen** (ursprünglich 0.15.0.45, nur `p`/`pr` und `c`/`cat`): `p`/`pr` für `price`, `c`/`cat` für
+  `category` (z. B. `kaffee p>=10 c~getränke`). Erkannt von `parsePriceCondition()`
+  und `parseCategoryCondition()` (Regex mit Alternativen) **und** vom Schnelltest
+  in `parseKeywordConfig()` (dort stand vorher ein `includes('price')`, das die
+  Abkürzungen ignoriert hätte). Beim Speichern schreibt
+  `aveExpandKeywordAbbreviations()` das ganze Wort in die Einstellung, damit die
+  Liste immer `price>=10` zeigt – die Abkürzung wird nur direkt vor einem Operator
+  bzw. der Tilde ersetzt, `preis>=10` bleibt also ein Text.
+* **Neue Keywords** in den Einstellungen stehen **oben** in der Liste
+  (`SETTINGS[dat.key].unshift(...)` im change-Handler von
+  `createSettingsKeywordsElement()`), damit sie direkt unter dem Eingabefeld
+  sichtbar sind. Beim Aufbau der Einstellungen sortiert dieselbe Funktion die
+  Liste weiterhin alphabetisch – nach dem Neuladen gilt also wieder die Sortierung.
+  Wächter `scripts/verify/verify_keyword_order.js` (10 Fälle, mit einem kleinen
+  DOM-Mock: Sortierung beim Aufbau, neues Keyword oben, Reihenfolge mehrerer
+  Eingaben, keine Dubletten, Feld `index` der Zeilen).
+* Bedingungen stehen **ohne Klammern** und sind immer ein **eigenes Wort**
+  (`price>=10`, `price >= 10`, `price<5`, `category~getränke`). Die Leerzeichen
+  um den Operator sind optional (ein Tokenizer liest 1–3 Wörter,
+  `parseKeywordConfig()`), `[price=0]` ist dagegen **Text** (die Klammern sind
+  auf einer deutschen Tastatur AltGr-Kombinationen und waren in einer
+  Remote-Sitzung nicht tippbar). Der Name einer Kategorie ist **ein** Wort
+  (`category~kaffee tee` → Kategorie "kaffee" + Text "tee").
+* **Umbenennung** (0.15.0.57): `updateNewProductsBtn()` heißt jetzt
+  `processNewItems()` – der Name beschreibt die Arbeit an den neuen Einträgen
+  (Abzeichen, Seitentitel, Meldungen, Keyword-Suche), nicht den Knopf. Ebenso
+  tragen die Logzeilen wieder den Namen ihrer eigenen Funktion
+  (`matchesKeyword()`, `checkKeywordsForProduct()`, `matchesPriceConditions()`,
+  `searchKeywordsInProducts()`); vorher stand dort überall
+  `updateNewProductsBtn():`. Die Wächter `verify_new_products_btn.js` (führt je
+  Seite den passenden Namen aus) und `verify_init.js` (beide Namen schreiben
+  dasselbe Etikett) bleiben „identisch".
+* **Meldung des Datenbank-Events** (0.15.0.56): `DB_HANDLER.#fireDataChangedEvent()`
+  zählt die Schreibvorgänge und die neuen Produkte des Entprellfensters (250 ms) und
+  gibt sie als `detail` mit `ave-database-changed` mit (`ave_eventhandler.emit(name,
+  detail)` → `CustomEvent`); der Zuhörer loggt
+  `EVENT - database changed (12 writes, 1 new product)` bei `DebugLevel > 1`. Die
+  Zähler werden **vor** dem Feuern zurückgesetzt, damit die Schreibvorgänge eines
+  Zuhörers zum nächsten Fenster gehören.
+* Die Benachrichtigungen (**Desktop und Gotify**) nennen den Grund des Treffers
+  in **bis zu drei Zeilen vor der Beschreibung des Produkts** (0.15.0.55; in der
+  Gotify-Nachricht stehen sie damit an derselben Stelle wie in der
+  Desktop-Benachrichtigung): `Keyword-Treffer: <keyword>`,
+  `Preis-Treffer: <Preis des Produkts, bei Varianten die Spanne>` und
+  `Kategorie-Treffer: <Name der Kategorie>`. Eine Zeile nur, wenn es die Art des
+  Treffers gab. Gebildet von `formatMatchLines()` (i18n `notifications`:
+  `keywordMatch`, `priceMatch`, `categoryMatch`, de/en).
+* Wächter `scripts/verify/verify_keyword_conditions.js` (75 Fälle: Preise,
+  Kategorien, das Parsen und die Vergleiche, Klammern als Text),
+  `verify_search.js` (20 Fälle) und `verify_match_lines.js` (10 Fälle: die Zeilen
+  der Benachrichtigung; zwei Textprüfungen zusätzlich in
+  `verify_new_products_btn.js`).
+* **Kategoriebedingungen** in den Keywords (`category~getränke`):
+  `parseCategoryCondition()` + `matchCategoryConditions()` (Teilstring, klein
+  geschrieben, alle Bedingungen müssen passen). Es muss ein **Keyword oder eine
+  Kategorie** angegeben sein (nur Preis bleibt ungültig). Die Kategorie eines
+  Produkts wird **nicht** in der DB gespeichert, sondern beim Parsen aus der
+  Seite gelesen (`getPageCategoryText()`, der `selectedNode` im Sidebar) und an
+  die Suche **mitgegeben** (`productsToCheckForKeywords` enthält jetzt
+  `{prod, categoryText}`). Ein Produkt, das schon in der DB ist und später auf
+  einer Kategorieseite gesehen wird (z. B. durch den Turbo-Scan), wird **einmal**
+  nachgeprüft (`categoryCheckedProducts` + `hasCategoryCondition()`), sonst
+  würde eine Kategoriesuche nie greifen. Der Turbo-Scan kennt die Nummern seiner
+  Kategorie und gibt die **Namen** an den Scanner (`getCategoryTextById()`, aus
+  dem Kategorie-Cache): bei einer Unterkategorie `"Haupt > Unter"`, damit beide
+  Namen matchen (`backGroundTileScanner(url, cb, { categoryText })`). Die **Suche** (Suchleiste) kann
+  Kategorien nicht prüfen (`searchProducts()` warnt und liefert nichts).
+* Die **Suche** (Suchleiste) kann dieselben **Preisbedingungen** benutzen wie die
+  Keywords (`searchProducts()` in der Hauptdatei): `kaffee [price >= 10]`, aber
+  auch **nur** nach dem Preis (`[price < 5]`, dann werden alle Produkte mit
+  bekanntem Preis geprüft, `database.getAll()`). Produkte **ohne** bekannten
+  Preis erfüllen keine Bedingung und sind nicht im Ergebnis. Eine ungültige
+  Bedingung (`[price > abc]`) liefert kein Ergebnis (Warnung in der Konsole).
+  Wächter: `scripts/verify/verify_search.js` (16 Fälle).
+* Ein Keyword mit **mehreren Wörtern** matcht, wenn **alle Wörter** im Text
+  vorkommen (Reihenfolge und Abstand egal, `matchesKeyword()`). Vorher waren die
+  Wörter eine Phrase (direkt hintereinander in dieser Reihenfolge). Ein Regex
+  wie `/toaster/i` gilt weiter wie geschrieben.
+* Ein Keyword, dessen Preisbedingung **zwischen** zwei Wörtern steht
+  (`toaster [price > 100] white`), wurde vorher zum Suchtext `toaster   white`
+  (drei Leerzeichen) und fand damit nie etwas. Der Leerraum um die Bedingung
+  verschwindet jetzt mit ihr (`parseKeywordConfig()`).
+
+### Turbo-Scan (Konzept, noch nicht implementiert)
+
+**Nächster geplanter Schritt.** Ziel: neue Produkte in einer kleinen, vom
+Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
+(wertvolle Produkte sind oft nach wenigen Minuten vergriffen).
+
+* Eine eigene Schleife lädt in konfigurierbarem Takt (Default **30 s**) die
+  **erste Seite** jeder konfigurierten Kategorie und parst die Tiles wie
+  gewohnt.
+* **Entscheidungen:** Textliste (wie die Keywords) **mit Unterkategorien** –
+  Tendenz zu Nummern statt Namen; der Turbo-Scan läuft **immer** (unabhängig
+  vom Background-Scan), nur in der Master-Session.
+* **Kein** neues Produktfeld, **keine** DB-Migration, **keine**
+  Kategorie-Bedingung in der Keyword-Suche – die Kategorie dient nur zum Bauen
+  der URL.
+* Der bestehende Scan (Haupt-/Fast-Scan) wird **nicht** umgebaut, damit
+  `verify_scan.js` gültig bleibt.
+* Kosten: 1 Kategorie = 120 Seiten/h = **+8 %** auf den Haupt-Scan,
+  2 Kategorien = 240 Seiten/h = **+17 %**.
+* Alle Messwerte, die Kategorie-Struktur (`pn`/`cn`, Sidebar-DOM) und die
+  Begründung, warum der Fast-Scan das nicht leisten kann: **`docs/TURBO-SCAN.md`**.
+* **Stand der Umsetzung:** Eigene Kategorie-Einstellung `TurboScanCategories`
+  mit Checkboxen (Unterkategorien werden beim Aufklappen geladen, bereits
+  gewählte Hauptkategorien öffnen sich von selbst), `EnableTurboScan` und
+  `TurboScanIntervalSeconds` stehen in den Einstellungen. Das Lesen der
+  Kategorien: `getVineCategoryParents()` / `getVineCategoryChildren()`. Sie
+  lesen die Kategorien **zuerst aus dem DOM der aktuellen Seite** (die sind dort
+  immer vorhanden, bevor `createProductSite()` den Container leert) → **kein
+  Request**; nur wenn die Seite sie nicht hat bzw. der Cache leer ist, wird die
+  Seite per `fetch` im Hintergrund geladen. Cache in `AVE_CATEGORY_CACHE`,
+  Wächter `verify_category_tree.js` (24 Fälle) und
+  `verify_settings_categories.js` (27 Fälle).
+* **Turbo-Scan ist umgesetzt** (0.15.0.32):
+  **Kein Seiten-Hash:** Ein Zwischenstand (0.15.0.33) hat das Parsen der Tiles
+  übersprungen, wenn ein Hash der Produkt-Ids gleich blieb. Das war **nicht** die
+  Ursache der Langsamkeit (die Pause zwischen den Seiten ist es) und wurde
+  wieder entfernt (0.15.0.34).
+  `isTurboScanDue()` (Einstellung an + Kategorien vorhanden + Wartezeit bzw.
+  laufende Runde) und `scanStepTurbo()` (eine Kategorie-Seite pro Schritt,
+  `?queue=all_items&pn=<pn>&cn=<cn>&page=1`, Rotationszähler
+  `AVE_TURBO_SCAN_CATEGORY_INDEX`, Rundenende setzt `AVE_TURBO_SCAN_LAST_TIME`).
+  Der Schritt läuft **in derselben Schleife** wie der Background-Scan (Priorität
+  Turbo vor BG, eine Seite pro Schritt) und benutzt `backGroundTileScanner()` –
+  dadurch werden neue Produkte gespeichert und die Keyword-Suche läuft wie
+  gewohnt. Die Schleife startet, wenn **einer** der beiden Scans an ist.
+  Wächter: `scripts/verify/verify_turbo_scan.js` (21 Fälle). **Der Turbo-Scan selbst fehlt noch** – die
+  Einstellungen haben bis dahin keine Wirkung, darum gibt es noch keinen
+  Changelog-Eintrag.
+* **Umbau der Steuerung:** eine einzige Schleife mit Prioritäten
+  (Turbo → Fast → BG → Cleanup, Verzögerung vorne) – Plan, Risiken und die
+  Verifikationsstrategie stehen in **`docs/SCAN-LOOP.md`**. **Schritte 1 und 2
+  sind umgesetzt** (die Schleife läuft, verhält sich aber noch wie vorher).
+  Rückfallpunkt: Tag `pre-scan-loop` = `aa68425`.
+* Der **Takt des Fast-Scans** war aus der Wartezeit pro Seite berechnet
+  (15 Seitentakte) und wurde deshalb mit einem schnelleren Background-Scan
+  immer kürzer (bei 2000/1000 ms nur ~40 s). Er ist jetzt die Einstellung
+  `FastScanIntervalSeconds` (Default **300 s**), Wächter
+  `scripts/verify/verify_fast_scan_interval.js`.
+
+### Analyse: Kontosperre durch zu viele Detail-Requests (offen)
+
+Am 2026-11-03 hat Amazon den Zugriff in einem Browser vorübergehend gesperrt,
+nachdem massenhaft `AVE: The details of … are already loaded.` in der Konsole
+auftauchte. Die Meldung selbst ist harmlos (kein Request), sie zeigt aber, wie
+oft der Pfad lief.
+
+* Ursache (mit hoher Wahrscheinlichkeit): **Menge an Detail-Requests**. Die
+  Keyword-Suche läuft nach jeder Scan-Seite über **alle** neuen Einträge, jeder
+  Keyword-Treffer mit Preisbedingung lädt die Details (unabhängig von
+  `EnableDetailsOnFavorite`), und wenn ein Produkt nie einen Preis bekommt,
+  wird es **bei jedem Suchlauf erneut** angefragt → Rückschleife + Dauerlast.
+* **Nicht** die Ursache: die neue Schleife (`verify_scan.js` zeigt die identische
+  Schrittfolge) und der neue Fast-Scan-Takt (läuft seltener als vorher).
+* **Umgesetzt (0.15.0.20):** Der Keyword-Match läuft nur noch für Produkte, die
+  **gerade neu** in die Datenbank kamen (`addProductToKeywordSearch()` an den
+  beiden `database.add()`-Stellen, `productsToCheckForKeywords` wird von
+  `processNewItems()` an die Suche übergeben). Jedes Produkt wird also
+  **einmal** geprüft – und da die Details nur nach einem Keyword-Match geholt
+  werden, werden sie **höchstens einmal pro Produkt** angefragt.
+  **Keine DB-Änderung nötig** (ein zwischenzeitlicher Merker im Produkt wurde
+  wieder entfernt).
+* Analyse, die restlichen Vorschläge (Notbremse, Queue-Limit, leises Log, Suche
+  drosseln) und Meßhinweise stehen in **`docs/ANALYSE-DETAILS-REQUESTS.md`**.
+
 ## Wichtige Dateien
 
 | Datei | Inhalt |
 |---|---|
-| `VineExplorer.user.js` (~4400 Zeilen) | Hauptdatei, alle Funktionen |
+| `VineExplorer.user.js` (~4900 Zeilen) | Hauptdatei, alle Funktionen |
 | `globals.js` | Konstanten, Settings, Session-Management |
-| `scripts/verify/` | 6 Verifikationsskripte für die Refactorings |
+| `scripts/verify/` | Verifikationsskripte für die Refactorings und die Features |
+| `vine_logo*.png` (Wurzel) | Projekt-Logos. Sie bleiben **im Wurzelverzeichnis**: die veröffentlichten Versionen laden `main/vine_logo.png` und `main/vine_logo_notification_image.png` zur Laufzeit, ein Umzug würde bei noch nicht aktualisierten Clients ein fehlendes Benachrichtigungssymbol erzeugen (Raw-URLs leiten nicht weiter). |
 | `scripts/check_css_syntax.js` | prüft die CSS auf Kommentare mit falscher Syntax |
-| `scripts/check_settings_keys.js` | prüft die Schlüssel der Einstellungen und der Übersetzungen |
+| `scripts/check_settings_keys.js` | prüft die Schlüssel der Einstellungen und dass alle Text-Kategorien in jeder Sprache die gleichen Schlüssel haben |
+| `scripts/check_state_keys.js` | prüft, dass jeder localStorage-Schlüssel in `AVE_LOCAL_STORAGE_KEYS` steht |
 | `scripts/verify/baselines.json` | Git-Stand, gegen den verglichen wird |
 | `scripts/verify/lib/verify_helpers.js` | Gemeinsame Helfer der Skripte |
 | `.unotes/` | Lokale Testskripte (nicht versioniert) |
+| `docs/TURBO-SCAN.md` | Konzept des Turbo-Scans (Messwerte, Entscheidungen, offene Punkte) |
+| `docs/SCAN-LOOP.md` | Plan für die eine Schleife mit Prioritäten (Turbo/Fast/BG/Cleanup) |
+| `docs/ANALYSE-DETAILS-REQUESTS.md` | Analyse der zu vielen Detail-Requests (Kontosperre) |
 | `AGENTS.md` | Arbeitsregeln für AI-Sessions |
 | `HANDOVER.md` | Umzug auf ein anderes System |
 
@@ -157,7 +481,7 @@ gehört in `scripts/verify/` und nutzt `lib/verify_helpers.js`.
 
 | Befehl | Wirkung |
 |---|---|
-| `npm run check` | Prettier + ESLint + CSS-Check + Schlüssel-Check (muss immer grün sein) |
+| `npm run check` | Prettier + ESLint + CSS-Check + Schlüssel-Check + State-Check (muss immer grün sein) |
 | `npm run verify` | alle Verifikationen |
 | `npm run verify:baseline` | Baseline einfrieren |
 | `npm run format` | Quellen formatieren |
@@ -169,3 +493,21 @@ gehört in `scripts/verify/` und nutzt `lib/verify_helpers.js`.
 * `dev-*` darf ohne Nachfrage gepusht werden
 * Commits: `type(scope): Beschreibung`, z. B. `fix(scan): ...`
 * Version im User-Script + Changelog in `README.md` bei jeder Änderung
+
+## Einstellungen (71)
+
+Aufbau des Menüs (Reihenfolge in `globals.js` = Reihenfolge im Menü):
+
+1. **Amazon Vine** (`TITLE_AMAZON_VINE`): Sprache, alle Schalter, Keyword-Liste,
+   Gotify
+2. **Background-Scan** (`TITLE_BACKGROUND_SCAN`): `EnableBackgroundScan`,
+   Button „Neuen Background Scan starten", `BackGroundScanDelayPerPage`,
+   `BackGroundScannerRandomness`
+3. **Fast-Scan** (`TITLE_FAST_SCAN`): `EnableFastScan`,
+   `FastScanIntervalSeconds`
+4. **Turbo-Scan** (`TITLE_TURBO`): `EnableTurboScan`,
+   `TurboScanIntervalSeconds`, `TurboScanCategories`
+5. **Wartezeiten und Grenzen** (`TITLE_DELAYS`): `DesktopNotifikationDelay`,
+   `SearchBarInputDelay`, `IdlePeriodAfterScan`, `HoursBeforeCleanup`,
+   `MaxItemsPerPage`, die Schwellwerte der Benachrichtigungen
+6. Farben und Styles, Entwickler-Werte

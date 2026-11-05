@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0
+// @version      0.16.0
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -39,24 +39,44 @@
 /* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
-   backGroundTileScanner, btnEventhandlerClick, checkKeywordsForProduct, cleanUpDatabase,
+   addProductToKeywordSearch, aveExpandCategoryNames, aveExpandKeywordAbbreviations, aveGetCategoryNames,
+   aveIsConditionWord, aveSplitQuotedWords, aveUnquoteKeywordPart, backGroundTileScanner,
+   btnEventhandlerClick, checkKeywordsForProduct,
+   cleanUpDatabase, getPageCategoryText, hasCategoryCondition, matchCategoryConditions, matchesKeyword,
+   matchesKeywordEntry, matchesPriceConditions, parseCategoryCondition,
+   scanLoop, scanStepBackground,
    colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
-   createProductSite, createSettingsKeywordsTableElement, createSettingsMenuElement,
+   createProductSite, createSettingsCategoriesElement, createSettingsCategoryRow,
+   createSettingsKeywordsTableElement, createSettingsMenuElement, findSettingsCategoryCheckbox,
+   getCategoryId, getCategoryTextById, hasSelectedSubCategory, isCategorySelected,
+   renderSettingsCategories,
+   setCategorySelected, toggleSettingsCategoryChildren, updateSettingsCategoryChildren,
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
-   favStarEventhandlerClick, fixProductImageUrl, getContrastColor, getPageinationData,
-   getTilesFromURL, getUrlParameter, gotifyNotification, handleInfiniteScroll,
-   handleFastScanFinished, importDatabase, init, initBackgroundScan, initNavigationButtons,
+   favStarEventhandlerClick, fixProductImageUrl, formatMatchLines, formatTaxPrize, getContrastColor, getFastScanState,
+   getFastScanIntervalSeconds, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
+   getScanDelay, getTaxPrices,
+   getTilesFromURL, getTurboScanCategories, getTurboScanIndex, getTurboScanIntervalSeconds,
+   getUrlParameter, getVariationRequestDelay, gotifyNotification, isTurboScanDue,
+   getSelectedCategoryPn, getVineCategoryChildren, getVineCategoryParents, parseCategoryNodes,
+   parseCategoryTree, parseTurboScanCategory,
+   restartBackgroundScan, scanStepTurbo,
+   startFastScan,
+   handleFastScanFinished, handleInfiniteScroll, importDatabase, init, initBackgroundScan,
+   initNavigationButtons,
+   loadProductDetails, matchPriceConditions, normalizePriceInput, parseKeywordConfig,
+   parsePriceCondition,
    initPagination, initSearchBar, initTileEventHandlers, initTileParsing, injectDarkMode,
    markAllCurrentDatabaseProductsAsSeen, markAllCurrentSiteProductsAsSeen,
    notifyAboutNewProducts, notifyAboutProductDrop, notifyAboutUnseenItems, parseTileData,
-   populateSettingsContainer, readFile, reloadPageWithSubpageTarget, requestProductDetails,
-   rgbToHex, rgbaToHex, searchKeywordsInProducts, shareEventHandlerClick,
+   populateSettingsContainer, processNewItems, readFile, reloadPageWithSubpageTarget, requestProductDetails,
+   rgbToHex, rgbaToHex, searchKeywordsInProducts, searchProducts, shareEventHandlerClick,
+   isCategoryCacheComplete, isCategoryListLoadRunning, loadCategoryListInBackground, removeBackgroundScanScreen,
    shouldStopFastScan, showBackgroundScanScreen, sort_by_key,
    stickElementToTopScrollEVhandler, stopBackgroundScan, stopFastScan,
    stringToRegex, timeAgo, translate, updateBackgroundScanScreenText,
-   updateFavoritesBtn, updateNewProductsBtn, updateTileStyle */
+   updateFavoritesBtn, updateSettingsButtonStates, updateTileStyle */
 console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 
 /**
@@ -86,6 +106,61 @@ let searchInputTimeout;
 let backGroundScanTimeout;
 
 let BackGroundScanIsRunning = false;
+
+/**
+ * The products that were added to the database and still have to be checked
+ * against the keywords of the settings.
+ *
+ * NOTE: Every product is added to this list only once, when it is added to the
+ * database. So every product is checked at most once in its life, and the
+ * details (the prices) are therefore requested at most once as well. Without
+ * this the search ran over all new entries after every scanned page and asked
+ * Amazon for the details of the same products again and again, which blocked the
+ * account of the user.
+ *
+ * @type {Product[]}
+ */
+const productsToCheckForKeywords = [];
+
+/**
+ * The generation of the scan loop. Every start of the loop counts it up, so
+ * that a loop that is still waiting stops, when a new loop was started.
+ * @type {number}
+ */
+let ScanLoopGeneration = 0;
+
+/**
+ * true, if the waiting time before the next step of the scan has to be skipped.
+ * It is set when the scan is restarted by the button in the settings and it is
+ * used once by the scan loop.
+ * @type {boolean}
+ */
+let scanStepImmediately = false;
+
+/** The background colour of a button of the settings that is not available. */
+const DISABLED_SETTINGS_BUTTON_COLOR = 'rgb(200, 200, 200)';
+
+/**
+ * The ids of the products that were checked a second time because their category
+ * became known (see addProductToKeywordSearch()).
+ * @type {Set<string>}
+ */
+const categoryCheckedProducts = new Set();
+
+/**
+ * The last result of hasCategoryCondition(), so that the keywords do not have to
+ * be parsed for every product of a page.
+ * @type {{key: string, result: boolean}}
+ */
+let categoryConditionCache = { key: '', result: false };
+
+/**
+ * The function that tells the scan loop that the current step is done. It is
+ * set while a step is running, because the steps that load a page are
+ * callback based.
+ * @type {function|null}
+ */
+let scanStepDone = null;
 
 /**
  * The pagination data of the last page that was scanned in the background.
@@ -249,9 +324,17 @@ ave_eventhandler.on('ave-new-product-added', () => {
     newProductWasAdded = true;
 });
 
-ave_eventhandler.on('ave-database-changed', () => {
-    if (SETTINGS.DebugLevel > 1) console.info('EVENT - Database has new Data for us! we should look what has changed');
-    updateNewProductsBtn();
+ave_eventhandler.on('ave-database-changed', (event) => {
+    // The event carries the number of the write operations and the number of the new
+    // products of the window it belongs to (see DB_HANDLER.fireDataChangedEvent()).
+    if (SETTINGS.DebugLevel > 1) {
+        const _writes = event?.detail?.writes ?? '?';
+        const _newProducts = event?.detail?.newProducts ?? '?';
+        console.info(
+            `EVENT - database changed (${_writes} write${_writes === 1 ? '' : 's'}, ${_newProducts} new product${_newProducts === 1 ? '' : 's'})`
+        );
+    }
+    processNewItems();
     updateFavoritesBtn();
 
     if (showDbUpdateLogoTimeout) clearTimeout(showDbUpdateLogoTimeout);
@@ -1186,17 +1269,51 @@ ${newUrl}`;
 }
 
 /**
+ * Returns the prices of a product, that are shown on the tile.
+ *
+ * The prices are in the list data_estimated_tax_prices. A product with
+ * variations has the prices of all its variations, a product without
+ * variations has a list with one price.
+ *
+ * @param {Product} prod The product of the tile
+ * @returns {number[]} The prices of the product, empty if no price is known
+ */
+function getTaxPrices(prod) {
+    if (!prod || !Array.isArray(prod.data_estimated_tax_prices)) return [];
+    return prod.data_estimated_tax_prices.filter((_prize) => Number.isFinite(_prize));
+}
+
+/**
  * Formats the tax prize of a product for the display.
+ *
+ * If the product has variations, the range from the lowest to the highest price
+ * of the variations is shown. The currency is shown only once at the end of the
+ * range. Otherwise the single price of the product is shown.
  *
  * @param {Product} prod The product of the tile
  * @returns {string} The formatted prize, or "--.--" if it is not known
  */
 function formatTaxPrize(prod) {
-    const _prize = prod ? prod.data_estimated_tax_prize : undefined;
-    if (typeof _prize != 'number') return '--.--';
+    const _prizes = getTaxPrices(prod);
+    if (_prizes.length === 0) return '--.--';
+
     let _currencySymbol = '';
     if (prod.data_tax_currency && prod.data_tax_currency == 'EUR') _currencySymbol = '€';
-    return `${Intl.NumberFormat(undefined, { minimumFractionDigits: 2 }).format(_prize)} ${_currencySymbol}`;
+    // NOTE: A currency that is not known has no symbol, then there is no space
+    // behind the price either.
+    const _currencySuffix = _currencySymbol ? ` ${_currencySymbol}` : '';
+
+    const _format = (_prize) => Intl.NumberFormat(undefined, { minimumFractionDigits: 2 }).format(_prize);
+
+    if (_prizes.length === 1) return `${_format(_prizes[0])}${_currencySuffix}`;
+
+    let _minPrize = _prizes[0];
+    let _maxPrize = _prizes[0];
+    for (const _prize of _prizes) {
+        if (_prize < _minPrize) _minPrize = _prize;
+        if (_prize > _maxPrize) _maxPrize = _prize;
+    }
+    return `${_format(_minPrize)} - ${_format(_maxPrize)}${_currencySuffix}`;
 }
 
 /**
@@ -1214,9 +1331,9 @@ function createTaxInfoElement(prod, index = Math.round(Math.random() * 10000)) {
     const _taxElement_span = document.createElement('span');
     _taxElement_span.setAttribute('id', `ave-taxinfo-${index}-text`);
     _taxElement_span.classList.add('ave-taxinfo-text');
-    const _prize = prod ? prod.data_estimated_tax_prize : undefined;
+    const _prize = formatTaxPrize(prod);
     if (SETTINGS.DebugLevel > 10) console.log('createTaxInfoElement(): We have a Taxprize of: ', _prize);
-    _taxElement_span.innerText = `Tax Price: ${formatTaxPrize(prod)}`;
+    _taxElement_span.innerText = `Tax Price: ${_prize}`;
     if (SETTINGS.DebugLevel > 10) console.log('createTaxInfoElement(): After innerText');
 
     _taxElement.appendChild(_taxElement_span);
@@ -1793,6 +1910,17 @@ function addTileEventhandlers(_currTile) {
  */
 function completeDelayedInit() {
     initTileEventHandlers();
+
+    // NOTE: The whole list of the categories is loaded in the background when it is
+    // missing or older than a day. It has priority over the scan (see scanLoop()).
+    const _loadCategories = () => {
+        loadCategoryListInBackground().catch((error) => {
+            const _reason = error?.message || error || 'unknown error';
+            console.error(`completeDelayedInit(): the categories could not be loaded: ${_reason}`);
+        });
+    };
+    _loadCategories();
+    setInterval(_loadCategories, CATEGORY_LOAD_CHECK_INTERVAL_SECONDS * 1000);
 }
 
 // Populate settings only once per render to avoid duplicates on re-open.
@@ -1918,6 +2046,73 @@ const AVE_SETTINGS_CSS = `
 
 .ave-settings-item > * >.ave-settings-label-setting:hover{
   color: red;
+}
+
+/* An item with a list (the categories of the turbo scan) is as high as the list */
+.ave-settings-item-tall {
+  height: auto;
+  align-items: flex-start;
+}
+
+/* The list of the categories (turbo scan) */
+.ave-category-list {
+  display: none;
+  width: 320px;
+  max-height: 260px;
+  overflow-y: auto;
+  /* A long name is wrapped, so that the list does not scroll sideways */
+  overflow-x: hidden;
+  border: 1px solid rgba(128, 128, 128, .5);
+  border-radius: 4px;
+  padding: 4px;
+  background-color: white;
+  color: black;
+  font-size: 13px;
+}
+
+.ave-category-row {
+  display: flex;
+  /* The checkbox stays at the top when a name is wrapped */
+  align-items: flex-start;
+  line-height: 1.4;
+}
+
+.ave-category-row label {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The arrow of a main category. The width is fixed, so that the checkboxes of
+ * all main categories are in the same column.
+ */
+.ave-category-toggle {
+  flex: 0 0 18px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+/*
+ * The sub categories of a main category. The margin is the width of the arrow,
+ * so that a sub category starts where the checkbox of its main category is.
+ */
+.ave-category-children {
+  margin-left: 22px;
+  border-left: 1px dotted rgba(128, 128, 128, .5);
+}
+
+.ave-category-error {
+  width: 320px;
+  color: rgb(255, 0, 0);
+}
+
+/* A sub category of a selected main category can not be changed on its own */
+.ave-category-row input:disabled + span {
+  opacity: .55;
 }
 
 /* Add this attribute to the element that needs a tooltip */
@@ -2197,6 +2392,8 @@ function createSettingsBoolElement(dat, _elem, _labelName, _labelDescription) {
         console.log('This is a Boolean Value Input', event);
         SETTINGS[dat.key] = event.target.checked;
         SETTINGS.save();
+        // A button can depend on this setting, so its state has to be updated.
+        updateSettingsButtonStates();
     });
 
     const _elem_item_left_label_span = document.createElement('span');
@@ -2208,6 +2405,39 @@ function createSettingsBoolElement(dat, _elem, _labelName, _labelDescription) {
     _elem.appendChild(_elem_item_left);
 
     _elem.appendChild(createSettingsItemRight(_labelName, _labelDescription));
+}
+
+/**
+ * Shows or hides the availability of a button of the settings.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {Element} label The label element that carries the background colour
+ * @param {HTMLButtonElement} button The button
+ */
+function applySettingsButtonState(dat, label, button) {
+    const _isEnabled = typeof dat.btnEnabled === 'function' ? dat.btnEnabled() : true;
+    button.disabled = !_isEnabled;
+    label.style.backgroundColor = _isEnabled ? dat.bgColor || '' : DISABLED_SETTINGS_BUTTON_COLOR;
+}
+
+/**
+ * Updates the availability of all buttons of the settings.
+ *
+ * NOTE: It is called when a setting is changed, because the availability of a
+ * button can depend on it (the button that starts a new scan needs the
+ * background scan to be switched on for example).
+ */
+function updateSettingsButtonStates() {
+    for (const _define of SETTINGS_USERCONFIG_DEFINES) {
+        if (_define.type !== 'button' || typeof _define.btnEnabled !== 'function' || !_define.key) continue;
+
+        const _elem = document.querySelector(`[ave-config-key="${_define.key}"]`);
+        if (!_elem) continue;
+        const _button = _elem.querySelector('button.ave-input-button');
+        if (!_button) continue;
+
+        applySettingsButtonState(_define, _button.parentElement, _button);
+    }
 }
 
 /**
@@ -2340,8 +2570,12 @@ function createSettingsButtonElement(dat, _elem, _labelName, _labelDescription) 
     _elem_item_left_input.className = 'ave-input-button';
 
     _elem_item_left_input.innerText = _labelName;
+    // A button can depend on another setting. Then it is shown grey as long as
+    // the other setting is switched off (see updateSettingsButtonStates()).
+    if (typeof dat.btnEnabled === 'function') applySettingsButtonState(dat, _elem_item_left_input_label, _elem_item_left_input);
     _elem_item_left_input.addEventListener('click', (event) => {
         console.log('This is a button Input', event);
+        if (_elem_item_left_input.disabled) return;
         if (dat.btnClick) dat.btnClick();
     });
 
@@ -2499,19 +2733,42 @@ function createSettingsKeywordsElement(dat, _elem, _labelName, _labelDescription
     _elem_keyword_input_input.setAttribute('cols', 70);
     _elem_keyword_input_input.setAttribute('rows', 1);
     _elem_keyword_input_input.setAttribute('placeholder', _inputPlaceholder || dat.inputPlaceholder);
-    _elem_keyword_input_input.addEventListener('change', (elm, ev) => {
+    _elem_keyword_input_input.addEventListener('change', async (elm, ev) => {
         if (SETTINGS.DebugLevel > 1) console.log('EVENTHANDLER CHANGE:', elm, 'event:', ev);
         const _value = elm.target.value.trim();
+        const _added = [];
         if (_value && _value.length > 0) {
+            // NOTE: The names of the categories are loaded once for all lines and
+            // only if a line really has a condition for a category, so that a plain
+            // keyword does not load the list of the categories.
+            const _hasCategory = _value
+                .split('\n')
+                .some((line) => [...line.matchAll(/\b([a-z]+)\s*[=!<>]/gi)].some((match) => aveIsConditionWord(match[1], 'category')));
+            const _categoryNames = _hasCategory ? await aveGetCategoryNames() : [];
+
             for (let _key of _value.split('\n')) {
                 _key = _key.trim();
                 if (_key.length === 0) {
                     continue;
                 }
-                if (!SETTINGS[dat.key].includes(_key)) {
-                    SETTINGS[dat.key].push(_key);
+                // NOTE: The abbreviations of the conditions are stored with the full
+                // words and a condition for a category with the whole name of the
+                // category (see aveExpandKeywordAbbreviations() and
+                // aveExpandCategoryNames()).
+                _key = aveExpandKeywordAbbreviations(_key);
+                _key = aveExpandCategoryNames(_key, _categoryNames);
+                if (!SETTINGS[dat.key].includes(_key) && !_added.includes(_key)) {
+                    _added.push(_key);
                 }
             }
+        }
+        // NOTE: The new keywords stand at the beginning of the list, so that the
+        // user sees them right below the input and does not have to scroll through
+        // a long list. The list is sorted alphabetically when the settings are
+        // built (see the beginning of this function), so the order on the screen is
+        // the sorted one again after a reload.
+        if (_added.length > 0) {
+            SETTINGS[dat.key].unshift(..._added);
         }
         SETTINGS.save();
         elm.target.value = '';
@@ -2567,9 +2824,269 @@ function createSettingsMenuElement(dat) {
         case 'keywords':
             createSettingsKeywordsElement(dat, _elem, _labelName, _labelDescription, _inputPlaceholder);
             break;
+        case 'categories':
+            createSettingsCategoriesElement(dat, _elem, _labelName, _labelDescription);
+            break;
     }
 
     return _elem;
+}
+
+/**
+ * Creates a settings item with the list of the categories.
+ *
+ * The categories are read from the Vine pages (see getVineCategoryParents()) and
+ * shown as checkboxes. The sub categories of a main category are loaded and shown
+ * when the arrow of the main category is clicked, because Amazon shows them only
+ * on the page of the main category.
+ *
+ * NOTE: Only the numbers of the selected categories are stored, the names are
+ * read again for the display.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {Element} _elem The element of the setting
+ * @param {string} _labelName The name of the setting
+ * @param {string} _labelDescription The description of the setting
+ */
+function createSettingsCategoriesElement(dat, _elem, _labelName, _labelDescription) {
+    const _elem_item_left = createSettingsItemLeft();
+    // NOTE: The item is as high as the list, the other items have a fixed height.
+    _elem.classList.add('ave-settings-item-tall');
+
+    const _error = document.createElement('div');
+    _error.classList.add('ave-category-error');
+    _error.style.display = 'none';
+    _error.innerText = translate('settings', 'categoriesError', 'Die Kategorien konnten nicht geladen werden.');
+
+    const _list = document.createElement('div');
+    _list.classList.add('ave-category-list');
+    _list.innerText = translate('settings', 'categoriesLoading', 'Kategorien werden geladen ...');
+
+    _elem_item_left.appendChild(_list);
+    _elem_item_left.appendChild(_error);
+    _elem.appendChild(_elem_item_left);
+    _elem.appendChild(createSettingsItemRight(_labelName, _labelDescription));
+
+    // The list is built after the element was created, because the pages of the
+    // categories have to be read for it.
+    renderSettingsCategories(dat, _list)
+        .then(() => {
+            _list.style.display = _list.children.length > 0 ? 'block' : 'none';
+            _error.style.display = _list.children.length > 0 ? 'none' : 'block';
+        })
+        .catch((error) => {
+            console.error(`createSettingsCategoriesElement(): could not build the list: ${error}`);
+            _list.style.display = 'none';
+            _error.style.display = 'block';
+        });
+}
+
+/**
+ * Builds the list of the categories for the settings.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {Element} listElement The element that holds the list
+ * @returns {Promise<void>} Resolves when the list is complete
+ */
+async function renderSettingsCategories(dat, listElement) {
+    const _parents = await getVineCategoryParents();
+    listElement.innerHTML = '';
+
+    for (const _parent of _parents) {
+        const _item = createSettingsCategoryRow(dat, _parent, false);
+        listElement.appendChild(_item.row);
+        listElement.appendChild(_item.children);
+
+        // A main category with a selected sub category is opened right away, so
+        // that the user sees the selected categories at once.
+        if (hasSelectedSubCategory(dat, _parent.pn)) await toggleSettingsCategoryChildren(dat, _item, _parent);
+    }
+}
+
+/**
+ * Creates one row of the list of the categories.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {object} category The category (name, number of products and ids)
+ * @param {boolean} isSubCategory true for a sub category
+ * @returns {{row: Element, toggle: Element, children: Element}} The elements of the row
+ */
+function createSettingsCategoryRow(dat, category, isSubCategory, parentSelected = false) {
+    const _row = document.createElement('div');
+    _row.classList.add('ave-category-row');
+
+    let _toggle = null;
+    let _children = null;
+    if (!isSubCategory) {
+        // NOTE: Only a main category gets the arrow. A sub category has no
+        // placeholder for it, so that it is indented by the container only.
+        _toggle = document.createElement('span');
+        _toggle.classList.add('ave-category-toggle');
+        // The element that holds the sub categories of this main category.
+        _children = document.createElement('div');
+        _children.classList.add('ave-category-children');
+        _children.style.display = 'none';
+        _toggle.innerText = '▸';
+        _toggle.addEventListener('click', () => {
+            toggleSettingsCategoryChildren(dat, { toggle: _toggle, children: _children }, category).catch((error) => {
+                console.error(`createSettingsCategoryRow(): the sub categories could not be loaded: ${error}`);
+            });
+        });
+        _row.appendChild(_toggle);
+    }
+
+    const _label = document.createElement('label');
+    const _checkbox = document.createElement('input');
+    _checkbox.type = 'checkbox';
+    _checkbox.value = getCategoryId(category);
+    // A sub category is selected as well when its main category is selected: the
+    // main category covers all of its sub categories.
+    _checkbox.checked = (isSubCategory && parentSelected) || isCategorySelected(dat, getCategoryId(category));
+    // NOTE: As long as the main category is selected, the sub categories can not
+    // be changed, because the main category covers them anyway.
+    _checkbox.disabled = isSubCategory && parentSelected;
+    _checkbox.addEventListener('change', () => {
+        setCategorySelected(dat, getCategoryId(category), _checkbox.checked);
+        if (!isSubCategory) updateSettingsCategoryChildren(dat, { children: _children }, category, _checkbox.checked);
+    });
+    _label.appendChild(_checkbox);
+
+    const _text = document.createElement('span');
+    _text.innerText = category.count === null ? category.name : `${category.name} (${category.count})`;
+    _label.appendChild(_text);
+    _row.appendChild(_label);
+
+    return { row: _row, toggle: _toggle, children: _children };
+}
+
+/**
+ * Opens or closes the sub categories of a main category.
+ *
+ * The sub categories are loaded when they are opened the first time, because
+ * Amazon shows them only on the page of the main category.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {object} item The elements of the row (toggle and children)
+ * @param {object} category The main category
+ * @returns {Promise<void>} Resolves when the sub categories are shown or hidden
+ */
+async function toggleSettingsCategoryChildren(dat, item, category) {
+    if (item.children.style.display === 'block') {
+        item.children.style.display = 'none';
+        item.toggle.innerText = '▸';
+        return;
+    }
+
+    if (item.children.children.length === 0) {
+        const _subCategories = await getVineCategoryChildren(category.pn);
+        const _parentSelected = isCategorySelected(dat, getCategoryId(category));
+        for (const _subCategory of _subCategories) {
+            item.children.appendChild(createSettingsCategoryRow(dat, _subCategory, true, _parentSelected).row);
+        }
+    }
+
+    item.children.style.display = 'block';
+    item.toggle.innerText = '▾';
+}
+
+/**
+ * Sets the state of the checkboxes of the sub categories of a main category.
+ *
+ * It is called when the checkbox of the main category is changed, so that all of
+ * its sub categories are selected (or not selected) as well.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {object} item The elements of the row of the main category
+ * @param {object} category The main category
+ * @param {boolean} selected true if the main category is selected
+ */
+function updateSettingsCategoryChildren(dat, item, category, selected) {
+    if (!item.children || !item.children.children) return;
+
+    for (const _row of item.children.children) {
+        const _checkbox = findSettingsCategoryCheckbox(_row);
+        if (!_checkbox) continue;
+        _checkbox.disabled = selected;
+        // A sub category is checked as well when it is selected on its own.
+        _checkbox.checked = selected || isCategorySelected(dat, _checkbox.value);
+    }
+
+    if (SETTINGS.DebugLevel > 1) console.log(`updateSettingsCategoryChildren(): ${category.pn} is selected: ${selected}`);
+}
+
+/**
+ * Returns the checkbox of a row of the list of the categories.
+ *
+ * @param {Element} row The row of the list
+ * @returns {HTMLInputElement|null} The checkbox, or null if the row has none
+ */
+function findSettingsCategoryCheckbox(row) {
+    if (!row || !row.children || row.children.length === 0) return null;
+    // The label is the last child of the row (the arrow is the first one).
+    const _label = row.children[row.children.length - 1];
+    if (!_label || !_label.children) return null;
+    for (const _child of _label.children) {
+        if (_child.tagName === 'INPUT') return _child;
+    }
+    return null;
+}
+
+/**
+ * Returns the id of a category, which is the value that is stored.
+ *
+ * @param {object} category The category
+ * @returns {string} "pn" for a main category and "pn/cn" for a sub category
+ */
+function getCategoryId(category) {
+    return category.cn ? `${category.pn}/${category.cn}` : category.pn;
+}
+
+/**
+ * Checks if a category is selected in the settings.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {string} id The id of the category
+ * @returns {boolean} true if it is selected
+ */
+function isCategorySelected(dat, id) {
+    return Array.isArray(SETTINGS[dat.key]) && SETTINGS[dat.key].includes(id);
+}
+
+/**
+ * Checks if a sub category of a main category is selected in the settings.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {string} pn The number of the main category
+ * @returns {boolean} true if one of its sub categories is selected
+ */
+function hasSelectedSubCategory(dat, pn) {
+    if (!Array.isArray(SETTINGS[dat.key])) return false;
+    return SETTINGS[dat.key].some((entry) => entry.startsWith(`${pn}/`));
+}
+
+/**
+ * Adds a category to the selected categories or removes it.
+ *
+ * @param {object} dat The definition of the setting
+ * @param {string} id The id of the category
+ * @param {boolean} selected true to add the category, false to remove it
+ */
+function setCategorySelected(dat, id, selected) {
+    const _stored = Array.isArray(SETTINGS[dat.key]) ? SETTINGS[dat.key] : [];
+    let _selected;
+
+    if (selected) {
+        // NOTE: A main category covers all of its sub categories, so the sub
+        // categories of this main category are removed from the list. They would
+        // load the same products a second time.
+        _selected = id.includes('/') ? _stored : _stored.filter((entry) => !entry.startsWith(`${id}/`));
+        if (!_selected.includes(id)) _selected.push(id);
+    } else {
+        _selected = _stored.filter((entry) => entry !== id);
+    }
+
+    SETTINGS[dat.key] = _selected;
+    SETTINGS.save();
 }
 
 /**
@@ -3122,8 +3639,10 @@ function initBackgroundScan() {
         console.warn('initBackgroundScan(): Backgroundscan is already running => Exit');
         return;
     }
-    if (!SETTINGS.EnableBackgroundScan) {
-        console.warn('initBackgroundScan(): Backgroundscan is disabled => Exit');
+    // NOTE: The loop of the scan runs the turbo scan as well, so it is started
+    // when one of the two scans is switched on.
+    if (!SETTINGS.EnableBackgroundScan && SETTINGS.EnableTurboScan !== true) {
+        console.warn('initBackgroundScan(): the background scan and the turbo scan are disabled => Exit');
         return;
     }
     if (!AVE_IS_THIS_SESSION_MASTER) {
@@ -3160,9 +3679,8 @@ function initBackgroundScan() {
             _state.stageZeroSites = getBackgroundScanStageZeroSites();
             _state.pageMax = parseInt(localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX')) || 0;
 
-            backGroundScanTimeout = setTimeout(() => {
-                backgroundScanLoop(_baseUrl, _state);
-            }, SETTINGS.BackGroundScanDelayPerPage);
+            // The loop waits itself before every step, so it is started directly.
+            scanLoop(_baseUrl, _state);
         }
     }, 250); //scan every 250ms
 }
@@ -3199,53 +3717,720 @@ function getBackgroundScanStageZeroSites() {
 }
 
 /**
- * One iteration of the background scan loop.
+ * The endless loop of the scans.
  *
- * The iteration only decides what has to be scanned, the scanning itself is
- * done by backGroundTileScanner(). The next iteration is started by
- * backgroundScanFinished(), as soon as the page was scanned.
+ * Every iteration waits the configured time and then makes exactly one step.
+ * The steps are ordered by their priority. An exception of one step does not
+ * stop the loop, the next iteration is made instead.
+ *
+ * NOTE: The loop stops when BackGroundScanIsRunning is set to false (e.g. when
+ * the master role is lost) or when the generation changed (e.g. when the scan
+ * was restarted after an import of the database).
  *
  * @param {string} baseUrl The base url of the Vine pages
  * @param {BackgroundScanState} state The state of the scan
  */
-function backgroundScanLoop(baseUrl, state) {
-    const startTime = performance.now(); // Get the Starttime to calculate the speed
+async function scanLoop(baseUrl, state) {
+    const _generation = ++ScanLoopGeneration;
+    if (SETTINGS.DebugLevel > 10) console.log(`scanLoop(): started with the generation ${_generation}`);
 
-    if (state.loopIsWorking) return;
-    state.loopIsWorking = true;
+    while (BackGroundScanIsRunning && _generation === ScanLoopGeneration) {
+        // NOTE: A restart of the scan (see restartBackgroundScan()) makes the next
+        // step at once instead of waiting for the delay.
+        await delay(scanStepImmediately ? 0 : getScanDelay());
+        scanStepImmediately = false;
 
-    prepareFastScan();
+        if (!BackGroundScanIsRunning || _generation !== ScanLoopGeneration) break;
 
-    const _iteration = prepareScanIteration(state, startTime);
+        // NOTE: The list of the categories has priority: the steps wait while it is
+        // loaded, so that no two pages are loaded at the same time.
+        if (CategoryListIsLoading) continue;
 
-    switch (state.stage) {
-        case 0:
-            scanStageZero(baseUrl, state, _iteration);
-            break;
-        case 1:
-            scanStageEncore(baseUrl, state, _iteration);
-            break;
-        case 2:
-            scanStageSkip(baseUrl, state, _iteration);
-            break;
-        case 3:
-            scanStageCleanup(baseUrl, state, _iteration);
-            break;
-        case 4:
-            scanStageIdle(baseUrl, state, _iteration);
-            break;
+        try {
+            // The steps are made in the order of their priority: the turbo scan is
+            // time critical, the background scan is the normal case.
+            if (isTurboScanDue()) await scanStepTurbo();
+            else if (SETTINGS.EnableBackgroundScan !== false) await scanStepBackground(baseUrl, state);
+        } catch (error) {
+            // NOTE: The loop has to continue, whatever a step does.
+            const _reason = error?.message || error || 'unknown error';
+            console.error(`scanLoop(): the step failed: ${_reason}`);
+        }
+    }
+
+    if (SETTINGS.DebugLevel > 10) console.log(`scanLoop(): stopped (generation ${_generation})`);
+}
+
+/**
+ * The time in seconds after which the list of the categories is read again.
+ *
+ * NOTE: The list of the categories is loaded from the Vine pages. The sub
+ * categories of a main category are only on its own page, so they are loaded
+ * when they are needed (see getVineCategoryChildren()). The result is kept in
+ * the local storage, so that the requests are only made once a day.
+ */
+const CATEGORY_CACHE_MAX_AGE_SECONDS = 24 * 60 * 60;
+
+/**
+ * The interval in seconds that checks if the stored categories are stale.
+ */
+const CATEGORY_LOAD_CHECK_INTERVAL_SECONDS = 30 * 60;
+
+/**
+ * The age of the flag of a running load in seconds. An older flag belongs to a tab
+ * that was closed while it loaded the categories, so it does not block the loading.
+ */
+const CATEGORY_LOAD_MAX_AGE_SECONDS = 5 * 60;
+
+/**
+ * True while this tab loads the list of the categories.
+ *
+ * NOTE: The steps of the scan wait while it is true (see scanLoop()), so that no two
+ * pages are loaded at the same time. The flag is only in the memory, so that the
+ * scan does not have to read the local storage for every step (that would change the
+ * order of the accesses).
+ */
+let CategoryListIsLoading = false;
+
+/**
+ * Reads the category nodes of a page.
+ *
+ * A node is an element with the given class ("parent-node" for a main category
+ * and "child-node" for a sub category). It holds the name and the number of the
+ * products in its text, e.g. "Garten (1249)", and a link with the number of the
+ * category (pn for a main category, pn and cn for a sub category).
+ *
+ * NOTE: The elements that AVE adds to the same container (the buttons of the
+ * side bar) have no link and are skipped.
+ *
+ * @param {Document} doc The document of the page
+ * @param {string} className The class of the nodes
+ * @returns {object[]} The categories with name, number of products and ids
+ */
+function parseCategoryNodes(doc, className) {
+    const _result = [];
+    if (!doc || typeof doc.querySelectorAll !== 'function') return _result;
+
+    const _nodes = doc.querySelectorAll(`#vvp-browse-nodes-container .${className}`);
+    for (const _node of _nodes) {
+        const _link = _node.querySelector('a[href*="pn="]');
+        if (!_link) continue;
+
+        const _href = _link.getAttribute('href') || '';
+        const _pn = (_href.match(/[?&]pn=(\d+)/) || [])[1];
+        const _cn = (_href.match(/[?&]cn=(\d+)/) || [])[1] || '';
+        if (!_pn) continue;
+
+        const _count = _node.textContent.trim().match(/^(.*?)\s*\((\d+)\)\s*$/);
+        _result.push({
+            name: _count ? _count[1].trim() : _link.textContent.trim(),
+            count: _count ? Number(_count[2]) : null,
+            pn: _pn,
+            cn: _cn
+        });
+    }
+    return _result;
+}
+
+/**
+ * Reads the category tree of a page.
+ *
+ * The page always shows all main categories, but the sub categories only of the
+ * main category that is selected.
+ *
+ * @param {Document} doc The document of the page
+ * @returns {{parents: object[], children: object[]}} The categories of the page
+ */
+function parseCategoryTree(doc) {
+    return {
+        parents: parseCategoryNodes(doc, 'parent-node'),
+        children: parseCategoryNodes(doc, 'child-node')
+    };
+}
+
+/**
+ * Returns the main categories of the Vine pages.
+ *
+ * They are read from the first page of "all items", which shows all of them.
+ * The result is kept in the local storage, so that it does not have to be loaded
+ * again for every opening of the settings (see CATEGORY_CACHE_MAX_AGE_SECONDS).
+ * The stored list is used as well when the page cannot be read (e.g. on a page of
+ * AVE, which removes the categories from the side bar).
+ *
+ * @param {boolean} [forceReload] true to read the list again in every case
+ * @returns {Promise<object[]>} The main categories
+ */
+async function getVineCategoryParents(forceReload = false) {
+    const _cached = readCategoryCache().parents;
+    if (!forceReload && _cached && isCategoryCacheFresh(_cached)) return _cached.list;
+
+    // NOTE: The categories of the current page are used when they are there. They
+    // are always in the side bar before AVE replaces them (its own pages empty the
+    // container), so no request is needed in that case.
+    const _fromPage = parseCategoryTree(document).parents;
+    if (_fromPage.length > 0) {
+        writeCategoryCache('parents', _fromPage);
+        return _fromPage;
+    }
+
+    try {
+        const _baseUrl = aveGetVineBaseUrl();
+        if (!_baseUrl) throw new Error('no Vine URL found');
+
+        const _doc = await fetchCategoryPage(`${_baseUrl}?queue=all_items&pn=&cn=&page=1`);
+        const _parents = parseCategoryTree(_doc).parents;
+        if (_parents.length === 0) throw new Error('the page did not contain any category');
+
+        writeCategoryCache('parents', _parents);
+        return _parents;
+    } catch (error) {
+        const _reason = error?.message || error || 'unknown error';
+        if (_cached) {
+            console.warn(`getVineCategoryParents(): the categories could not be read (${_reason}), the stored list is used`);
+            return _cached.list;
+        }
+        throw error;
     }
 }
 
 /**
- * Decides if a fast scan should be started.
+ * Returns the sub categories of one main category.
+ *
+ * Amazon shows the sub categories only on the page of the main category, so this
+ * needs one request. The result is kept in the local storage, so that a category
+ * that was opened once is available at once when the settings are opened again.
+ *
+ * @param {string} pn The number of the main category
+ * @param {boolean} [forceReload] true to read the list again in every case
+ * @returns {Promise<object[]>} The sub categories
+ */
+async function getVineCategoryChildren(pn, forceReload = false) {
+    const _cached = readCategoryCache().children[pn];
+    if (!forceReload && _cached && isCategoryCacheFresh(_cached)) return _cached.list;
+
+    // NOTE: A page of a category shows its sub categories. When the page of this
+    // category is open, they are used without a request.
+    if (getSelectedCategoryPn(document) === pn) {
+        const _fromPage = parseCategoryTree(document).children;
+        if (_fromPage.length > 0) {
+            writeCategoryCache(`children.${pn}`, _fromPage);
+            return _fromPage;
+        }
+    }
+
+    try {
+        const _baseUrl = aveGetVineBaseUrl();
+        if (!_baseUrl) throw new Error('no Vine URL found');
+
+        const _doc = await fetchCategoryPage(`${_baseUrl}?queue=all_items&pn=${pn}&cn=&page=1`);
+        const _children = parseCategoryTree(_doc).children;
+
+        writeCategoryCache(`children.${pn}`, _children);
+        return _children;
+    } catch (error) {
+        const _reason = error?.message || error || 'unknown error';
+        if (_cached) {
+            console.warn(`getVineCategoryChildren(): the categories of ${pn} could not be read (${_reason}), the stored list is used`);
+            return _cached.list;
+        }
+        throw error;
+    }
+}
+
+/**
+ * Returns the number of the category that is selected on a page.
+ *
+ * @param {Document} doc The document of the page
+ * @returns {string} The number of the main category, or an empty string
+ */
+function getSelectedCategoryPn(doc) {
+    if (!doc || typeof doc.querySelector !== 'function') return '';
+    const _selected = doc.querySelector('#vvp-browse-nodes-container a.selectedNode');
+    if (!_selected) return '';
+    return ((_selected.getAttribute('href') || '').match(/[?&]pn=(\d+)/) || [])[1] || '';
+}
+
+/**
+ * Loads one page of the Vine site and returns its document.
+ *
+ * @param {string} url The url of the page
+ * @returns {Promise<Document>} The document of the page
+ */
+async function fetchCategoryPage(url) {
+    const _response = await vineFetch(url);
+    if (!_response.ok) throw new Error(`the page ${url} could not be loaded (${_response.status})`);
+    return new DOMParser().parseFromString(await _response.text(), 'text/html');
+}
+
+/**
+ * Reads the stored categories.
+ *
+ * The main categories and the sub categories of every main category that was
+ * loaded once are stored with the time they were read.
+ *
+ * @returns {{parents: object|null, children: object}} The stored categories
+ */
+function readCategoryCache() {
+    const _empty = { parents: null, children: {} };
+    try {
+        const _stored = JSON.parse(localStorage.getItem('AVE_CATEGORY_CACHE') || 'null');
+        if (!_stored || typeof _stored !== 'object') return _empty;
+        return {
+            parents: _stored.parents && Array.isArray(_stored.parents.list) ? _stored.parents : null,
+            children: _stored.children && typeof _stored.children === 'object' ? _stored.children : {}
+        };
+    } catch (error) {
+        console.error(`readCategoryCache(): the stored categories could not be read: ${error}`);
+        return _empty;
+    }
+}
+
+/**
+ * Stores a part of the categories.
+ *
+ * @param {string} path "parents" for the main categories, "children.<pn>" for
+ *                      the sub categories of a main category
+ * @param {object[]} list The categories
+ */
+function writeCategoryCache(path, list) {
+    try {
+        const _stored = readCategoryCache();
+        const _entry = { ts: Date.now(), list: list };
+
+        if (path === 'parents') _stored.parents = _entry;
+        else _stored.children[path.replace('children.', '')] = _entry;
+
+        localStorage.setItem('AVE_CATEGORY_CACHE', JSON.stringify(_stored));
+    } catch (error) {
+        console.error(`writeCategoryCache(): the categories could not be stored: ${error}`);
+    }
+}
+
+/**
+ * Checks if a stored list of categories is young enough to be used.
+ *
+ * @param {{ts: number}} entry The stored list
+ * @returns {boolean} true if it can be used
+ */
+function isCategoryCacheFresh(entry) {
+    return Date.now() - entry.ts < CATEGORY_CACHE_MAX_AGE_SECONDS * 1000;
+}
+
+/**
+ * Checks if the stored categories are complete.
+ *
+ * The list is complete when the main categories and the sub categories of every
+ * main category are stored and not older than a day.
+ *
+ * @returns {boolean} true if nothing has to be loaded
+ */
+function isCategoryCacheComplete() {
+    const _cache = readCategoryCache();
+    if (!_cache.parents || !isCategoryCacheFresh(_cache.parents)) return false;
+
+    return _cache.parents.list.every((_parent) => _cache.children[_parent.pn] && isCategoryCacheFresh(_cache.children[_parent.pn]));
+}
+
+/**
+ * Checks if the list of the categories is loaded at the moment.
+ *
+ * NOTE: The flag is in the local storage, so that only one tab of the browser loads
+ * the pages. A flag that is older than CATEGORY_LOAD_MAX_AGE_SECONDS is ignored,
+ * because it belongs to a tab that was closed while it loaded the categories.
+ *
+ * @returns {boolean} true if a load is running
+ */
+function isCategoryListLoadRunning() {
+    const _startedAt = Number(localStorage.getItem('AVE_CATEGORY_LOAD_IS_RUNNING'));
+    if (!Number.isFinite(_startedAt) || _startedAt <= 0) return false;
+    return Date.now() - _startedAt < CATEGORY_LOAD_MAX_AGE_SECONDS * 1000;
+}
+
+/**
+ * Shows the progress of the loading of the categories in the corner of the page.
+ *
+ * The element of the screen of the scan is used when it is there already, so that
+ * both texts stand in the same place.
+ *
+ * @param {number} done The number of the main categories that were worked on
+ * @param {number} total The number of the main categories
+ */
+function showCategoryLoadScreen(done, total) {
+    const _text = translate('notifications', 'loadingCategories', `Kategorien werden geladen: ${done} / ${total}`, done, total);
+    if (document.getElementById('ave-backgroundscan-text')) updateBackgroundScanScreenText(_text);
+    else showBackgroundScanScreen(_text);
+}
+
+/**
+ * Loads the whole list of the categories in the background.
+ *
+ * The list is loaded when it is missing or older than a day (see
+ * isCategoryCacheComplete()). The pages are loaded one after the other with a delay
+ * and every list is stored at once, so that an interruption does not lose what was
+ * loaded (getVineCategoryParents() and getVineCategoryChildren() use the stored list
+ * and do not load a page again that is fresh).
+ *
+ * NOTE: The pages are loaded with the same pause as the pages of the background scan
+ * (see getScanDelay()), so that the loading looks like a normal scan for Amazon.
+ *
+ * NOTE: The list has priority over the scan, the steps of the scan wait while it is
+ * loaded (see scanLoop()), so that no two pages are loaded at the same time.
+ *
+ * @returns {Promise<void>}
+ */
+async function loadCategoryListInBackground() {
+    if (isCategoryCacheComplete() || isCategoryListLoadRunning()) return;
+
+    localStorage.setItem('AVE_CATEGORY_LOAD_IS_RUNNING', String(Date.now()));
+    CategoryListIsLoading = true;
+    // NOTE: The screen is only removed again if it was created here, a screen of the
+    // scan belongs to the scan (its next step writes the text again).
+    const _ownScreen = !document.getElementById('ave-backgroundscan-text');
+
+    try {
+        const _parents = await getVineCategoryParents();
+        showCategoryLoadScreen(0, _parents.length);
+        if (SETTINGS.DebugLevel > 1) console.log(`loadCategoryListInBackground(): ${_parents.length} main categories`);
+
+        const _cache = readCategoryCache();
+        for (let _index = 0; _index < _parents.length; _index++) {
+            const _parent = _parents[_index];
+            // The sub categories that are fresh are not loaded again.
+            if (_cache.children[_parent.pn] && isCategoryCacheFresh(_cache.children[_parent.pn])) continue;
+
+            await delay(getScanDelay());
+            showCategoryLoadScreen(_index + 1, _parents.length);
+            try {
+                await getVineCategoryChildren(_parent.pn);
+            } catch (error) {
+                const _reason = error?.message || error || 'unknown error';
+                console.warn(`loadCategoryListInBackground(): the sub categories of ${_parent.name} could not be loaded: ${_reason}`);
+            }
+        }
+    } catch (error) {
+        const _reason = error?.message || error || 'unknown error';
+        console.error(`loadCategoryListInBackground(): the categories could not be loaded: ${_reason}`);
+    } finally {
+        localStorage.removeItem('AVE_CATEGORY_LOAD_IS_RUNNING');
+        CategoryListIsLoading = false;
+        if (_ownScreen) removeBackgroundScanScreen();
+        else updateBackgroundScanScreenText('');
+    }
+}
+
+/**
+ * Starts the background scan from its beginning.
+ *
+ * It is used by the button in the settings. A scan that is running is set back to
+ * the first page, a scan that is waiting for the next round is started again.
+ * Nothing happens while the background scan is switched off.
+ */
+function restartBackgroundScan() {
+    if (SETTINGS.EnableBackgroundScan === false) {
+        console.warn('restartBackgroundScan(): the background scan is switched off => Exit');
+        return;
+    }
+
+    // NOTE: The position of the scan is kept in the local storage and it is read
+    // again at the beginning of every step. The time of the last round is set to
+    // 0, which makes the scan start at the beginning (see prepareScanIteration()),
+    // and the fast scan is stopped, so that it does not keep a position either.
+    localStorage.setItem('AVE_BACKGROUND_SCAN_LAST_TIME', 0);
+    localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
+    localStorage.setItem('AVE_FAST_SCAN_LAST_TIME', 0);
+    localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', 0);
+    localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', 0);
+    // The pagination of the last scanned page belongs to the old position.
+    lastScanPaginationData = undefined;
+    // The next step of the scan is made at once.
+    scanStepImmediately = true;
+
+    if (BackGroundScanIsRunning) {
+        updateBackgroundScanScreenText('Start Background Scanner');
+        return;
+    }
+
+    // No scan is running, so the loop is started again. It sets the flag itself,
+    // but it is set here as well, because the scan is started with a delay.
+    console.log('restartBackgroundScan(): the background scan was not running, it is started now');
+    initBackgroundScan();
+    scanStepImmediately = true;
+}
+
+/**
+ * The default interval of the turbo scan in seconds. It is used, if the setting
+ * "TurboScanIntervalSeconds" is not set.
+ */
+const TURBO_SCAN_INTERVAL_SECONDS = 30;
+
+/** The smallest interval that is allowed for the turbo scan in seconds. */
+const MIN_TURBO_SCAN_INTERVAL_SECONDS = 10;
+
+/**
+ * Returns the interval of the turbo scan.
+ *
+ * The interval is counted from the end of the last round, so that every category
+ * is loaded once in the interval.
+ *
+ * @returns {number} The interval in seconds
+ */
+function getTurboScanIntervalSeconds() {
+    const _configured = Number(SETTINGS.TurboScanIntervalSeconds);
+    if (!Number.isFinite(_configured)) return TURBO_SCAN_INTERVAL_SECONDS;
+    return Math.max(MIN_TURBO_SCAN_INTERVAL_SECONDS, _configured);
+}
+
+/**
+ * Returns the categories that the turbo scan watches.
+ *
+ * Only the numbers of the categories are stored ("pn" for a main category and
+ * "pn/cn" for a sub category), the names are only used for the display.
+ *
+ * @returns {string[]} The ids of the categories
+ */
+function getTurboScanCategories() {
+    const _stored = Array.isArray(SETTINGS.TurboScanCategories) ? SETTINGS.TurboScanCategories : [];
+    return _stored.filter((entry) => typeof entry === 'string' && /^\d+(\/\d+)?$/.test(entry));
+}
+
+/**
+ * Returns the names of a category of the settings.
+ *
+ * The names come from the list of the categories (see getVineCategoryParents()
+ * and getVineCategoryChildren()). The name of the main category is always part of
+ * it, so that a search for the main category matches as well.
+ *
+ * NOTE: The list is stored for a day, so this does not load a page for every
+ * step. An empty result is returned when the category is not in the list, e.g.
+ * because the list could not be loaded.
+ *
+ * @param {string} id The id of the category ("10925031" or "10925031/87837030")
+ * @returns {Promise<string>} "main" or "main > sub" or an empty string
+ */
+async function getCategoryTextById(id) {
+    const _category = parseTurboScanCategory(id);
+
+    try {
+        const _parents = await getVineCategoryParents();
+        const _parent = _parents.find((entry) => entry.pn === _category.pn);
+        if (!_parent) return '';
+        if (!_category.cn) return _parent.name;
+
+        const _children = await getVineCategoryChildren(_category.pn);
+        const _child = _children.find((entry) => entry.cn === _category.cn);
+        return _child ? `${_parent.name} > ${_child.name}` : _parent.name;
+    } catch (error) {
+        console.error(`getCategoryTextById(): the name of ${id} could not be read: ${error}`);
+        return '';
+    }
+}
+
+/**
+ * Splits the id of a category into its numbers.
+ *
+ * @param {string} id The id of the category ("10925031" or "10925031/87837030")
+ * @returns {{pn: string, cn: string}} The numbers of the category
+ */
+function parseTurboScanCategory(id) {
+    const _parts = String(id).split('/');
+    return { pn: _parts[0], cn: _parts[1] || '' };
+}
+
+/**
+ * Returns the position of the turbo scan in the list of the categories.
+ *
+ * @returns {number} The index of the category that is loaded next
+ */
+function getTurboScanIndex() {
+    const _index = parseInt(localStorage.getItem('AVE_TURBO_SCAN_CATEGORY_INDEX'), 10);
+    const _length = getTurboScanCategories().length;
+    if (!Number.isFinite(_index) || _index < 0 || _index >= _length) return 0;
+    return _index;
+}
+
+/**
+ * Checks if the turbo scan has to make a step now.
+ *
+ * The categories are loaded one after the other: while a round is running (the
+ * position is not the first category) the next step is made at once. The waiting
+ * time starts at the end of a round.
+ *
+ * @returns {boolean} true if a category has to be loaded now
+ */
+function isTurboScanDue() {
+    if (SETTINGS.EnableTurboScan !== true) return false;
+    if (getTurboScanCategories().length === 0) return false;
+
+    // A round that is running is continued without a waiting time.
+    if (getTurboScanIndex() > 0) return true;
+
+    const _waitingMS = Date.now() - (Number(localStorage.getItem('AVE_TURBO_SCAN_LAST_TIME')) || 0);
+    return _waitingMS >= getTurboScanIntervalSeconds() * 1000;
+}
+
+/**
+ * One step of the scan loop: the first page of the next category of the turbo
+ * scan.
+ *
+ * The page is scanned like a page of the background scan, so that new products
+ * are stored and the search for the keywords runs for them. The position of the
+ * round is kept in the local storage.
+ *
+ * NOTE: The step is made in the loop of the scans, so that the requests are made
+ * one after the other and Amazon does not block the account.
+ *
+ * @returns {Promise<void>} Resolves when the page was scanned
+ */
+async function scanStepTurbo() {
+    const _categories = getTurboScanCategories();
+    if (_categories.length === 0) return;
+
+    const _index = getTurboScanIndex();
+    const _category = parseTurboScanCategory(_categories[_index]);
+    const _baseUrl = aveGetVineBaseUrl();
+    if (!_baseUrl) {
+        console.warn('scanStepTurbo(): no Vine URL found => Exit');
+        return;
+    }
+
+    const _url = `${_baseUrl}?queue=all_items&pn=${_category.pn}&cn=${_category.cn}&page=1`;
+    // NOTE: The names of the category are given to the scanner, so that a search
+    // for the category can match the name of the sub category as well.
+    const _categoryText = await getCategoryTextById(_categories[_index]);
+    updateBackgroundScanScreenText(`Turbo Scanner: ${_index + 1} / ${_categories.length}`);
+    if (SETTINGS.DebugLevel > 1) console.log(`scanStepTurbo(): loading ${_url} (${_categoryText})`);
+
+    await new Promise((resolve) => {
+        backGroundTileScanner(
+            _url,
+            (newCount) => {
+                if (SETTINGS.DebugLevel > 1) console.log(`scanStepTurbo(): the page of ${_category.pn} has ${newCount} new products`);
+                resolve();
+            },
+            { categoryText: _categoryText }
+        );
+    });
+
+    // NOTE: A round is complete when the position is back at the first category.
+    // Only then the waiting time of the next round starts.
+    const _nextIndex = _index + 1 >= _categories.length ? 0 : _index + 1;
+    localStorage.setItem('AVE_TURBO_SCAN_CATEGORY_INDEX', _nextIndex);
+    if (_nextIndex === 0) localStorage.setItem('AVE_TURBO_SCAN_LAST_TIME', Date.now());
+}
+
+/**
+ * One step of the scan loop: one page of the stage that is due.
+ *
+ * The step only decides what has to be scanned, the scanning itself is done by
+ * backGroundTileScanner(). The step is done when backgroundScanFinished() is
+ * called, which happens after the page was scanned or directly for the stages
+ * that do not load a page.
+ *
+ * @param {string} baseUrl The base url of the Vine pages
+ * @param {BackgroundScanState} state The state of the scan
+ */
+async function scanStepBackground(baseUrl, state) {
+    const _startTime = performance.now(); // Get the Starttime to calculate the speed
+
+    if (state.loopIsWorking) return;
+    state.loopIsWorking = true;
+
+    // NOTE: A stage that is not known would stop the loop, because the step
+    // would never be finished. The scan is set back to its beginning instead.
+    if (state.stage < 0 || state.stage > 4) {
+        console.error(`scanStepBackground(): the stage ${state.stage} is not known, the scan is restarted`);
+        state.stage = 0;
+        state.subStage = 0;
+        state.loopIsWorking = false;
+        return;
+    }
+
+    prepareFastScan();
+
+    const _iteration = prepareScanIteration(state, _startTime);
+
+    await new Promise((resolve) => {
+        scanStepDone = resolve;
+
+        switch (state.stage) {
+            case 0:
+                scanStageZero(baseUrl, state, _iteration);
+                break;
+            case 1:
+                scanStageEncore(baseUrl, state, _iteration);
+                break;
+            case 2:
+                scanStageSkip(baseUrl, state, _iteration);
+                break;
+            case 3:
+                scanStageCleanup(baseUrl, state, _iteration);
+                break;
+            case 4:
+                scanStageIdle(baseUrl, state, _iteration);
+                break;
+        }
+    });
+
+    scanStepDone = null;
+}
+
+/**
+ * Returns the waiting time between two pages of the scan.
+ *
+ * @returns {number} The waiting time in milliseconds
+ */
+function getScanDelay() {
+    return SETTINGS.BackGroundScanDelayPerPage + Math.round(Math.random() * SETTINGS.BackGroundScannerRandomness);
+}
+
+/**
+ * The minimum time between two fast scans in seconds. It is used, if the
+ * setting "FastScanIntervalSeconds" is not set.
+ */
+const FAST_SCAN_INTERVAL_SECONDS = 300;
+
+/**
+ * The smallest interval that is allowed for the fast scan in seconds.
+ *
+ * NOTE: A fast scan loads the first pages of the product list, so a very short
+ * interval would load them again and again.
+ */
+const MIN_FAST_SCAN_INTERVAL_SECONDS = 30;
+
+/**
+ * Returns the minimum time between two fast scans.
+ *
+ * The time is taken from the setting "FastScanIntervalSeconds". It was counted
+ * from the delay per page of the background scan before, so a faster background
+ * scan made the fast scan run much more often.
+ *
+ * @returns {number} The interval in seconds
+ */
+function getFastScanIntervalSeconds() {
+    const _configured = Number(SETTINGS.FastScanIntervalSeconds);
+    if (!Number.isFinite(_configured)) return FAST_SCAN_INTERVAL_SECONDS;
+    return Math.max(MIN_FAST_SCAN_INTERVAL_SECONDS, _configured);
+}
+
+/**
+ * Reads the state of the fast scan from the local storage.
  *
  * A fast scan is a shortened version of the background scan. It is only started
  * if the last scan is long enough ago and the scan is at the beginning, so that
  * a possible product drop is found early.
+ *
+ * NOTE: The reads have to stay in this order, because the sequence of the local
+ * storage accesses is part of the behaviour of the scan.
+ *
+ * @returns {{running: boolean, due: boolean}} true if a fast scan is already
+ *                                   running and true if it has to be started
  */
-function prepareFastScan() {
-    if (localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true') return;
+function getFastScanState() {
+    // NOTE: The fast scan can be switched off. Then it is never started and a
+    // running fast scan is stopped (see prepareFastScan()).
+    if (SETTINGS.EnableFastScan === false) return { running: false, due: false };
+
+    if (localStorage.getItem('AVE_FAST_SCAN_IS_RUNNING') == 'true') return { running: true, due: false };
 
     const _backgroundScanStage = localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE') || -1;
     const _backgroundScanPageMax = localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_MAX') || -1;
@@ -3253,32 +4438,52 @@ function prepareFastScan() {
 
     const _fastTimeWaitingMS = Date.now() - (localStorage.getItem('AVE_FAST_SCAN_LAST_TIME') || 0);
     const _fastTimeWaitingSec = _fastTimeWaitingMS / 1000;
-    let _fastTimeIntervalSec = ((SETTINGS.BackGroundScanDelayPerPage + SETTINGS.BackGroundScannerRandomness / 2) * 15) / 1000;
-    if (_fastTimeIntervalSec < 30) _fastTimeIntervalSec = 30;
+    const _fastTimeIntervalSec = getFastScanIntervalSeconds();
 
     // The fast scan is started if the last scan is long enough ago, if the scan
     //   is not at the very beginning and if it did not just start with the encore
     //   queue. The conditions are combined into one expression, because every
     //   single one of them would set the same flag.
-    const _startFastScan =
+    const _due =
         !(_fastTimeWaitingSec < _fastTimeIntervalSec) &&
         !(_backgroundScanStage <= 0) &&
         !(_backgroundScanPageMax <= 0) &&
         !(_backgroundScanStage == 1 && _backgroundScanPageCurrent <= 0) &&
         !(_backgroundScanStage == 1 && _backgroundScanPageCurrent < _backgroundScanPageMax / 20);
 
-    if (_startFastScan) {
-        if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): starting fast scan');
-        localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', true);
-        localStorage.setItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS', '-1:-1:-1:-1');
-        localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT', localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT'));
-        localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_STAGE', localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE'));
-        localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', 0);
-        localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', 0);
-        localStorage.setItem('AVE_NEW_COUNT', 0);
-    } else {
-        localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
-    }
+    return { running: false, due: _due };
+}
+
+/**
+ * Starts a fast scan.
+ *
+ * The position of the background scan is remembered, so that it can be restored
+ * after the fast scan stopped, and the scan is set to its beginning.
+ *
+ * NOTE: The writes have to stay in this order, because the sequence of the local
+ * storage accesses is part of the behaviour of the scan.
+ */
+function startFastScan() {
+    if (SETTINGS.DebugLevel > 10) console.log('scanLoop(): starting fast scan');
+    localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', true);
+    localStorage.setItem('AVE_FAST_SCAN_PREVIOUS_NEW_COUNTS', '-1:-1:-1:-1');
+    localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_PAGE_CURRENT', localStorage.getItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT'));
+    localStorage.setItem('AVE_LAST_BACKGROUND_SCAN_STAGE', localStorage.getItem('AVE_BACKGROUND_SCAN_STAGE'));
+    localStorage.setItem('AVE_BACKGROUND_SCAN_PAGE_CURRENT', 0);
+    localStorage.setItem('AVE_BACKGROUND_SCAN_STAGE', 0);
+    localStorage.setItem('AVE_NEW_COUNT', 0);
+}
+
+/**
+ * Decides if a fast scan is started and starts it.
+ */
+function prepareFastScan() {
+    const _state = getFastScanState();
+    // A running fast scan is not started again and must not be switched off.
+    if (_state.running) return;
+
+    if (_state.due) startFastScan();
+    else localStorage.setItem('AVE_FAST_SCAN_IS_RUNNING', false);
 }
 
 /**
@@ -3584,13 +4789,14 @@ function backgroundScanFinished(baseUrl, state, iteration, newCount) {
         handleFastScanFinished(newCount);
     }
 
-    const _delay = SETTINGS.BackGroundScanDelayPerPage + Math.round(Math.random() * SETTINGS.BackGroundScannerRandomness);
     const _timeElapsed = performance.now() - iteration.startTime;
-    if (SETTINGS.DebugLevel > 10) console.log('initBackgroundScan(): Scantime: ', _timeElapsed, ' Delay: ', _delay);
+    if (SETTINGS.DebugLevel > 10) console.log('scanLoop(): Scantime: ', _timeElapsed);
 
-    backGroundScanTimeout = setTimeout(() => {
-        backgroundScanLoop(baseUrl, state);
-    }, _delay);
+    // NOTE: The waiting time is applied by the loop before the next step, so the
+    // step only has to tell the loop that it is done.
+    const _done = scanStepDone;
+    scanStepDone = null;
+    if (_done) _done();
 }
 
 /**
@@ -3670,8 +4876,11 @@ function removeScanIframe(iframe) {
  * @param {string} url The URL of the page
  * @param {function} cb The function that is called with the number of the new
  *                       products
+ * @param {object} [options] The options of the scan. "categoryText" names the
+ *                           category of the page (the turbo scan knows it, the
+ *                           background scan reads it from the side bar)
  */
-function backGroundTileScanner(url, cb) {
+function backGroundTileScanner(url, cb, options = {}) {
     if (SETTINGS.DebugLevel > 10) console.log(`Called backgroundTileScanner(${url})`);
     const _iconLoading = addLoadingSymbol();
 
@@ -3734,6 +4943,9 @@ function backGroundTileScanner(url, cb) {
         clearInterval(_loopDelay);
 
         if (_tilesLength > 0) {
+            // The caller can name the category (the turbo scan knows it), otherwise
+            // it is read from the side bar of the scanned page.
+            const pageCategoryText = options.categoryText || getPageCategoryText(_liveDoc);
             let _newCount = 0;
             let _returned = 0;
             const _tilesProm = [];
@@ -3743,6 +4955,9 @@ function backGroundTileScanner(url, cb) {
                         _returned++;
                         if (SETTINGS.DebugLevel > 14)
                             console.log(`BACKGROUNDSCAN => Got TileData Back: Tile ${_returned}/${_tilesLength} =>`, prod);
+                        // NOTE: The name of the category of the scanned page is given to
+                        // the search of the keywords. It is not stored in the database.
+                        addProductToKeywordSearch(prod, pageCategoryText);
                         if (!prod.gotFromDB) {
                             ++_newCount;
                             // NOTE: database.add() is fire-and-forget on purpose. Awaiting it
@@ -3810,6 +5025,14 @@ function showBackgroundScanScreen(text) {
 function updateBackgroundScanScreenText(text = '') {
     const _elem = document.getElementById('ave-backgroundscan-text');
     _elem.textContent = text;
+}
+
+/**
+ * Removes the text of the background scan screen from the page.
+ */
+function removeBackgroundScanScreen() {
+    const _elem = document.getElementById('ave-backgroundscan-text');
+    if (_elem && _elem.parentElement) _elem.parentElement.remove();
 }
 
 /**
@@ -3933,45 +5156,603 @@ function stringToRegex(s) {
 }
 
 /**
+ * Normalizes a price of the user input to a number.
+ *
+ * The price can use the dot or the comma as the decimal separator, so that it
+ * does not depend on the language of the user. If both separators are used,
+ * the last one is the decimal separator and the others are thousand
+ * separators, which are removed.
+ *
+ * @param {string|number} value The price of the user input
+ * @returns {number|null} The price, or null if the input is not a valid price
+ */
+function normalizePriceInput(value) {
+    const _text = String(value ?? '').trim();
+    // Only digits, an optional sign and the separators are allowed.
+    if (!/^[+-]?[\d.,]+$/.test(_text)) return null;
+
+    const _lastDot = _text.lastIndexOf('.');
+    const _lastComma = _text.lastIndexOf(',');
+    let _normalized = _text;
+
+    if (_lastDot >= 0 && _lastComma >= 0) {
+        // Both separators are used: the last one is the decimal separator, the
+        // others are thousand separators and are removed.
+        const _decimalIndex = Math.max(_lastDot, _lastComma);
+        const _integerPart = _text.slice(0, _decimalIndex).replace(/[.,]/g, '');
+        const _fractionPart = _text.slice(_decimalIndex + 1);
+        if (!/^\d+$/.test(_fractionPart)) return null;
+        _normalized = `${_integerPart}.${_fractionPart}`;
+    } else {
+        // Only one kind of separator is used: it may only be used once, because
+        // a thousand separator is not allowed.
+        if ((_text.match(/[.,]/g) || []).length > 1) return null;
+        _normalized = _text.replace(',', '.');
+    }
+
+    const _price = Number(_normalized);
+    if (!Number.isFinite(_price)) return null;
+    return _price;
+}
+
+/**
+ * Replaces the abbreviations of the conditions of a keyword with the full words.
+ *
+ * The user can write "p>=10" instead of "price>=10" and "c=kaffee" instead of
+ * "category=kaffee". A keyword of the settings is stored with the full words, so
+ * that the list always shows them. The abbreviations are understood as well (see
+ * parsePriceCondition() and parseCategoryCondition()), so that they work in the
+ * search bar and in a keyword that was stored before.
+ *
+ * NOTE: Only a word that stands directly in front of the operator is replaced,
+ * so that a keyword like "preis>=10" (the German word) stays a text.
+ *
+ * @param {string} text The keyword as it was entered
+ * @returns {string} The keyword with the full words
+ */
+function aveExpandKeywordAbbreviations(text) {
+    return String(text ?? '').replace(/\b([a-z]+)\s*(?=[=!<>])/gi, (_match, _word) => {
+        if (aveIsConditionWord(_word, 'price')) return 'price';
+        if (aveIsConditionWord(_word, 'category')) return 'category';
+        return _match;
+    });
+}
+
+/**
+ * Returns the names of all categories that are known.
+ *
+ * The main categories are read from the list of the categories (see
+ * getVineCategoryParents(), it loads the list once and keeps it for a day). The sub
+ * categories are known for the main categories that were opened once (see
+ * getVineCategoryChildren()), they are used without a request.
+ *
+ * @returns {Promise<string[]>} The names of the categories
+ */
+async function aveGetCategoryNames() {
+    const _names = [];
+    try {
+        for (const _parent of await getVineCategoryParents()) _names.push(_parent.name);
+    } catch (error) {
+        console.warn(`aveGetCategoryNames(): the list of the categories is not available: ${error}`);
+    }
+
+    const _children = readCategoryCache().children;
+    for (const _pn of Object.keys(_children)) {
+        for (const _child of _children[_pn].list || []) _names.push(_child.name);
+    }
+    return _names;
+}
+
+/**
+ * Replaces the name of a condition for a category with the whole name.
+ *
+ * The user can write a part of the name (e.g. category=lebens). The setting stores
+ * the whole name (category="Lebensmittel & Getränke"), so that the list of the
+ * keywords shows which category is meant. The name is taken from the list of the
+ * categories (see aveGetCategoryNames()), the first name that contains the typed
+ * text wins. A text that matches nothing stays as it is.
+ *
+ * NOTE: Only the operators "=", "==", "!=" and "<>" are completed, because they
+ * compare the name itself. A text behind "<" or ">" is a boundary of the alphabet
+ * and not the name of a category (see matchCategoryConditions()).
+ *
+ * @param {string} text The keyword as it was entered
+ * @param {string[]} names The names of the categories
+ * @returns {string} The keyword with the whole names
+ */
+function aveExpandCategoryNames(text, names) {
+    if (!Array.isArray(names) || names.length === 0) return String(text ?? '');
+
+    return String(text ?? '').replace(/\b([a-z]+)\s*(==|!=|<>|=)\s*("[^"]*"|\S+)/gi, (_match, _word, _operator, _value) => {
+        if (!aveIsConditionWord(_word, 'category')) return _match;
+
+        const _typed = aveUnquoteKeywordPart(_value).toLowerCase();
+        if (_typed.length === 0) return _match;
+
+        const _name = names.find((name) => String(name).toLowerCase().includes(_typed));
+        if (!_name) return _match;
+        return `${_word}${_operator}"${_name}"`;
+    });
+}
+
+/**
+ * Splits a text into its words.
+ *
+ * A part in double quotes counts as one word, even if it contains spaces, so that a
+ * verbatim string like "kaffee bohnen" stays together. The quotes are kept, so that
+ * the caller can see which part is a verbatim string (see aveUnquoteKeywordPart()).
+ *
+ * @param {string} text The text to split
+ * @returns {string[]} The words (without empty ones)
+ */
+function aveSplitQuotedWords(text) {
+    const _words = [];
+    let _current = '';
+    let _inQuotes = false;
+
+    for (const _character of String(text ?? '')) {
+        if (_character === '"') {
+            _inQuotes = !_inQuotes;
+            _current += _character;
+        } else if (!_inQuotes && /\s/.test(_character)) {
+            if (_current.length > 0) _words.push(_current);
+            _current = '';
+        } else {
+            _current += _character;
+        }
+    }
+
+    if (_current.length > 0) _words.push(_current);
+    return _words;
+}
+
+/**
+ * Removes the double quotes around a part of a keyword.
+ *
+ * @param {string} part The part of a keyword, e.g. "kaffee bohnen"
+ * @returns {string} The text without the quotes
+ */
+function aveUnquoteKeywordPart(part) {
+    const _part = String(part ?? '');
+    if (_part.length > 1 && _part.startsWith('"') && _part.endsWith('"')) return _part.slice(1, -1);
+    return _part;
+}
+
+/**
+ * Checks if a word is a shortening of the name of a field of a condition.
+ *
+ * Every shortening works: "p", "pr", "pri", "pric" and "price" as well as "c",
+ * "ca", "cat", "cate" and so on up to "category". That makes the conditions easier
+ * to type, especially in a remote session where single keys get lost.
+ *
+ * @param {string} word The word to check (e.g. "p" or "cat")
+ * @param {string} [field] The name of the field, if only one of them is allowed
+ * @returns {boolean} true if the word is a shortening of the name of the field
+ */
+function aveIsConditionWord(word, field = null) {
+    const _word = String(word ?? '').toLowerCase();
+    if (_word.length === 0) return false;
+    if (field) return String(field).toLowerCase().startsWith(_word);
+    return 'price'.startsWith(_word) || 'category'.startsWith(_word);
+}
+
+/**
+ * Parses a price condition of the keyword configuration.
+ *
+ * The format of a condition is "price <operator> <value>", the spaces are
+ * optional, e.g. "price>=10" and "price >= 10" are the same. Every shortening of
+ * the word is allowed, e.g. "p", "pr" or "pri" (see aveIsConditionWord()). The operator can
+ * be "=" or "==" (one of the prices is equal), "!=" or "<>" (none of the prices
+ * is equal), "<" or "<=" (the lowest price is lower), ">" or ">=" (the highest
+ * price is higher).
+ *
+ * @param {string} text The text of the condition
+ * @returns {object|null} The condition, or null if it is not valid
+ */
+function parsePriceCondition(text) {
+    const _match = /^\s*([a-z]+)\s*(<=|>=|==|!=|<>|=|<|>)\s*(.+?)\s*$/i.exec(String(text ?? ''));
+    if (!_match) return null;
+    // NOTE: Every shortening of "price" is allowed (see aveIsConditionWord()).
+    if (!aveIsConditionWord(_match[1], 'price')) return null;
+    const _price = normalizePriceInput(_match[3]);
+    if (_price === null) return null;
+    return { op: _match[2], price: _price };
+}
+
+/**
+ * Parses the keyword of the configuration.
+ *
+ * A keyword can contain price conditions, e.g.
+ * "toaster price >= 10 price < 20", and searches for a category, e.g.
+ * "kaffee category~getränke". The text without the conditions is the keyword
+ * itself, the conditions are checked against the prices and the category of the
+ * product.
+ *
+ * NOTE: A condition has to be a word of its own, the space between the name of
+ * the field and the value is optional. Brackets are part of the text, so
+ * "[price=0]" searches for that text and it is not a condition. The brackets are
+ * hard to type in a remote session (AltGr) and they are not needed. The name of a
+ * category is one word, so "category~kaffee tee" searches for the category
+ * "kaffee" and for the text "tee".
+ *
+ * @param {string} config The keyword of the configuration
+ * @returns {{keyword: string, conditions: object[], categories: object[], valid: boolean}} The parsed keyword
+ */
+function parseKeywordConfig(config) {
+    const _text = String(config ?? '');
+    const _result = { keyword: _text, conditions: [], categories: [], valid: true };
+
+    // NOTE: Only a keyword with a condition is parsed. The keywords can be regular
+    // expressions and they can contain the name of a field, so it is checked if a
+    // field name stands directly in front of an operator. The field names can be
+    // shortened (see aveExpandKeywordAbbreviations()).
+    const _start = /\b([a-z]+)\s*(?=[=!<>])/i.exec(_text);
+    if (!_start || !aveIsConditionWord(_start[1])) return _result;
+
+    // NOTE: A condition is a word of its own, the spaces around the operator are
+    // optional ("price>=10" and "price >= 10" are the same). A condition of up to
+    // three words is read, because of those spaces. The words that are no
+    // condition stay in the keyword, so that a keyword like
+    // "toaster price > 100 white" keeps the text "toaster white" without extra
+    // spaces. The brackets are part of the text, so "[price=0]" is no condition.
+    const _conditions = [];
+    const _categories = [];
+    const _keywordWords = [];
+    // NOTE: A part in double quotes is one word, so that a verbatim string like
+    // "kaffee bohnen" stays together (see aveSplitQuotedWords()).
+    const _words = aveSplitQuotedWords(_text);
+
+    /**
+     * Reads a condition from the words of the keyword.
+     * @param {number} index The position of the first word
+     * @returns {{count: number, condition: object|null, category: object|null}|null} The condition and its number of words
+     */
+    const _readCondition = (index) => {
+        for (let count = 1; count <= 3 && index + count <= _words.length; count++) {
+            const _condition = parsePriceCondition(_words.slice(index, index + count).join(' '));
+            if (_condition) return { count, condition: _condition, category: null };
+        }
+
+        // The name of a category is one word ("category~kaffee") or the operator
+        // is written with spaces ("category ~ kaffee").
+        for (const count of [1, 3]) {
+            if (index + count > _words.length) continue;
+            const _category = parseCategoryCondition(_words.slice(index, index + count).join(' '));
+            if (_category) return { count, condition: null, category: _category };
+        }
+        return null;
+    };
+
+    for (let i = 0; i < _words.length; i++) {
+        const _found = _readCondition(i);
+        if (!_found) {
+            _keywordWords.push(_words[i]);
+            continue;
+        }
+        if (_found.condition) _conditions.push(_found.condition);
+        if (_found.category) _categories.push(_found.category);
+        i += _found.count - 1;
+    }
+
+    const _keyword = _keywordWords.join(' ');
+
+    // NOTE: A word that names a field and cannot be read as a condition makes the
+    // keyword invalid, so that a typo does not silently search for a text.
+    const _broken = _keyword.match(/(?:^|\s)([a-z]+)\s*(?=[=!<>])/gi) || [];
+    // NOTE: The leading space is part of the match, so it is cut off before the check.
+    if (_broken.some((candidate) => aveIsConditionWord(candidate.trim()))) {
+        _result.valid = false;
+        console.warn(`The condition of the keyword "${_text}" is not valid.`);
+    }
+
+    _result.keyword = _keyword;
+    _result.conditions = _conditions;
+    _result.categories = _categories;
+    return _result;
+}
+
+/**
+ * Parses a category condition of the keyword configuration.
+ *
+ * The format of a condition is "category<operator>name", the spaces are optional,
+ * e.g. "category=kaffee". Every shortening of the word "category" is allowed, e.g.
+ * "c", "ca" or "cat" (see aveIsConditionWord()).
+ *
+ * NOTE: The operators are the same as the ones of a price condition (see
+ * parsePriceCondition()): "=" or "==" (the name of the category is exactly the text),
+ * "!=" or "<>" (it is not), "<" or "<=" (the name stands before the text in the
+ * alphabet) and ">" or ">=" (it stands behind it). The operator "~" of the older
+ * versions is not used any more.
+ *
+ * NOTE: A name in double quotes can contain spaces, e.g. category="kaffee tee".
+ *
+ * @param {string} text The text of the condition
+ * @returns {object|null} The condition, or null if it is not valid
+ */
+function parseCategoryCondition(text) {
+    const _match = /^\s*([a-z]+)\s*(<=|>=|==|!=|<>|=|<|>)\s*(.+?)\s*$/i.exec(String(text ?? ''));
+    if (!_match) return null;
+    // NOTE: Every shortening of "category" is allowed (see aveIsConditionWord()).
+    if (!aveIsConditionWord(_match[1], 'category')) return null;
+
+    const _text = aveUnquoteKeywordPart(_match[3]).toLowerCase();
+    if (_text.length === 0) return null;
+    return { op: _match[2], text: _text };
+}
+
+/**
+ * Checks the price conditions of a keyword against the prices of a product.
+ *
+ * The prices are loaded, if the keyword has price conditions and they are not
+ * known yet.
+ *
+ * NOTE: The prices are loaded, even if the setting EnableDetailsOnFavorite is
+ * switched off. The setting decides only, if the prices of a product without
+ * price conditions are loaded.
+ *
+ * @param {object} entry The parsed keyword
+ * @param {Product} prod The product to check
+ * @param {string} currKey The keyword of the settings (for the messages)
+ * @returns {Promise<boolean>} true if there are no conditions or all of them match
+ */
+async function matchesPriceConditions(entry, prod, currKey) {
+    if (entry.conditions.length === 0) return true;
+
+    await loadProductDetails(prod);
+    const _prices = getTaxPrices(prod);
+    if (matchPriceConditions(entry.conditions, _prices)) return true;
+
+    if (SETTINGS.DebugLevel > 1)
+        console.log(`matchesPriceConditions(): The price conditions of "${currKey}" do not match the prices: ${JSON.stringify(_prices)}`);
+    return false;
+}
+
+/**
+ * Builds the lines that name the reasons for a notification.
+ *
+ * A product can match the text of a keyword, the price conditions and a search
+ * for a category. Every kind of match gets its own line, so a notification shows
+ * up to three lines:
+ *
+ *   Keyword-Treffer: <keyword>
+ *   Preis-Treffer: <price>
+ *   Kategorie-Treffer: <name of the category>
+ *
+ * @param {object} entry The parsed keyword of the settings
+ * @param {Product} prod The product of the notification
+ * @param {string} [categoryText] The name of the category of the product
+ * @returns {string[]} The lines in the order of the notification
+ */
+function formatMatchLines(entry, prod, categoryText = '') {
+    const _lines = [];
+
+    if (entry.keyword) {
+        _lines.push(translate('notifications', 'keywordMatch', `Keyword-Treffer: ${entry.keyword}`, entry.keyword));
+    }
+
+    // NOTE: The prices are known, because the conditions were checked before the
+    // notification is sent (matchesPriceConditions()).
+    if (entry.conditions.length > 0) {
+        const _price = formatTaxPrize(prod);
+        _lines.push(translate('notifications', 'priceMatch', `Preis-Treffer: ${_price}`, _price));
+    }
+
+    if (entry.categories.length > 0 && categoryText) {
+        _lines.push(translate('notifications', 'categoryMatch', `Kategorie-Treffer: ${categoryText}`, categoryText));
+    }
+
+    return _lines;
+}
+
+/**
+ * Checks if the text and the category conditions of a keyword match a product.
+ *
+ * @param {object} entry The parsed keyword
+ * @param {string} descFull The description of the product in lower case
+ * @param {string} categoryText The name of the category of the product
+ * @returns {boolean} true if the entry matches
+ */
+function matchesKeywordEntry(entry, descFull, categoryText) {
+    // The text of the keyword has to match, if the entry has one.
+    if (entry.keyword && !matchesKeyword(descFull, entry.keyword)) return false;
+
+    // The category of the product has to match as well.
+    if (entry.categories.length > 0 && !matchCategoryConditions(entry.categories, categoryText)) return false;
+
+    return true;
+}
+
+/**
+ * Checks the category conditions of a keyword against the category of a product.
+ *
+ * A product has one category. The text of the page can be a path of more than one
+ * name ("Lebensmittel & Getränke > Getränke, Kaffee & Tee", see
+ * getPageCategoryText()), the category of the product is the last name of it.
+ *
+ * The operators are the same as the ones of a price condition (see
+ * parsePriceCondition()): "=" or "==" (the name of the category is exactly the text),
+ * "!=" or "<>" (it is not), "<" or "<=" (the name stands before the text in the
+ * alphabet) and ">" or ">=" (it stands behind it).
+ *
+ * NOTE: The category of a product is only known when it was seen on a page of a
+ * category (e.g. by the turbo scan). A product whose category is not known can
+ * not fulfil a category condition.
+ *
+ * @param {object[]} categories The conditions of the keyword
+ * @param {string} categoryText The name of the category of the product
+ * @returns {boolean} true if all conditions are fulfilled
+ */
+function matchCategoryConditions(categories, categoryText) {
+    if (typeof categoryText !== 'string' || categoryText.length === 0) return false;
+
+    const _parts = categoryText
+        .toLowerCase()
+        .split('>')
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0);
+    if (_parts.length === 0) return false;
+    const _name = _parts[_parts.length - 1];
+
+    for (const _category of categories) {
+        switch (_category.op) {
+            case '=':
+            case '==':
+                if (_name !== _category.text) return false;
+                break;
+            case '!=':
+            case '<>':
+                if (_name === _category.text) return false;
+                break;
+            case '<':
+                if (!(_name < _category.text)) return false;
+                break;
+            case '<=':
+                if (!(_name <= _category.text)) return false;
+                break;
+            case '>':
+                if (!(_name > _category.text)) return false;
+                break;
+            case '>=':
+                if (!(_name >= _category.text)) return false;
+                break;
+            default:
+                return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Checks the price conditions of a keyword against the prices of a product.
+ *
+ * @param {object[]} conditions The conditions of the keyword
+ * @param {number[]} prices The prices of the product
+ * @returns {boolean} true if all conditions are fulfilled
+ */
+function matchPriceConditions(conditions, prices) {
+    // Without a known price the conditions can not be checked.
+    if (!Array.isArray(prices) || prices.length === 0) return false;
+
+    const _minPrize = Math.min(...prices);
+    const _maxPrize = Math.max(...prices);
+
+    for (const _condition of conditions) {
+        switch (_condition.op) {
+            case '=':
+            case '==':
+                if (!prices.includes(_condition.price)) return false;
+                break;
+            case '!=':
+            case '<>':
+                if (prices.includes(_condition.price)) return false;
+                break;
+            case '<':
+                if (!(_minPrize < _condition.price)) return false;
+                break;
+            case '<=':
+                if (!(_minPrize <= _condition.price)) return false;
+                break;
+            case '>':
+                if (!(_maxPrize > _condition.price)) return false;
+                break;
+            case '>=':
+                if (!(_maxPrize >= _condition.price)) return false;
+                break;
+            default:
+                return false;
+        }
+    }
+    return true;
+}
+
+/**
  * Searches a keyword in the description of a product and sends the
  * notifications if the keyword was found.
+ *
+ * A keyword can contain price conditions. The steps of the search are:
+ *   1. the keyword of the configuration is matched with the description
+ *   2. the prices are loaded, if the keyword has price conditions
+ *   3. the price conditions are checked with the prices of the product
+ *   4. the actions are executed (notification and favorite)
+ *
+ * NOTE: The prices are only loaded after a successful keyword match. A keyword
+ * that only has price conditions and no keyword text never matches, so the
+ * prices are never loaded for it.
+ *
+ * NOTE: The prices of the product are loaded before the notifications are
+ * sent, so that the price is known, when the notification arrives.
+ *
  * @param {Product} _prod The product to check
  * @param {string[]} _configKeyWords The keywords to search for
- * @returns {boolean} true if a keyword was found
+ * @returns {Promise<boolean>} true if a keyword was found
  */
-function checkKeywordsForProduct(_prod, _configKeyWords) {
+async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = '') {
     const _descFull = _prod.description_full.toLowerCase();
 
     if (_prod.isNotified) {
-        if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Skipping Product which was already notified: ${_descFull}`);
+        if (SETTINGS.DebugLevel > 1)
+            console.log(`checkKeywordsForProduct(): Skipping the product which was already notified: ${_descFull}`);
         return false;
     }
 
     if (SETTINGS.DebugLevel > 1)
-        console.log(`updateNewProductsBtn(): Search Product Description: ${_descFull} for keys: `, _configKeyWords);
+        console.log(`checkKeywordsForProduct(): Search the description of the product: ${_descFull} for keys: `, _configKeyWords);
     const _configkeyWordsLength = _configKeyWords.length;
 
     for (let j = 0; j < _configkeyWordsLength; j++) {
         const _currKey = _configKeyWords[j].toLowerCase();
-        let _keyFound = false;
-        const _regExp = stringToRegex(_currKey);
-        if (_regExp !== undefined) {
-            if (SETTINGS.DebugLevel > 1)
-                console.log(`updateNewProductsBtn(): Search Product Description for Regular Expression: ${_regExp}`);
-            _keyFound = _regExp.test(_descFull);
-        } else {
-            if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Search Product Description for Keyword: ${_currKey}`);
-            _keyFound = _descFull.includes(_currKey);
+        const _entry = parseKeywordConfig(_currKey);
+        if (!_entry.valid) continue;
+
+        // NOTE: A keyword or a search for a category is needed. An entry that only
+        // has price conditions can never match.
+        if (!_entry.keyword && _entry.categories.length === 0) {
+            console.warn(`The keyword "${_currKey}" has no keyword and no category next to its price conditions and can never match.`);
+            continue;
         }
-        if (!_keyFound) continue;
+
+        if (!matchesKeywordEntry(_entry, _descFull, categoryText)) {
+            if (SETTINGS.DebugLevel > 1) console.log(`checkKeywordsForProduct(): "${_currKey}" does not match the text or the category`);
+            continue;
+        }
+
+        // The keyword matched. Only now the prices are loaded, if the keyword has
+        // price conditions. The conditions are checked with the prices.
+        if (!(await matchesPriceConditions(_entry, _prod, _currKey))) continue;
+
+        _prod.isNotified = true;
+        const _markedAsFavorite = SETTINGS.EnableAutoMarkFavorite;
+        if (_markedAsFavorite) {
+            _prod.isFav = 1;
+        }
+        // NOTE: The product is saved before the prices are loaded, so that it
+        // is not notified twice, if the search runs again in the meantime.
+        await database.update(_prod).catch((error) => {
+            console.error(`Could not save the notified product ${_prod.id}: ${error}`);
+        });
+
+        // The details of a product that became a favorite are loaded before the
+        // notification is sent, so that the price information is available. The
+        // requests are queued, because Amazon blocks the account temporarily if
+        // too many requests are made in a short time.
+        if (_markedAsFavorite) {
+            try {
+                await loadProductDetailsIfEnabled(_prod);
+            } catch (error) {
+                console.error(`Could not load the details of the product ${_prod.id}: ${error}`);
+            }
+        }
+
+        // The reasons for the match are shown in the notifications, one line per
+        // kind of match (the keyword, the price and the category).
+        const _matchLines = formatMatchLines(_entry, _prod, categoryText);
 
         if (SETTINGS.EnableDesktopNotifikation) {
-            // NOTE: The key of the keyword is shown before the description of the
-            // product, because it is the reason for the notification.
-            const _matchText = translate('notifications', 'keywordMatch', `Treffer: ${_currKey}`, _currKey);
+            // NOTE: The reasons for the notification stand before the description
+            // of the product, one line per kind of match.
             desktopNotifikation(
                 `Amazon Vine Explorer - ${AVE_VERSION}`,
-                `${_matchText}\n${_prod.description_full}`,
+                `${_matchLines.join('\n')}\n${_prod.description_full}`,
                 fixProductImageUrl(_prod.data_img_url),
                 true,
                 function (event) {
@@ -3989,47 +5770,135 @@ function checkKeywordsForProduct(_prod, _configKeyWords) {
             );
         }
         if (SETTINGS.GotifyUrl) {
+            // NOTE: The reasons for the match stand before the description of the
+            // product, like in the desktop notification.
             if (_prod.link) {
                 gotifyNotification(
-                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \nMatched key: ${_currKey}`,
+                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`,
                     _prod
                 );
             } else {
                 gotifyNotification(
-                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \nMatched key: ${_currKey}`
+                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`
                 );
             }
         }
-        _prod.isNotified = true;
-        const _markedAsFavorite = SETTINGS.EnableAutoMarkFavorite;
-        if (_markedAsFavorite) {
-            _prod.isFav = 1;
-        }
-        database.update(_prod).catch((error) => {
-            console.error(`Could not save the notified product ${_prod.id}: ${error}`);
-        });
-        // The details of a product that became a favorite are loaded, so that
-        // the price information is available. The requests are queued, because
-        // Amazon blocks the account temporarily if too many requests are made
-        // in a short time.
-        if (_markedAsFavorite) loadProductDetailsIfEnabled(_prod);
         return true;
     }
     return false;
 }
 
 /**
- * Searches the keywords in the new products and sends the notifications.
+ * Checks if a keyword matches the description of a product.
  *
- * NOTE: The search is expensive, because every new product is checked against
- * every keyword. It is only done if a new product was added and not after every
- * update of an existing product (e.g. after every timestamp update of the
- * background scan).
+ * A keyword that is a regular expression (e.g. "/toaster/i") is tested as it
+ * is. A keyword with several words matches if **all** of its words appear in the
+ * description, the order of the words and the distance between them do not
+ * matter.
  *
- * @param {Product[]} _prodArr The new entries
- * @returns {boolean} true if at least one product was notified
+ * @param {string} descFull The description of the product in lower case
+ * @param {string} keyword The keyword of the settings in lower case
+ * @returns {boolean} true if the keyword matches
  */
-function searchKeywordsInProducts(_prodArr) {
+function matchesKeyword(descFull, keyword) {
+    const _regExp = stringToRegex(keyword);
+    if (_regExp !== undefined) {
+        if (SETTINGS.DebugLevel > 1) console.log(`matchesKeyword(): Search the description for the regular expression: ${_regExp}`);
+        return _regExp.test(descFull);
+    }
+
+    if (SETTINGS.DebugLevel > 1) console.log(`matchesKeyword(): Search the description for the keyword: ${keyword}`);
+    // NOTE: A part in double quotes is a verbatim string and has to occur with its
+    // spaces: "a b" does not match the text "a x b". Without the quotes every word
+    // has to occur somewhere in the text, the order does not matter.
+    const _parts = aveSplitQuotedWords(keyword);
+    return _parts.length > 0 && _parts.every((part) => descFull.includes(aveUnquoteKeywordPart(part)));
+}
+
+/**
+ * Returns the name of the category of a page.
+ *
+ * The category is only in the side bar of the page, it is not stored with the
+ * product. A page of the all items list has no category, so the result is empty.
+ *
+ * @param {Document} doc The document of the page
+ * @returns {string} The name of the category, or an empty string
+ */
+function getPageCategoryText(doc) {
+    if (!doc || typeof doc.querySelectorAll !== 'function') return '';
+
+    const _selected = doc.querySelectorAll('#vvp-browse-nodes-container a.selectedNode');
+    const _names = [];
+    for (const _node of _selected) {
+        const _name = String(_node.textContent).trim();
+        if (_name) _names.push(_name);
+    }
+    return _names.join(' > ');
+}
+
+/**
+ * Checks if the keywords of the settings contain a search for a category.
+ *
+ * @returns {boolean} true if at least one keyword has a category condition
+ */
+function hasCategoryCondition() {
+    const _keywords = Array.isArray(SETTINGS.DesktopNotifikationKeywords) ? SETTINGS.DesktopNotifikationKeywords : [];
+    const _key = JSON.stringify(_keywords);
+
+    // The result is cached, because it is asked for every product of a page.
+    if (categoryConditionCache.key !== _key) {
+        categoryConditionCache = {
+            key: _key,
+            result: _keywords.some((keyword) => parseKeywordConfig(String(keyword).toLowerCase()).categories.length > 0)
+        };
+    }
+    return categoryConditionCache.result;
+}
+
+/**
+ * Remembers a product for the search of the keywords.
+ *
+ * A product that is new is checked once, as soon as the search runs. It is called
+ * at the two places that add a product to the database (the tile of the page and
+ * the page of the background scan).
+ *
+ * NOTE: A product that is already in the database was checked before its category
+ * was known (the background scan does not show a category). It is checked once
+ * more when its category becomes known and the keywords contain a search for a
+ * category, so that such a search can match it after all.
+ *
+ * @param {Product} prod The product that was added to the database
+ * @param {string} [categoryText] The name of the category of the page
+ */
+function addProductToKeywordSearch(prod, categoryText = '') {
+    if (!prod) return;
+
+    if (prod.gotFromDB) {
+        if (!categoryText || prod.isNotified) return;
+        if (categoryCheckedProducts.has(prod.id)) return;
+        if (!hasCategoryCondition()) return;
+
+        categoryCheckedProducts.add(prod.id);
+        // NOTE: The search has to run for this product, so it is remembered like a
+        // new product.
+        newProductWasAdded = true;
+    }
+
+    productsToCheckForKeywords.push({ prod: prod, categoryText: categoryText });
+}
+
+/**
+ * Searches the keywords in the given products and sends the notifications.
+ *
+ * NOTE: The search is expensive, because every product is checked against every
+ * keyword. It only receives the products that were just added to the database
+ * (see addProductToKeywordSearch()), so that no product is checked twice and the
+ * details of a product are requested at most once.
+ *
+ * @param {Product[]} _prodArr The products to check
+ * @returns {Promise<boolean>} true if at least one product was notified
+ */
+async function searchKeywordsInProducts(_prodArr) {
     if (
         !(SETTINGS.EnableDesktopNotifikation || SETTINGS.EnableAutoMarkFavorite || SETTINGS.GotifyUrl) ||
         !SETTINGS.DesktopNotifikationKeywords?.length
@@ -4037,14 +5906,16 @@ function searchKeywordsInProducts(_prodArr) {
         return false;
     }
 
-    if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Inside IF`);
+    if (SETTINGS.DebugLevel > 1) console.log(`searchKeywordsInProducts(): Search the products for the keywords`);
 
     const _configKeyWords = SETTINGS.DesktopNotifikationKeywords;
     let _notifyed = false;
 
     for (let i = 0; i < _prodArr.length; i++) {
-        const _prod = _prodArr[i];
-        if (checkKeywordsForProduct(_prod, _configKeyWords)) {
+        const _entry = _prodArr[i];
+        // NOTE: The product is awaited, because the prices are loaded before
+        // its notification is sent.
+        if (await checkKeywordsForProduct(_entry.prod, _configKeyWords, _entry.categoryText)) {
             _notifyed = true;
         }
     }
@@ -4071,21 +5942,23 @@ function notifyAboutNewProducts(_prodArrLength, _notifyed) {
 /**
  * Update the "new entries" badge and trigger threshold notifications.
  */
-function updateNewProductsBtn() {
-    if (SETTINGS.DebugLevel > 1) console.log('Called updateNewProductsBtn()');
+function processNewItems() {
+    if (SETTINGS.DebugLevel > 1) console.log('Called processNewItems()');
 
-    // The search for the keywords is expensive, because every new product is
-    // checked against every keyword. It is only done if a new product was added
-    // and not after every update of an existing product (e.g. after every
-    // timestamp update of the background scan).
+    // The search for the keywords is expensive, because every product is checked
+    // against every keyword. It is only done if a product was really added and
+    // not after every update of an existing product (e.g. after every timestamp
+    // update of the background scan). The products that were added since the last
+    // search are taken out of the list, so that no product is checked twice.
     const _checkForKeywords = newProductWasAdded;
     newProductWasAdded = false;
+    const _productsToCheck = productsToCheckForKeywords.splice(0);
 
-    database.getNewEntries().then((prodArr) => {
+    database.getNewEntries().then(async (prodArr) => {
         const _btnBadge = document.getElementById('ave-new-items-btn-badge');
         const _pageTitle = document.title.replace(/^[^|]*\|/, '').trim();
         const _prodArrLength = prodArr.length;
-        if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Got Database Response: ${_prodArrLength} New Items`);
+        if (SETTINGS.DebugLevel > 1) console.log(`processNewItems(): Got Database Response: ${_prodArrLength} New Items`);
 
         if (_prodArrLength > 0) {
             const _badgeCount = parseInt(_btnBadge && _btnBadge.innerText ? _btnBadge.innerText : '0', 10) || 0;
@@ -4100,7 +5973,9 @@ function updateNewProductsBtn() {
             document.title = `${_pageTitle}`;
         }
 
-        const _notifyed = _checkForKeywords ? searchKeywordsInProducts(prodArr) : false;
+        // NOTE: The search is awaited, because the notifications of the keyword
+        // matches are sent after the prices of the products were loaded.
+        const _notifyed = _checkForKeywords ? await searchKeywordsInProducts(_productsToCheck) : false;
         notifyAboutNewProducts(_prodArrLength, _notifyed);
     });
 }
@@ -4148,7 +6023,9 @@ function desktopNotifikation(title, message, image = null, requireInteraction = 
         Notification.requestPermission().then(function (permission) {
             if (permission === 'granted') {
                 console.log('Berechtigung für Benachrichtigungen erhalten!');
-                desktopNotifikation(title, message);
+                // NOTE: The arguments are given to the second call as well, so that
+                // the notification looks the same in both cases.
+                desktopNotifikation(title, message, image, requireInteraction, onClick);
             }
         });
     }
@@ -4337,6 +6214,10 @@ function createNavButton(mainID, text, textID, color, onclick, badgeId, badgeVal
  * @param {Product} _product The product of the tile
  */
 function addStyleToTile(_currTile, _product) {
+    // NOTE: A product that is shown on a page of a category gets the name of the
+    // category for the search of the keywords. It is not stored in the database.
+    addProductToKeywordSearch(_product, getPageCategoryText(document));
+
     if (!_product.gotFromDB) {
         // We have a new one ==> Save it to our Database ;)
         // NOTE: The promise is not awaited, so a failed write has to be caught here.
@@ -4387,14 +6268,68 @@ function addStyleToTile(_currTile, _product) {
 }
 
 /**
- * The minimum delay between two requests of the product details in
- * milliseconds.
+ * The default delay between two products of the queue of the product details
+ * in milliseconds. It is used, if the setting
+ * "ProductDetailsRequestDelay" is not set.
  *
  * NOTE: Amazon blocks the account temporarily if too many requests are made
  * in a short time. The requests are therefore not made in parallel and not
  * faster than this delay.
  */
 const PRODUCT_DETAILS_REQUEST_DELAY = 1500;
+
+/**
+ * The default delay between two requests for the details of the variations of
+ * a product in milliseconds. It is used, if the setting
+ * "VariationRequestDelay" is not set.
+ *
+ * NOTE: Only the requests for the variations use this delay. The pause
+ * between two products of the queue is PRODUCT_DETAILS_REQUEST_DELAY.
+ */
+const VARIATION_REQUEST_DELAY = 500;
+
+/**
+ * Returns a delay with a random variation of +/- 50 percent.
+ *
+ * The randomization makes sure that the requests are not sent in a fixed
+ * rhythm.
+ *
+ * @param {number} base The delay in milliseconds
+ * @returns {number} The delay in milliseconds
+ */
+function getRandomizedDelay(base) {
+    if (!(base > 0)) return 0;
+    return Math.round(base * (0.5 + Math.random()));
+}
+
+/**
+ * Returns the delay between two requests for the details of the variations.
+ *
+ * The delay is taken from the setting "VariationRequestDelay". It is randomized
+ * by +/- 50 percent, so that the requests are not sent in a fixed rhythm.
+ *
+ * @returns {number} The delay in milliseconds
+ */
+function getVariationRequestDelay() {
+    const _configured = Number(SETTINGS.VariationRequestDelay);
+    const _base = Number.isFinite(_configured) && _configured >= 0 ? _configured : VARIATION_REQUEST_DELAY;
+    return getRandomizedDelay(_base);
+}
+
+/**
+ * Returns the pause between two products of the queue of the product details.
+ *
+ * The pause is taken from the setting "ProductDetailsRequestDelay". It is
+ * randomized by +/- 50 percent, so that the requests are not sent in a fixed
+ * rhythm.
+ *
+ * @returns {number} The delay in milliseconds
+ */
+function getProductDetailsRequestDelay() {
+    const _configured = Number(SETTINGS.ProductDetailsRequestDelay);
+    const _base = Number.isFinite(_configured) && _configured >= 0 ? _configured : PRODUCT_DETAILS_REQUEST_DELAY;
+    return getRandomizedDelay(_base);
+}
 
 /**
  * The products whose details still have to be loaded. Every entry holds the
@@ -4407,8 +6342,8 @@ const productDetailsQueue = [];
  * Loads the details of all variations of a product with a parent ASIN.
  *
  * A product with a parent ASIN has no price of its own, the Vine API returns
- * the variations for it. The price of the product is the highest price of its
- * variations.
+ * the variations for it. The prices of all variations are stored in the list
+ * data_estimated_tax_prices, so that the range of the prices can be shown.
  *
  * NOTE: The requests are made one after the other and not in parallel, because
  * Amazon blocks the account temporarily if too many requests are made in a short
@@ -4421,13 +6356,19 @@ async function loadProductDetailsOfVariations(prod) {
     const _variations = prod.data_childs || [];
     if (_variations.length === 0) return;
 
+    // The prices of all variations that could be loaded.
+    const _prizes = [];
+    // The currency of the most expensive variation.
+    let _highestPrize;
+    let _currency;
+
     for (let i = 0; i < _variations.length; i++) {
         const _child = _variations[i];
         if (!_child || !_child.asin) continue;
 
         // The delay is also made between the variations of a product, because
         // they are requests to the same API.
-        if (i > 0) await delay(PRODUCT_DETAILS_REQUEST_DELAY);
+        if (i > 0) await delay(getVariationRequestDelay());
 
         try {
             const _childRes = await vineFetch(
@@ -4442,14 +6383,26 @@ async function loadProductDetailsOfVariations(prod) {
             for (const _dataPoint of Object.keys(_childRes.result)) {
                 _child[_dataPoint] = _childRes.result[_dataPoint];
             }
-            // The price of the product is the highest price of its variations.
-            if (typeof _child.taxValue == 'number' && (prod.data_estimated_tax_prize ?? 0) < _child.taxValue) {
-                prod.data_estimated_tax_prize = _child.taxValue;
-                prod.data_tax_currency = _child.taxCurrency;
+            if (typeof _child.taxValue == 'number') {
+                _prizes.push(_child.taxValue);
+                // The currency of the product is the currency of its most
+                // expensive variation.
+                if (_highestPrize === undefined || _highestPrize < _child.taxValue) {
+                    _highestPrize = _child.taxValue;
+                    _currency = _child.taxCurrency;
+                }
             }
         } catch (error) {
             console.error(`Could not load the details of the variation ${_child.asin}: ${error}`);
         }
+    }
+
+    // The list of the prices is stored with the product, so that the range of
+    // the prices can be shown on the tile. If no price could be loaded, the
+    // old list is kept, because it still holds the prices of the last load.
+    if (_prizes.length > 0) {
+        prod.data_estimated_tax_prices = _prizes;
+        if (_currency) prod.data_tax_currency = _currency;
     }
 }
 
@@ -4490,7 +6443,7 @@ async function processProductDetailsQueue() {
             console.error(`Could not load the details of the product ${_entry.prod.id}: ${_reason}`);
         }
         _entry.resolve();
-        if (productDetailsQueue.length > 0) await delay(PRODUCT_DETAILS_REQUEST_DELAY);
+        if (productDetailsQueue.length > 0) await delay(getProductDetailsRequestDelay());
     }
 
     processProductDetailsQueue._isRunning = false;
@@ -4514,7 +6467,35 @@ function hasProductDetails(prod) {
         // always there, because it comes with the list of the variations.
         return prod.data_childs.every((_child) => !_child || !_child.asin || _child.taxValue !== undefined);
     }
-    return prod.data_estimated_tax_prize !== undefined;
+    // The price of a product without variations is in the list of the prices.
+    return getTaxPrices(prod).length > 0;
+}
+
+/**
+ * Loads the details of a product, if they are not loaded yet.
+ *
+ * The details are loaded, even if the setting "EnableDetailsOnFavorite" is
+ * switched off. The setting decides only, if the prices of a product that is
+ * marked as favorite are loaded.
+ *
+ * NOTE: The details are only requested after a keyword match and a product is
+ * only checked against the keywords once, when it is added to the database (see
+ * addProductToKeywordSearch()). So the details of a product are requested at
+ * most once.
+ *
+ * @param {Product} prod The product to load the details for
+ * @returns {Promise<void>} Resolves when the details were loaded and stored
+ */
+async function loadProductDetails(prod) {
+    // A product that is marked as favorite and unmarked again would be loaded
+    // a second time otherwise.
+    if (hasProductDetails(prod)) {
+        if (SETTINGS.DebugLevel > 1) console.info(`AVE: The details of ${prod.id} are already loaded.`);
+        return;
+    }
+    console.info(`AVE: Loading the details of ${prod.id} ...`);
+    await requestProductDetailsQueued(prod);
+    console.info(`AVE: The details of ${prod.id} were loaded.`);
 }
 
 /**
@@ -4531,15 +6512,7 @@ async function loadProductDetailsIfEnabled(prod) {
         console.info(`AVE: The details of ${prod.id} were not loaded, the setting is off.`);
         return;
     }
-    // A product that is marked as favorite and unmarked again would be loaded
-    // a second time otherwise.
-    if (hasProductDetails(prod)) {
-        console.info(`AVE: The details of ${prod.id} are already loaded.`);
-        return;
-    }
-    console.info(`AVE: Loading the details of ${prod.id} ...`);
-    await requestProductDetailsQueued(prod);
-    console.info(`AVE: The details of ${prod.id} were loaded.`);
+    await loadProductDetails(prod);
 }
 
 async function requestProductDetails(prod) {
@@ -4590,7 +6563,10 @@ async function requestProductDetails(prod) {
         prod.data_contributors = data.byLineContributors;
         prod.data_catalogSize = data.catalogSize;
         prod.data_tax_currency = data.taxCurrency;
-        prod.data_estimated_tax_prize = data.taxValue;
+        // The price is stored in the list of the prices, so that the prices of
+        // the variations and the price of a product without variations are
+        // handled the same way.
+        if (Number.isFinite(data.taxValue)) prod.data_estimated_tax_prices = [data.taxValue];
         prod.data_limited_quantity = data.limitedQuantity;
         return prod;
     }
@@ -4692,6 +6668,51 @@ function initNavigationButtons() {
 /**
  * Adds the search bar for the products to the navigation of Amazon.
  */
+/**
+ * Searches the products of the database.
+ *
+ * The search text can contain the same price conditions as the keywords of the
+ * notification, e.g. "kaffee price>=10". Unlike a keyword, a price can be
+ * searched without a text: "price<5" shows all products that are cheaper
+ * than 5.
+ *
+ * NOTE: A product whose price is not known can not match a price condition, so it
+ * is not part of the result (matchPriceConditions() returns false for it).
+ *
+ * @param {string} queryText The text of the search (lower case)
+ * @returns {Promise<Product[]>} The products that match the search
+ */
+async function searchProducts(queryText) {
+    const _entry = parseKeywordConfig(String(queryText ?? '').trim());
+    if (!_entry.valid) {
+        console.warn(`searchProducts(): the search "${queryText}" has a condition that is not valid.`);
+        return [];
+    }
+
+    // NOTE: The category of a product is not stored in the database, so the search
+    // can not check a condition for the category.
+    if (_entry.categories.length > 0) {
+        console.warn(`searchProducts(): the search "${queryText}" can not check the category of a product.`);
+        return [];
+    }
+
+    // NOTE: A part in double quotes is a verbatim string. The quotes are removed, so
+    // that the search of the database looks for the text with its spaces (query()
+    // checks every word with includes()).
+    const _words = aveSplitQuotedWords(_entry.keyword)
+        .map((word) => aveUnquoteKeywordPart(word))
+        .filter((word) => word.length > 0);
+    // NOTE: getAll() is used when the search has no text at all, because query()
+    // is meant for a text search.
+    const _products = _words.length > 0 ? await database.query(_words) : await database.getAll();
+    if (_entry.conditions.length === 0) return _products;
+
+    return _products.filter((prod) => matchPriceConditions(_entry.conditions, getTaxPrices(prod)));
+}
+
+/**
+ * Adds the search bar for the products of the database.
+ */
 function initSearchBar() {
     const _searchbarContainer = document.getElementById('vvp-items-button-container');
 
@@ -4711,7 +6732,7 @@ function initSearchBar() {
             if (searchInputTimeout) clearTimeout(searchInputTimeout);
             searchInputTimeout = setTimeout(
                 () => {
-                    database.query(_input.split(' ')).then((_objArr) => {
+                    searchProducts(_input).then((_objArr) => {
                         if (SETTINGS.DebugLevel > 10) console.log(`Found ${_objArr.length} Items with this Search`);
                         createNewSite(PAGETYPE.SEARCH_RESULT, _objArr);
                         searchInputTimeout = null;
@@ -4800,7 +6821,7 @@ function init(hasTiles) {
     // The search for the keywords is also done on page load, because the products could
     // have been added by an other tab or before the page was closed.
     newProductWasAdded = true;
-    updateNewProductsBtn();
+    processNewItems();
     updateFavoritesBtn();
 
     initSearchBar();

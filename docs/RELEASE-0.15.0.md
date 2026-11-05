@@ -1,5 +1,10 @@
 # Release 0.15.0 – Checkliste
 
+> **ERLEDIGT am 2026-11-01.** Das Release 0.15.0 ist veröffentlicht
+> (Merge-Commit `75bb04b`), Issue #68 ist kommentiert und geschlossen, der
+> Entwicklungsbranch `dev-0.16.0` ist angelegt. Die Datei bleibt als
+> Referenz im Repository.
+
 Diese Datei enthält den fertigen Stand des Release 0.15.0 und alles, was noch
 zu tun ist, wenn `main` gepusht werden soll. Sie liegt im Repository, damit der
 Rest auch nach einer Verdichtung des Chats nicht verloren geht.

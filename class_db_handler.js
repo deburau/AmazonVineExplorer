@@ -1,4 +1,4 @@
-/* exported DB_HANDLER */
+/* exported DB_HANDLER, migrateProductToVersion5 */
 console.log('loaded db_handler.js');
 class DB_HANDLER {
     #version;
@@ -6,7 +6,11 @@ class DB_HANDLER {
     #storeName;
     #db;
     #eventDelayTimeout;
-    #pendingNewProduct = false;
+    // The write operations of the running window of the change event. The numbers are
+    // handed over with the event, so that a listener can log what happened (see
+    // fireDataChangedEvent()).
+    #pendingWrites = 0;
+    #pendingNewProducts = 0;
 
     /**
      * Db Handler to easy use of IndexedDB Object Store Databases
@@ -106,45 +110,65 @@ class DB_HANDLER {
                     _store.createIndex('isFav', 'isFav', { unique: false });
                 }
 
-                if (!_store.indexNames.contains('data_asin')) {
-                    // if new db, don't check for duplicate asins
-                    if (event.oldVersion === 0) {
-                        _store.createIndex('data_asin', 'data_asin', { unique: true });
-                    } else if (this.#checkForDuplicatedASIN()) {
-                        _store.createIndex('data_asin', 'data_asin', { unique: true });
-                    }
+                // The products are migrated to the version 5 of the database. They
+                // get the list with the prices of the product and of its
+                // variations.
+                const _needsMigration = event.oldVersion < 5;
+
+                // The index of the ASIN can only be unique, if there are no
+                // duplicated ASINs in the database.
+                const _needsAsinIndex = !_store.indexNames.contains('data_asin');
+
+                if (_needsAsinIndex && event.oldVersion === 0) {
+                    // A new database has no duplicates.
+                    _store.createIndex('data_asin', 'data_asin', { unique: true });
+                } else if (_needsMigration || _needsAsinIndex) {
+                    // The migration and the check for duplicated ASINs both need a
+                    // cursor over the products, so they are done in one run.
+                    this.#updateProducts(_store, _needsMigration, _needsAsinIndex);
                 }
             };
         });
     }
 
     /**
-     * DB ASIN CHECKER
-     * @param {function} [cb] Callback function executes when database query is done
+     * Updates the products of the object store, while the database is upgraded.
+     *
+     * The products are migrated to the current version of the database. The
+     * ASINs are checked for duplicates, so that the index of the ASIN can be
+     * created as unique.
+     *
+     * NOTE: The cursor has to run inside the transaction of the upgrade,
+     * otherwise the changes are not written to the database. The index can only
+     * be created, while this transaction is active.
+     *
+     * @param {IDBObjectStore} store The object store of the database
+     * @param {boolean} migrate true, if the products have to be migrated
+     * @param {boolean} checkDuplicates true, if the ASINs have to be checked
      */
-    #checkForDuplicatedASIN() {
-        const _request = this.#getStore().openCursor();
+    #updateProducts(store, migrate, checkDuplicates) {
+        const _asins = [];
+        const _request = store.openCursor();
 
-        const existingDataAsinValues = [];
         _request.onsuccess = (event) => {
             const _cursor = event.target.result;
             if (_cursor) {
-                existingDataAsinValues.push(_cursor.key);
+                if (checkDuplicates && _cursor.value && _cursor.value.data_asin) _asins.push(_cursor.value.data_asin);
+                if (migrate) _cursor.update(migrateProductToVersion5(_cursor.value));
                 _cursor.continue();
-            } else {
-                const uniqueDataAsinValues = Array.from(new Set(existingDataAsinValues));
-
-                if (existingDataAsinValues.length !== uniqueDataAsinValues.length) {
-                    console.warn('Duplikate in "data_asin" gefunden. Bereinigen oder löschen Sie die Datenbank');
-                    return false;
-                } else {
+            } else if (checkDuplicates) {
+                const _uniqueAsins = new Set(_asins);
+                if (_asins.length === _uniqueAsins.size) {
                     // No duplicates found, the index can be marked as unique
-                    return true;
+                    store.createIndex('data_asin', 'data_asin', { unique: true });
+                } else {
+                    console.warn('Duplikate in "data_asin" gefunden. Bereinigen oder löschen Sie die Datenbank');
                 }
             }
         };
+
         _request.onerror = (event) => {
-            throw new Error(`DB_HANDLER.#checkForDuplicatedAsin: ${event.target.error.name}`);
+            console.error(`DB_HANDLER.#updateProducts: ${event.target.error.name}`);
         };
     }
 
@@ -153,20 +177,29 @@ class DB_HANDLER {
      * If a new product was added, the Event ave-new-product-added is fired as well.
      * The two events are debounced together, so that a burst of write operations
      * results in only one event.
+     *
+     * The change event carries the number of the write operations of the window and
+     * the number of the new products in it, so that a listener can log what happened.
+     *
+     * @param {boolean} [isNewProduct] true if the record was added and not updated
      */
     // Debounced change event to avoid flooding listeners on batch writes.
     #fireDataChangedEvent(isNewProduct = false) {
-        if (isNewProduct) this.#pendingNewProduct = true;
+        this.#pendingWrites++;
+        if (isNewProduct) this.#pendingNewProducts++;
         if (this.#eventDelayTimeout) clearTimeout(this.#eventDelayTimeout);
         this.#eventDelayTimeout = setTimeout(() => {
+            // NOTE: The numbers are taken and reset before the events are fired, so that
+            // the write operations of a listener belong to the next window.
+            const _detail = { writes: this.#pendingWrites, newProducts: this.#pendingNewProducts };
+            this.#pendingWrites = 0;
+            this.#pendingNewProducts = 0;
+            this.#eventDelayTimeout = null;
+
             // NOTE: The event for a new product comes first, so that the listener of the
             // change event can already know that a new product was added.
-            if (this.#pendingNewProduct) {
-                this.#pendingNewProduct = false;
-                ave_eventhandler.emit('ave-new-product-added');
-            }
-            ave_eventhandler.emit('ave-database-changed');
-            this.#eventDelayTimeout = null;
+            if (_detail.newProducts > 0) ave_eventhandler.emit('ave-new-product-added');
+            ave_eventhandler.emit('ave-database-changed', _detail);
         }, 250);
     }
 
@@ -479,7 +512,9 @@ class DB_HANDLER {
             _clearRequest.onsuccess = () => {
                 let _addRequest;
                 for (const data of datas) {
-                    _addRequest = _store.add(data);
+                    // NOTE: The products of an old backup do not have the list of
+                    // the prices, so they are migrated too.
+                    _addRequest = _store.add(migrateProductToVersion5(data));
                     _addRequest.onerror = (event) => {
                         reject(`DB_HANDLER.import().add(): ${event.target.error.name}`);
                     };
@@ -504,6 +539,20 @@ class DB_HANDLER {
     }
 
     /**
+     * Closes the connection to the database.
+     *
+     * NOTE: An open connection blocks the delete of the database. The connection
+     * has to be closed before deleteDatabase() is called, otherwise the delete
+     * request waits for the connection and never finishes.
+     */
+    closeDatabase() {
+        if (!this.#db) return;
+        this.#db.close();
+        this.#db = null;
+        console.log('DB_HANDLER: the connection to the database was closed');
+    }
+
+    /**
      * Deletes the entire database.
      * @returns {Promise<void>}
      */
@@ -523,4 +572,41 @@ class DB_HANDLER {
             };
         });
     }
+}
+
+/**
+ * Migrates a product of the database to the version 5.
+ *
+ * The version 5 of the database has the list with the prices of a product
+ * (data_estimated_tax_prices). The price of the product is in
+ * data_estimated_tax_prize, the prices of the variations are in the variations
+ * of the product. Both are taken over, so that the prices do not have to be
+ * requested from Amazon again after the migration.
+ *
+ * @param {object} prod The product from the database
+ * @returns {object} The product with the list of the prices
+ */
+function migrateProductToVersion5(prod) {
+    if (!prod || typeof prod != 'object') return prod;
+    // The product was already migrated.
+    if (Array.isArray(prod.data_estimated_tax_prices)) return prod;
+
+    const _prices = [];
+
+    // The price of the product. It is the only price that is known for the
+    // products without variations.
+    if (Number.isFinite(prod.data_estimated_tax_prize) && !_prices.includes(prod.data_estimated_tax_prize)) {
+        _prices.push(prod.data_estimated_tax_prize);
+    }
+
+    // The prices of the variations.
+    const _variations = Array.isArray(prod.data_childs) ? prod.data_childs : [];
+    for (const _variation of _variations) {
+        if (_variation && Number.isFinite(_variation.taxValue) && !_prices.includes(_variation.taxValue)) {
+            _prices.push(_variation.taxValue);
+        }
+    }
+
+    prod.data_estimated_tax_prices = _prices;
+    return prod;
 }

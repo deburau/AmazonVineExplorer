@@ -2,7 +2,8 @@
  * verify_new_products_btn.js
  *
  * Vergleicht die alte (git HEAD) und die neue Implementierung von
- * updateNewProductsBtn(). Beide werden in einem vm-Kontext mit gemockter
+ * processNewItems() (in der alten Version updateNewProductsBtn()). Beide werden in
+ * einem vm-Kontext mit gemockter
  * Datenbank und gemockten Benachrichtigungen ausgefuehrt.
  *
  * Verglichen werden:
@@ -17,10 +18,17 @@
 const vm = require('vm');
 const { prepareWithConstants, finish } = require('./lib/verify_helpers');
 
+// Die Funktion heisst in der neuen Version processNewItems().
 const OLD_NAMES = ['updateNewProductsBtn'];
 const NEW_NAMES = [
-    'updateNewProductsBtn',
+    'processNewItems',
     'notifyAboutUnseenItems',
+    'addProductToKeywordSearch',
+    'matchesKeyword',
+    'matchesKeywordEntry',
+    'matchesPriceConditions',
+    'parseCategoryCondition',
+    'matchCategoryConditions',
     'searchKeywordsInProducts',
     'checkKeywordsForProduct',
     'notifyAboutNewProducts',
@@ -29,7 +37,28 @@ const NEW_NAMES = [
     'loadProductDetailsIfEnabled',
     'requestProductDetailsQueued',
     'processProductDetailsQueue',
-    'hasProductDetails'
+    'hasProductDetails',
+    // Die Funktion, die die Preise des Produkts liefert.
+    'getTaxPrices',
+    // Die Funktionen fuer die Bedingungen der Keywords.
+    'normalizePriceInput',
+    'parsePriceCondition',
+    'parseKeywordConfig',
+    // Die Funktion, die prueft, ob ein Wort eine Verkuerzung eines Feldnamens ist.
+    'aveIsConditionWord',
+    // Die Funktionen fuer die verbatim-Strings in Anfuehrungszeichen.
+    'aveSplitQuotedWords',
+    'aveUnquoteKeywordPart',
+    'matchPriceConditions',
+    // Die Funktionen, die die Zeilen der Benachrichtigung bilden.
+    'formatMatchLines',
+    'formatTaxPrize',
+    // Die Funktion, die die Details laedt.
+    'loadProductDetails',
+    // Die Funktionen, die die Verzoegerungen zwischen den Requests berechnen.
+    'getRandomizedDelay',
+    'getVariationRequestDelay',
+    'getProductDetailsRequestDelay'
 ];
 
 const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
@@ -37,10 +66,12 @@ const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
 const { old: oldCode, new: newCode } = prepareWithConstants('verify_new_products_btn.js', OLD_NAMES, NEW_NAMES, CONSTANT_NAMES);
 
 /**
- * Baut eine Sandbox und fuehrt updateNewProductsBtn() aus.
+ * Baut eine Sandbox und fuehrt processNewItems() (alte Version: updateNewProductsBtn())
+ * aus.
  * @param {object} opts Szenario-Optionen
+ * @param {string} entryPoint Der Name der Funktion, die ausgefuehrt wird
  */
-function run(code, opts) {
+function run(code, opts, entryPoint) {
     const log = [];
     const _store = {};
 
@@ -93,6 +124,7 @@ function run(code, opts) {
             NewItemsNotificationThreshold: 0,
             EnableDesktopNotifikation: !!opts.desktop,
             EnableAutoMarkFavorite: !!opts.autoFavorite,
+            VariationRequestDelay: 100,
             GotifyUrl: opts.gotify ? 'https://gotify.example.com' : '',
             DesktopNotifikationKeywords: opts.keywords || [],
             DesktopNotifikationDelay: opts.notifDelay || 0
@@ -100,15 +132,23 @@ function run(code, opts) {
         database,
         AUTO_SCAN_IS_RUNNING: false,
         newProductWasAdded: opts.newProductWasAdded !== false,
+        // Die Produkte, die seit dem letzten Lauf hinzugekommen sind. Nur sie
+        // werden gegen die Keywords geprueft (addProductToKeywordSearch()).
+        productsToCheckForKeywords: (opts.newProducts || []).map((e) => ({
+            prod: Object.assign({}, e),
+            categoryText: opts.categoryText || ''
+        })),
         oldCountOfNewItems: opts.oldCount || 0,
         lastDesktopNotifikationTimestamp: opts.lastNotifTs || 0,
         AVE_VERSION: '1.0',
-        gotifyNotification: (msg, prod) => log.push(`gotify: ${String(msg).substring(0, 60)}${prod ? ' [withProd]' : ''}`),
-        desktopNotifikation: (title, msg) => log.push(`desktop: ${title} | ${String(msg).substring(0, 60)}`),
+        // NOTE: Der ganze Text wird protokolliert, damit die Zeilen der
+        // Benachrichtigung (Keyword/Preis/Kategorie) geprueft werden koennen.
+        gotifyNotification: (msg, prod) => log.push(`gotify: ${String(msg)}${prod ? ' [withProd]' : ''}`),
+        desktopNotifikation: (title, msg) => log.push(`desktop: ${title} | ${String(msg)}`),
         fixProductImageUrl: (u) => u,
         requestProductDetails: async (prod) => {
             log.push(`requestProductDetails ${prod.id}`);
-            prod.data_estimated_tax_prize = 12.5;
+            prod.data_estimated_tax_prices = [12.5];
             return prod;
         },
         delay: (ms) => new Promise((r) => setTimeout(r, 0)),
@@ -128,7 +168,7 @@ function run(code, opts) {
     const ctx = vm.createContext(sandbox);
     vm.runInContext(code, ctx, { filename: 'newproducts.js' });
 
-    sandbox.updateNewProductsBtn();
+    sandbox[entryPoint]();
 
     // Die Datenbank-Operationen sind asynchron, es wird auf sie gewartet.
     return new Promise((resolve) =>
@@ -177,10 +217,229 @@ const SCENARIOS = [
         }
     },
     {
-        name: 'Keyword-Treffer mit Desktop-Notification',
+        name: 'Nur neue Produkte werden geprueft: das Produkt wurde gerade hinzugefuegt',
         opts: {
             desktop: true,
             keywords: ['wichtig'],
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
+        name: 'Produkte, die schon in der Datenbank sind, werden nicht geprueft',
+        // Das Produkt liegt in der Datenbank und passt zum Keyword, es kam aber
+        // nicht gerade hinzu. Es darf keine Benachrichtigung geben - sonst
+        // wuerde die Suche nach jeder Scan-Seite erneut laufen und die Details
+        // erneut anfragen (Sperre durch Amazon).
+        expectNoNotification: true,
+        opts: {
+            desktop: true,
+            keywords: ['wichtig'],
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
+        name: 'Keyword mit zwei Woertern: beide Woerter muessen vorkommen (Reihenfolge egal)',
+        expectNotification: true,
+        opts: {
+            desktop: true,
+            keywords: ['toaster white'],
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'A nice toaster and a white cable',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'A nice toaster and a white cable',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
+        name: 'Keyword mit zwei Woertern: ein Wort fehlt',
+        expectNoNotification: true,
+        opts: {
+            desktop: true,
+            keywords: ['toaster white'],
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'A nice toaster with a cable',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'A nice toaster with a cable',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
+        name: 'Kategorie-Suche: die Kategorie des Produkts passt',
+        expectNotification: true,
+        expectText: 'Kategorie-Treffer: Lebensmittel & Getränke',
+        opts: {
+            desktop: true,
+            keywords: ['category="Lebensmittel & Getränke"'],
+            categoryText: 'Lebensmittel & Getränke',
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
+        name: 'Kategorie-Suche: die Kategorie des Produkts passt nicht',
+        expectNoNotification: true,
+        opts: {
+            desktop: true,
+            keywords: ['category="Lebensmittel & Getränke"'],
+            categoryText: 'Garten',
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
+        name: 'Keyword-Treffer mit Gotify: die Trefferzeilen stehen vor der Beschreibung',
+        expectNotification: true,
+        expectText: 'Keyword-Treffer: wichtig',
+        expectTextBefore: ['Keyword-Treffer: wichtig', 'Ein WICHTIGES Produkt'],
+        opts: {
+            gotify: true,
+            keywords: ['wichtig'],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
+        name: 'Keyword-Treffer mit Desktop-Notification',
+        expectText: 'Keyword-Treffer: wichtig',
+        opts: {
+            desktop: true,
+            keywords: ['wichtig'],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
             entries: [
                 {
                     id: 'p1',
@@ -208,6 +467,18 @@ const SCENARIOS = [
         opts: {
             autoFavorite: true,
             keywords: ['wichtig'],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img',
+                    link: '/dp/ASIN1'
+                }
+            ],
             entries: [
                 {
                     id: 'p1',
@@ -227,6 +498,17 @@ const SCENARIOS = [
         opts: {
             desktop: true,
             keywords: ['/wicht.*produkt/i'],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein wichtiges Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
             entries: [
                 {
                     id: 'p1',
@@ -245,6 +527,17 @@ const SCENARIOS = [
         opts: {
             desktop: true,
             keywords: ['wichtig'],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 1,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
             entries: [
                 {
                     id: 'p1',
@@ -274,8 +567,8 @@ const SCENARIOS = [
     let _totalDiffs = 0;
     for (const _scenario of SCENARIOS) {
         console.log(`\n########## ${_scenario.name} ##########`);
-        const _old = await run(oldCode, _scenario.opts);
-        const _new = await run(newCode, _scenario.opts);
+        const _old = await run(oldCode, _scenario.opts, 'updateNewProductsBtn');
+        const _new = await run(newCode, _scenario.opts, 'processNewItems');
 
         const _diffs = [];
         // Die Benachrichtigungen, das Badge und der Seitentitel muessen gleich
@@ -284,11 +577,39 @@ const SCENARIOS = [
         if (_old.title !== _new.title) _diffs.push('title');
 
         // Ohne Auto-Favorit werden keine Details geladen, mit Auto-Favorit
-        // dagegen schon.
+        // dagegen schon. Die Details duerfen nur bei einem Keyword-Treffer
+        // geladen werden.
         const _hasDetails = _new.log.some((_l) => _l.startsWith('requestProductDetails'));
-        const _expectDetails = !!_scenario.opts.autoFavorite && !!_scenario.opts.keywords?.length;
+        const _expectDetails = !!_scenario.opts.autoFavorite && !!_scenario.opts.newProducts?.length;
         if (_hasDetails !== _expectDetails) {
             _diffs.push(_expectDetails ? 'details missing' : 'unexpected details');
+        }
+
+        const _hasNotification = _new.log.some((_l) => _l.startsWith('desktop:') || _l.startsWith('gotify:'));
+
+        // Ein Produkt, das nicht gerade hinzugekommen ist, darf keine
+        // Keyword-Benachrichtigung ausloesen.
+        if (_scenario.expectNoNotification && _hasNotification) {
+            _diffs.push('unexpected notification');
+        }
+
+        // Ein Keyword-Treffer muss eine Benachrichtigung ausloesen.
+        if (_scenario.expectNotification && !_hasNotification) {
+            _diffs.push('notification missing');
+        }
+
+        // Der Text der Benachrichtigung nennt die Gruende des Treffers.
+        if (_scenario.expectText && !_new.log.some((_l) => _l.includes(_scenario.expectText))) {
+            _diffs.push(`text missing: ${_scenario.expectText}`);
+        }
+
+        // Die Trefferzeilen stehen vor der Beschreibung des Produkts.
+        if (_scenario.expectTextBefore) {
+            const _line = _new.log.find((_l) => _l.startsWith('gotify:') || _l.startsWith('desktop:')) || '';
+            const [_first, _second] = _scenario.expectTextBefore;
+            if (_line.indexOf(_first) < 0 || _line.indexOf(_first) > _line.indexOf(_second)) {
+                _diffs.push(`order wrong: "${_first}" before "${_second}"`);
+            }
         }
 
         if (_diffs.length === 0) {
