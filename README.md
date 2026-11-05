@@ -83,6 +83,10 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
+##### [2026-11-05] - Version 0.16.0.1
+
+* The development continues on the branch `dev-0.17.0`, the version was raised to prepare the next release.
+
 ##### [2026-11-05] - Version 0.16.0
 
 **Prices of the variations**
