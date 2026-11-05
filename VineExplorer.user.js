@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.56
+// @version      0.15.0.57
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -70,13 +70,13 @@
    initPagination, initSearchBar, initTileEventHandlers, initTileParsing, injectDarkMode,
    markAllCurrentDatabaseProductsAsSeen, markAllCurrentSiteProductsAsSeen,
    notifyAboutNewProducts, notifyAboutProductDrop, notifyAboutUnseenItems, parseTileData,
-   populateSettingsContainer, readFile, reloadPageWithSubpageTarget, requestProductDetails,
+   populateSettingsContainer, processNewItems, readFile, reloadPageWithSubpageTarget, requestProductDetails,
    rgbToHex, rgbaToHex, searchKeywordsInProducts, searchProducts, shareEventHandlerClick,
    isCategoryCacheComplete, isCategoryListLoadRunning, loadCategoryListInBackground, removeBackgroundScanScreen,
    shouldStopFastScan, showBackgroundScanScreen, sort_by_key,
    stickElementToTopScrollEVhandler, stopBackgroundScan, stopFastScan,
    stringToRegex, timeAgo, translate, updateBackgroundScanScreenText,
-   updateFavoritesBtn, updateNewProductsBtn, updateSettingsButtonStates, updateTileStyle */
+   updateFavoritesBtn, updateSettingsButtonStates, updateTileStyle */
 console.log(`Init Vine Voices Explorer ${AVE_VERSION}`);
 
 /**
@@ -334,7 +334,7 @@ ave_eventhandler.on('ave-database-changed', (event) => {
             `EVENT - database changed (${_writes} write${_writes === 1 ? '' : 's'}, ${_newProducts} new product${_newProducts === 1 ? '' : 's'})`
         );
     }
-    updateNewProductsBtn();
+    processNewItems();
     updateFavoritesBtn();
 
     if (showDbUpdateLogoTimeout) clearTimeout(showDbUpdateLogoTimeout);
@@ -5503,7 +5503,7 @@ async function matchesPriceConditions(entry, prod, currKey) {
     if (matchPriceConditions(entry.conditions, _prices)) return true;
 
     if (SETTINGS.DebugLevel > 1)
-        console.log(`updateNewProductsBtn(): The price conditions of "${currKey}" do not match the prices: ${JSON.stringify(_prices)}`);
+        console.log(`matchesPriceConditions(): The price conditions of "${currKey}" do not match the prices: ${JSON.stringify(_prices)}`);
     return false;
 }
 
@@ -5690,12 +5690,13 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
     const _descFull = _prod.description_full.toLowerCase();
 
     if (_prod.isNotified) {
-        if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Skipping Product which was already notified: ${_descFull}`);
+        if (SETTINGS.DebugLevel > 1)
+            console.log(`checkKeywordsForProduct(): Skipping the product which was already notified: ${_descFull}`);
         return false;
     }
 
     if (SETTINGS.DebugLevel > 1)
-        console.log(`updateNewProductsBtn(): Search Product Description: ${_descFull} for keys: `, _configKeyWords);
+        console.log(`checkKeywordsForProduct(): Search the description of the product: ${_descFull} for keys: `, _configKeyWords);
     const _configkeyWordsLength = _configKeyWords.length;
 
     for (let j = 0; j < _configkeyWordsLength; j++) {
@@ -5711,7 +5712,7 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
         }
 
         if (!matchesKeywordEntry(_entry, _descFull, categoryText)) {
-            if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): "${_currKey}" does not match the text or the category`);
+            if (SETTINGS.DebugLevel > 1) console.log(`checkKeywordsForProduct(): "${_currKey}" does not match the text or the category`);
             continue;
         }
 
@@ -5802,11 +5803,11 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
 function matchesKeyword(descFull, keyword) {
     const _regExp = stringToRegex(keyword);
     if (_regExp !== undefined) {
-        if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Search Product Description for Regular Expression: ${_regExp}`);
+        if (SETTINGS.DebugLevel > 1) console.log(`matchesKeyword(): Search the description for the regular expression: ${_regExp}`);
         return _regExp.test(descFull);
     }
 
-    if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Search Product Description for Keyword: ${keyword}`);
+    if (SETTINGS.DebugLevel > 1) console.log(`matchesKeyword(): Search the description for the keyword: ${keyword}`);
     // NOTE: A part in double quotes is a verbatim string and has to occur with its
     // spaces: "a b" does not match the text "a x b". Without the quotes every word
     // has to occur somewhere in the text, the order does not matter.
@@ -5905,7 +5906,7 @@ async function searchKeywordsInProducts(_prodArr) {
         return false;
     }
 
-    if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Inside IF`);
+    if (SETTINGS.DebugLevel > 1) console.log(`searchKeywordsInProducts(): Search the products for the keywords`);
 
     const _configKeyWords = SETTINGS.DesktopNotifikationKeywords;
     let _notifyed = false;
@@ -5941,8 +5942,8 @@ function notifyAboutNewProducts(_prodArrLength, _notifyed) {
 /**
  * Update the "new entries" badge and trigger threshold notifications.
  */
-function updateNewProductsBtn() {
-    if (SETTINGS.DebugLevel > 1) console.log('Called updateNewProductsBtn()');
+function processNewItems() {
+    if (SETTINGS.DebugLevel > 1) console.log('Called processNewItems()');
 
     // The search for the keywords is expensive, because every product is checked
     // against every keyword. It is only done if a product was really added and
@@ -5957,7 +5958,7 @@ function updateNewProductsBtn() {
         const _btnBadge = document.getElementById('ave-new-items-btn-badge');
         const _pageTitle = document.title.replace(/^[^|]*\|/, '').trim();
         const _prodArrLength = prodArr.length;
-        if (SETTINGS.DebugLevel > 1) console.log(`updateNewProductsBtn(): Got Database Response: ${_prodArrLength} New Items`);
+        if (SETTINGS.DebugLevel > 1) console.log(`processNewItems(): Got Database Response: ${_prodArrLength} New Items`);
 
         if (_prodArrLength > 0) {
             const _badgeCount = parseInt(_btnBadge && _btnBadge.innerText ? _btnBadge.innerText : '0', 10) || 0;
@@ -6820,7 +6821,7 @@ function init(hasTiles) {
     // The search for the keywords is also done on page load, because the products could
     // have been added by an other tab or before the page was closed.
     newProductWasAdded = true;
-    updateNewProductsBtn();
+    processNewItems();
     updateFavoritesBtn();
 
     initSearchBar();

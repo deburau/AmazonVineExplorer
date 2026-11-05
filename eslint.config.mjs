@@ -220,7 +220,7 @@ const mainFile = [
     'updateSettingsCategoryChildren',
     'updateBackgroundScanScreenText',
     'updateFavoritesBtn',
-    'updateNewProductsBtn',
+    'processNewItems',
     'updateSettingsButtonStates',
     'updateTileStyle',
     'stopBackgroundScan'

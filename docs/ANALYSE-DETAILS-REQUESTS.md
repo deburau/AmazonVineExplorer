@@ -24,7 +24,7 @@ vorher).
 Scan-Seite gefunden (alle BackGroundScanDelayPerPage + Zufall)
   → database.add(neues Produkt)
     → 250 ms entprellt: ave-new-product-added + ave-database-changed
-      → updateNewProductsBtn()
+      → processNewItems()   (in dieser Analyse noch updateNewProductsBtn() genannt)
         → searchKeywordsInProducts(database.getNewEntries())   ← ALLE isNew-Produkte
           → Keyword passt?
             → Keyword hat Preisbedingungen?

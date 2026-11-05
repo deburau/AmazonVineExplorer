@@ -83,7 +83,7 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
-##### [2026-11-04] - Version 0.15.0.56
+##### [2026-11-04] - Version 0.15.0.57
 
 **Prices of the variations**
 
@@ -117,6 +117,7 @@ only the products that were just added to the database are checked by the keywor
 * The fast scan has its own interval (the setting "Fast scan interval", default 5 minutes) and can be switched off - a fast scan that is running stops then.
 * The whole list of the categories (the main categories and their sub categories) is loaded in the background: after the start and then every 30 minutes it is checked if the list is missing or older than a day, and if it is, the pages are loaded one after the other with the pause of the background scan. A message in the lower left corner shows the progress, and the steps of the scan wait while the categories are loaded, so that no two pages of Amazon are loaded at the same time.
 * The settings menu is grouped with headings ("Amazon Vine", "Background scan", "Fast scan", "Turbo scan", the delays and the limits), so that every switch stands next to the values it controls. Every tooltip explains what the setting does.
+* The debug message `Called updateNewProductsBtn()` is `Called processNewItems()` now, because the function does more than updating the button: it also updates the badge and the title, shows the notifications and runs the search for the new products. The messages inside the search name the function they come from as well.
 * The message in the console about a change of the database (DebugLevel > 1) names the number of the records that were written and how many of them were new products, e.g. `EVENT - database changed (12 writes, 1 new product)`. The message is only written once per burst of write operations (the events are debounced by 250 milliseconds).
 * A new keyword stands at the beginning of the list of the keywords, so that it is right below the input field. The list is sorted alphabetically while the settings are built, so the keywords are in alphabetical order again after a reload.
 

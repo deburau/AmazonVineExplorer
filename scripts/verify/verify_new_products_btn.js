@@ -2,7 +2,8 @@
  * verify_new_products_btn.js
  *
  * Vergleicht die alte (git HEAD) und die neue Implementierung von
- * updateNewProductsBtn(). Beide werden in einem vm-Kontext mit gemockter
+ * processNewItems() (in der alten Version updateNewProductsBtn()). Beide werden in
+ * einem vm-Kontext mit gemockter
  * Datenbank und gemockten Benachrichtigungen ausgefuehrt.
  *
  * Verglichen werden:
@@ -17,9 +18,10 @@
 const vm = require('vm');
 const { prepareWithConstants, finish } = require('./lib/verify_helpers');
 
+// Die Funktion heisst in der neuen Version processNewItems().
 const OLD_NAMES = ['updateNewProductsBtn'];
 const NEW_NAMES = [
-    'updateNewProductsBtn',
+    'processNewItems',
     'notifyAboutUnseenItems',
     'addProductToKeywordSearch',
     'matchesKeyword',
@@ -64,10 +66,12 @@ const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
 const { old: oldCode, new: newCode } = prepareWithConstants('verify_new_products_btn.js', OLD_NAMES, NEW_NAMES, CONSTANT_NAMES);
 
 /**
- * Baut eine Sandbox und fuehrt updateNewProductsBtn() aus.
+ * Baut eine Sandbox und fuehrt processNewItems() (alte Version: updateNewProductsBtn())
+ * aus.
  * @param {object} opts Szenario-Optionen
+ * @param {string} entryPoint Der Name der Funktion, die ausgefuehrt wird
  */
-function run(code, opts) {
+function run(code, opts, entryPoint) {
     const log = [];
     const _store = {};
 
@@ -164,7 +168,7 @@ function run(code, opts) {
     const ctx = vm.createContext(sandbox);
     vm.runInContext(code, ctx, { filename: 'newproducts.js' });
 
-    sandbox.updateNewProductsBtn();
+    sandbox[entryPoint]();
 
     // Die Datenbank-Operationen sind asynchron, es wird auf sie gewartet.
     return new Promise((resolve) =>
@@ -563,8 +567,8 @@ const SCENARIOS = [
     let _totalDiffs = 0;
     for (const _scenario of SCENARIOS) {
         console.log(`\n########## ${_scenario.name} ##########`);
-        const _old = await run(oldCode, _scenario.opts);
-        const _new = await run(newCode, _scenario.opts);
+        const _old = await run(oldCode, _scenario.opts, 'updateNewProductsBtn');
+        const _new = await run(newCode, _scenario.opts, 'processNewItems');
 
         const _diffs = [];
         // Die Benachrichtigungen, das Badge und der Seitentitel muessen gleich

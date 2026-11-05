@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.56` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.57` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 18 erfolgreich (`npm run verify`) |
@@ -197,7 +197,7 @@ Release erledigt und wurde geschlossen.
   markiert** werden (`EnableAutoMarkFavorite`). Ohne Auto-Favorit gibt es keine
   Preisanfrage und die Benachrichtigung geht sofort raus.
 * `checkKeywordsForProduct()` und `searchKeywordsInProducts()` sind deshalb
-  **asynchron** geworden, `updateNewProductsBtn()` wartet auf die Suche.
+  **asynchron** geworden, `processNewItems()` wartet auf die Suche.
 * Das Produkt wird **vor** dem Laden der Preise gespeichert (`isNotified = 1`),
   damit es bei einem zweiten Suchlauf nicht doppelt benachrichtigt wird.
 
@@ -298,6 +298,15 @@ Release erledigt und wurde geschlossen.
   auf einer deutschen Tastatur AltGr-Kombinationen und waren in einer
   Remote-Sitzung nicht tippbar). Der Name einer Kategorie ist **ein** Wort
   (`category~kaffee tee` → Kategorie "kaffee" + Text "tee").
+* **Umbenennung** (0.15.0.57): `updateNewProductsBtn()` heißt jetzt
+  `processNewItems()` – der Name beschreibt die Arbeit an den neuen Einträgen
+  (Abzeichen, Seitentitel, Meldungen, Keyword-Suche), nicht den Knopf. Ebenso
+  tragen die Logzeilen wieder den Namen ihrer eigenen Funktion
+  (`matchesKeyword()`, `checkKeywordsForProduct()`, `matchesPriceConditions()`,
+  `searchKeywordsInProducts()`); vorher stand dort überall
+  `updateNewProductsBtn():`. Die Wächter `verify_new_products_btn.js` (führt je
+  Seite den passenden Namen aus) und `verify_init.js` (beide Namen schreiben
+  dasselbe Etikett) bleiben „identisch".
 * **Meldung des Datenbank-Events** (0.15.0.56): `DB_HANDLER.#fireDataChangedEvent()`
   zählt die Schreibvorgänge und die neuen Produkte des Entprellfensters (250 ms) und
   gibt sie als `detail` mit `ave-database-changed` mit (`ave_eventhandler.emit(name,
@@ -425,7 +434,7 @@ oft der Pfad lief.
 * **Umgesetzt (0.15.0.20):** Der Keyword-Match läuft nur noch für Produkte, die
   **gerade neu** in die Datenbank kamen (`addProductToKeywordSearch()` an den
   beiden `database.add()`-Stellen, `productsToCheckForKeywords` wird von
-  `updateNewProductsBtn()` an die Suche übergeben). Jedes Produkt wird also
+  `processNewItems()` an die Suche übergeben). Jedes Produkt wird also
   **einmal** geprüft – und da die Details nur nach einem Keyword-Match geholt
   werden, werden sie **höchstens einmal pro Produkt** angefragt.
   **Keine DB-Änderung nötig** (ein zwischenzeitlicher Merker im Produkt wurde
