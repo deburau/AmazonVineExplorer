@@ -1,41 +1,38 @@
 # Release 0.16.0 – Checkliste
 
-> **VORBEREITET am 2026-11-02.** Das Release 0.16.0 ist noch nicht
-> veröffentlicht. Die Entwicklung läuft auf `dev-0.16.0` mit der Version
-> `0.15.0.16`, `main` steht noch auf dem Release 0.15.0. Für die
-> Veröffentlichung wird die ausdrückliche Freigabe des Maintainers gebraucht
-> (siehe `AGENTS.md`).
+> **VERÖFFENTLICHT am 2026-11-05.** Die Entwicklung läuft danach auf dem Branch
+> `dev-0.17.0` mit der Version `0.16.0.1`.
 
-Diese Datei enthält den fertigen Stand des Release 0.16.0 und alles, was noch
-zu tun ist, wenn `main` gepusht werden soll. Sie liegt im Repository, damit
-der Rest auch nach einer Verdichtung des Chats nicht verloren geht.
+Diese Datei enthält den Stand des Release 0.16.0 und alles, was beim Veröffentlichen
+zu tun war. Sie liegt im Repository, damit der Ablauf auch nach einer Verdichtung des
+Chats nachvollziehbar bleibt.
 
 ## Stand
 
 | Punkt | Stand |
 |---|---|
-| Branch | `dev-0.16.0` |
-| Version im User-Script | `0.15.0.16` (wird beim Release auf `0.16.0` gesetzt) |
-| Release-Commit | **noch nicht erstellt** (`chore(release): prepare the version 0.16.0`) |
-| `main` | **noch nicht aktualisiert** (steht auf dem Release 0.15.0) |
-| Datenbank | Version 5 (die Version 4 aus dem Release 0.15.0 + 1) |
-| Changelog | ein Eintrag für die Patch-Versionen 0.15.0.x, er wird beim Release zum Eintrag für 0.16.0 |
+| Branch | `dev-0.16.0` (in `main` gemergt) |
+| Version im User-Script | `0.16.0` |
+| Release-Commit | `chore(release): prepare the version 0.16.0` auf `dev-0.16.0` |
+| `main` | aktualisiert (Merge-Commit `chore(release): merge the version 0.16.0`) |
+| Datenbank | Version 5 (die Version 4 aus dem Release 0.15.0 + die Preise der Varianten) |
+| Changelog | ein Eintrag für 0.16.0 (er war ein Eintrag für alle Patch-Versionen 0.15.0.x) |
 
 ## Inhalt des Releases
 
-* **Preise der Varianten**: Die Preise aller Varianten stehen in der Spalte
-  `data_estimated_tax_prices`, die Tiles zeigen den Bereich vom kleinsten bis
-  zum größten Preis. Die vorhandenen Preise bleiben beim Upgrade erhalten.
-* **Preisbedingungen in den Keywords**: Ein Keyword kann Bedingungen enthalten,
-  z. B. `toaster price>=10 price<20`. Die Preise werden erst geladen,
-  wenn das Keyword gematcht hat.
-* **Schnellere Preisdetails**: Die Wartezeit zwischen den Varianten-Requests
-  (`VariationRequestDelay`, Default 500 ms) und zwischen den Produkten der
-  Queue (`ProductDetailsRequestDelay`, Default 1500 ms) sind einstellbar.
-* **Benachrichtigung nach den Preisen**: Die Benachrichtigung bei einem
-  Keyword-Treffer kommt erst, wenn die Preise geladen sind.
-* **Fix**: Das Script startete nicht mit einer Datenbank, die mit einer
-  älteren Version von AVE angelegt wurde.
+Der Inhalt steht im Changelog-Eintrag `##### [2026-11-05] - Version 0.16.0` in
+`README.md` und in Kurzform in `docs/STAND.md`. Die wichtigsten Punkte:
+
+* Preise der Varianten (Spannen auf den Tiles, alle Preise in der Datenbank)
+* Bedingungen in den Keywords: Preise **und** Kategorien, gleiche Operatoren,
+  Abkürzungen der Feldnamen, verbatim-Strings in doppelten Anführungszeichen
+* Gruppen von Trefferzeilen in den Benachrichtigungen (Desktop und Gotify)
+* Die Suche mit denselben Bedingungen
+* Turbo-Scan, eigener Fast-Scan-Takt, Neustart-Button, gruppierte Einstellungen
+* Die Kategorienliste wird im Hintergrund geladen und gepflegt
+* **Warnung:** die Preisbedingungen können bei unspezifischen Keywords zu einer
+  Sperre des Kontos führen (siehe den Abschnitt „Too many requests can block your
+  account" in `README.md`)
 
 ## Schritt 1: Release-Commit auf dem Entwicklungsbranch
 

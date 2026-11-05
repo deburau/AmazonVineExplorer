@@ -83,7 +83,7 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
-##### [2026-11-04] - Version 0.15.0.57
+##### [2026-11-05] - Version 0.16.0
 
 **Prices of the variations**
 
