@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.52` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.53` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 18 erfolgreich (`npm run verify`) |
@@ -311,11 +311,15 @@ Release erledigt und wurde geschlossen.
   "wichtige" Logo (`vine_logo_important.png`, roter Ring) wird nicht mehr benutzt.
   **Die Bilder liegen fest auf `main`** (Raw-URL), darum wurden sie als reine
   Asset-Commits auch dorthin gepusht (`258b120`, danach `59cf8a3`).
-* **Gotify** kann das Symbol nicht pro Nachricht setzen (es hängt an der
-  Anwendung), darum steht die **kleine Fassung** des Ring-Bildes (64×64,
-  `…_small.png`) in der ersten Zeile der Nachricht neben dem Produktbild
-  (`aveMatchImageUrl(name, true)`). Markdown kann keine Bildgröße setzen,
-  deshalb eigene kleine Dateien.
+* **Gotify** kann das Symbol einer Nachricht nicht setzen (die offizielle Doku
+  `gotify/website/docs/msgextras.md` kennt nur `client::display.contentType`,
+  `client::notification.click.url` und `client::notification.bigImageUrl`; das
+  Symbol oben links ist das Bild der **Anwendung** und gilt für alle Nachrichten).
+  Darum steht die **kleine Fassung** des Ring-Bildes (64×64, `…_small.png`) in einer
+  **eigenen ersten Zeile** der Nachricht, also oben links über dem Produktbild
+  (`aveMatchImageUrl(name, true)`); vorher stand sie in der Zeile des Produktbilds
+  und landete dadurch rechts unten. Markdown kann keine Bildgröße setzen, deshalb
+  eigene kleine Dateien.
 * Die Benachrichtigungen (**Desktop und Gotify**) nennen den Grund des Treffers
   in **bis zu drei Zeilen**: `Keyword-Treffer: <keyword>`,
   `Preis-Treffer: <Preis des Produkts, bei Varianten die Spanne>` und

@@ -83,7 +83,7 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
-##### [2026-11-04] - Version 0.15.0.52
+##### [2026-11-04] - Version 0.15.0.53
 
 **Prices of the variations**
 
@@ -109,7 +109,8 @@ only the products that were just added to the database are checked by the keywor
 **Notifications**
 
 * The desktop notification and the message of Gotify name the reason for the match in up to three lines: `Keyword-Treffer: …`, `Preis-Treffer: …` and `Kategorie-Treffer: …` (one line per kind of a match).
-* The icon of the desktop notification shows at the first glance which kinds of a match happened: a ring with K (keyword) in the top left corner, with C (category) in the bottom left corner and with P (price) in the bottom right corner, single or in every combination. The message of Gotify shows the same icon as a small graphic in its first line.
+* The icon of the desktop notification shows at the first glance which kinds of a match happened: a ring with K (keyword) in the top left corner, with C (category) in the bottom left corner and with P (price) in the bottom right corner, single or in every combination.
+* The message of Gotify shows the same icon as a small graphic in its own line at the top left, above the image of the product. NOTE: Gotify can not set the icon of a single message (the icon of a notification is the image of the application), so the graphic stands in the message.
 
 **Scans and settings**
 

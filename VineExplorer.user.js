@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.15.0.52
+// @version      0.15.0.53
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -5800,19 +5800,21 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
             );
         }
         if (SETTINGS.GotifyUrl) {
-            // NOTE: The icon of the application can not be set per message in
-            // Gotify, so the kinds of the match are shown as a small image in the
-            // first line of the message. It is the small version of the icon,
-            // because markdown can not set the size of an image.
+            // NOTE: Gotify can not set the icon of a message (the icon of a
+            // notification is the image of the application), so the kinds of the
+            // match are shown as a small image in the first line of the message -
+            // on its own line, so that it stands at the top left and not behind the
+            // image of the product. It is the small version of the icon, because
+            // markdown can not set the size of an image.
             const _matchIcon = `![](${aveMatchImageUrl(_matchImageName, true)})`;
             if (_prod.link) {
                 gotifyNotification(
-                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link}) ${_matchIcon}  \n${_prod.description_full}  \n${_matchLines.join('  \n')}`,
+                    `${_matchIcon}  \n[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_prod.description_full}  \n${_matchLines.join('  \n')}`,
                     _prod
                 );
             } else {
                 gotifyNotification(
-                    `![](${fixProductImageUrl(_prod.data_img_url)}) ${_matchIcon}  \n${_prod.description_full}  \n${_matchLines.join('  \n')}`
+                    `${_matchIcon}  \n![](${fixProductImageUrl(_prod.data_img_url)})  \n${_prod.description_full}  \n${_matchLines.join('  \n')}`
                 );
             }
         }
