@@ -61,134 +61,71 @@ npm run verify            # compare the baseline with the current state
 The verification scripts are in `scripts/verify/`. See `AGENTS.md` for the
 details.
 
+## Too many requests can block your account
+
+Some features of AVE load the details of a product from Amazon, e.g. its price and the
+prices of its variations. Every single page is a request to Amazon, and Amazon blocks
+an account temporarily when too many requests are made in a short time. A blocked
+account does not only stop the price details, it also stops the other requests of the
+script, e.g. the pages of the scan.
+
+The conditions for a price are the dangerous part: a keyword with a price condition
+loads the price of **every** product whose text matches the keyword. An unspecific
+keyword like `black price>50` matches hundreds of products, so hundreds of pages are
+loaded one after the other. Please
+
+* use keywords that are as specific as possible - a keyword with several words only matches if all of them occur in the description, a regular expression works as well,
+* watch the messages in the console, the script logs every request as `AVE: Loading the details of ...`,
+* increase the pauses in the settings (`ProductDetailsRequestDelay` and `VariationRequestDelay`, see the tooltips) or remove the price conditions from the keywords if the console shows a long list.
+
+This is not a theoretical warning: a blocked account was the reason for the change that
+only the products that were just added to the database are checked by the keywords.
+
 ## Changelog Deburau
 
 ##### [2026-11-04] - Version 0.15.0.52
 
-* A product has exactly one category, so a condition is checked against a single name now: when the page shows the category as a path ("Lebensmittel & Getränke > Getränke, Kaffee & Tee"), the last name of it is the category of the product (the concrete one, not the main category). The comparison needs no minimum or maximum any more, the operators work exactly like the ones of a price.
+**Prices of the variations**
 
-##### [2026-11-04] - Version 0.15.0.51
+* The tiles of products with variations show the range from the lowest to the highest price, the currency is shown once at the end of the range. Products without a variation show their price, products without a known price show none.
+* The prices of all variations are stored in the database. A product of an older version keeps its price, it is not requested from Amazon again.
+* The pause between two products of the queue of the price details and the pause between the requests for the variations of one product are settings (`ProductDetailsRequestDelay`, default 1500 milliseconds, and `VariationRequestDelay`, default 500 milliseconds). Both are random between 50 and 150 percent of the value, so that the requests do not have a fixed rhythm.
 
-* The conditions of a keyword use the same operators for a category as for a price now: `=`, `==` (the name of the category is exactly the text), `!=`, `<>` (it is not), `<`, `<=` (the name stands before the text in the alphabet) and `>`, `>=` (it stands behind it). Examples: `category="kaffee tee"`, `category!=garten`, `category<kaffee`. The category of a product is a chain of names (e.g. "Lebensmittel & Getränke > Kaffee"), every name of the chain is checked.
-* The operator `~` of the earlier versions is not understood any more: a keyword like `category~kaffee` becomes a normal text that matches nothing. Such keywords have to be rewritten (e.g. to `category=kaffee`).
-* A condition for a category is only completed with the whole name while it is stored for the operators `=`, `==`, `!=` and `<>` - behind `<` or `>` the text is a boundary of the alphabet and not the name of a category.
+**Conditions in the keywords**
 
-##### [2026-11-04] - Version 0.15.0.50
+* A keyword can contain conditions, e.g. `toaster price>=10 price<20` or `kaffee category="Kaffee Tee"`. A condition is written without brackets and is a word of its own, the spaces around the operator are optional.
+* The operators are the same for a price and for a category: `=` and `==` (equal), `!=` and `<>` (not equal), `<` and `<=` (lower or before), `>` and `>=` (higher or behind). A price can use the dot or the comma as the decimal separator.
+* A price condition is checked against the price and the prices of the variations of a product. A condition for a category is checked against the name of the category with the alphabet - a product has exactly one category, and when the page shows a path ("Lebensmittel & Getränke > Kaffee"), the last name of it is the category of the product.
+* The names of the fields can be shortened to every beginning: `p`, `pr`, `pri`, `pric` or `price` and `c`, `ca`, `cat` and so on up to `category`. The whole word is stored, so the list of the keywords always shows it.
+* A part in double quotes is a verbatim string: `"kaffee bohnen"` matches only if that text stands in the description with its spaces (`"a b"` does not match the text "a x b"). Without the quotes all words of the keyword have to occur somewhere in the description, the order and the distance do not matter.
+* The price of a product is only loaded after the keyword matched its text, and the notification is sent after the prices were loaded, so that the price is known when it arrives. A keyword that only has price conditions never matches.
+* The category of a product is read from the page it was found on, it is not stored in the database. A product of the unfiltered list gets its category when a scan of that category sees it, it is checked once more then.
+* **Warning:** a keyword with a price condition loads the price of **every** product whose text matches it. Please read "Too many requests can block your account" above - an unspecific keyword can block the account.
 
-* The pages of the list of the categories are loaded with the same pause as the pages of the background scan (`getScanDelay()`, by default 6 seconds plus up to 6 seconds of randomness) - the loading used its own pause of 1.5 seconds before. The loading therefore looks like a normal scan for Amazon, and the setting for the pause of the scan is used as well.
+**The search**
 
-##### [2026-11-04] - Version 0.15.0.49
+* The search bar searches the products of the database with the same conditions as the keywords, e.g. `kaffee price>=10` or `price<5` (a price can be searched without a text). Only the products whose price is known are part of the result. A condition for a category can not be used in the search, because the category of a product is not stored in the database.
 
-* The whole list of the categories (the main categories and their sub categories) is loaded in the background now. After the start of the script and then every 30 minutes it is checked if the stored list is missing or older than a day; in that case the pages are loaded one after the other with a pause of about 1.5 seconds. Every list is stored at once, so an interruption (closing the tab) does not lose what was loaded - a sub category that is known is used for the conditions of the keywords right away.
-* While the categories are loaded, a message stands in the lower left corner of the page ("Kategorien werden geladen: 3 / 30"). The steps of the scan wait during that time, so that no two pages of Amazon are loaded at the same time - the list of the categories has priority.
+**Notifications**
 
-##### [2026-11-04] - Version 0.15.0.48
+* The desktop notification and the message of Gotify name the reason for the match in up to three lines: `Keyword-Treffer: …`, `Preis-Treffer: …` and `Kategorie-Treffer: …` (one line per kind of a match).
+* The icon of the desktop notification shows at the first glance which kinds of a match happened: a ring with K (keyword) in the top left corner, with C (category) in the bottom left corner and with P (price) in the bottom right corner, single or in every combination. The message of Gotify shows the same icon as a small graphic in its first line.
 
-* A condition for a category is stored with the whole name of the category now: `category~lebens` becomes `category~"Lebensmittel & Getränke"`, so that the list of the keywords shows which category is meant (the name is taken from the list of the categories, the first name that contains the typed text wins, an unknown text stays as it is). The list of the categories is only loaded if the input really has a condition for a category, so a plain keyword does not cause a request.
+**Scans and settings**
 
-##### [2026-11-04] - Version 0.15.0.47
+* New: the turbo scan. It loads the first page of the categories that are selected in the settings again and again (default every 30 seconds), so that a new product of one of those categories is found within a minute. A main category selects all of its sub categories, so that no product is loaded twice. The turbo scan runs in the same loop as the background scan, one page at a time.
+* New: a button in the settings starts the background scan from its beginning. While the background scan is switched off the button is greyed out.
+* The fast scan has its own interval (the setting "Fast scan interval", default 5 minutes) and can be switched off - a fast scan that is running stops then.
+* The whole list of the categories (the main categories and their sub categories) is loaded in the background: after the start and then every 30 minutes it is checked if the list is missing or older than a day, and if it is, the pages are loaded one after the other with the pause of the background scan. A message in the lower left corner shows the progress, and the steps of the scan wait while the categories are loaded, so that no two pages of Amazon are loaded at the same time.
+* The settings menu is grouped with headings ("Amazon Vine", "Background scan", "Fast scan", "Turbo scan", the delays and the limits), so that every switch stands next to the values it controls. Every tooltip explains what the setting does.
+* A new keyword stands at the beginning of the list of the keywords, so that it is right below the input field. The list is sorted alphabetically while the settings are built, so the keywords are in alphabetical order again after a reload.
 
-* A part of a keyword in double quotes is a verbatim string: `"kaffee bohnen"` matches only if that text stands in the description as it is, spaces included. Without the quotes the words are matched as before, so `a b` matches the text "a x b" and `"a b"` does not. The same works for the name of a category: `category~"kaffee tee"` checks the whole name with its spaces, and in the search bar both forms work as well.
+**Fixes**
 
-##### [2026-11-04] - Version 0.15.0.46
-
-* Every shortening of the field names of a condition works now, not only `p`, `pr`, `c` and `cat`: `p`, `pr`, `pri`, `pric`, `price` and `c`, `ca`, `cat`, `cate`, `categ`, `catego`, `categor`, `category`. The whole word is stored in every case, the sort order of the list does not change and a word like `preis>=10` stays a normal text (only directly in front of an operator counts).
-* A word that names a field, but does not fit the operator (e.g. `ca>=10` or `pri~x`), makes the keyword invalid as before - it does not match products silently.
-
-##### [2026-11-04] - Version 0.15.0.45
-
-* The conditions of a keyword can be shortened: `p` or `pr` instead of `price` and `c` or `cat` instead of `category`, e.g. `kaffee p>=10 c~getränke`. The setting stores the whole word in every case, so the list of the keywords shows `price>=10` and `category~getränke`. The abbreviations work in the search bar as well.
-
-##### [2026-11-04] - Version 0.15.0.44
-
-* A new keyword stands at the beginning of the list of the keywords now, so that it is right below the input field - before, it was added at the end, where it was only visible after scrolling through a long list. The list is still sorted alphabetically while the settings are built, so the keywords are in alphabetical order again after a reload.
-
-##### [2026-11-04] - Version 0.15.0.43
-
-* The message of Gotify shows the kind of the match as a small graphic as well: the ring icon (K/C/P) stands in the first line next to the image of the product. Gotify sets the icon of a notification in the application, not per message, so a small image inside the message is used - a 64 x 64 version of the icon, because markdown can not set the size of an image.
-
-##### [2026-11-04] - Version 0.15.0.42
-
-* New: the icon of the desktop notification shows at the first glance, which kind of a match the notification has - a ring with a **K** (keyword) in the top left corner, with a **C** (category) in the bottom left corner and with a **P** (price) in the bottom right corner, single or in every combination. The rings are transparent, so the logo stays visible through them.
-* The icons are loaded from the repository like the logo. A notification without a match ("new entries", "product drop") keeps the plain logo, so the icon of the older "important" logo with the red exclamation mark is not used any more.
-
-##### [2026-11-03] - Version 0.15.0.41
-
-* The desktop notification and the message of Gotify name the reason for the hit in up to three lines now, instead of the single "Treffer:" line: `Keyword-Treffer: <keyword>`, `Preis-Treffer: <price>` and `Kategorie-Treffer: <name of the category>`. A line is only shown if that kind of a match happened, and the keyword is shown even if the entry has conditions as well.
-* A price that is not in Euro no longer gets a space behind it in the price of a tile (`12.50 ` became `12.50`), it was not visible in the text.
-
-##### [2026-11-03] - Version 0.15.0.40
-
-* The conditions of the keywords and of the search are written **without square brackets** now: `price>=10`, `price<5`, `price=12.50`, `category~getränke`. The spaces around the operator are optional, so `price >= 10` works as well. The brackets are hard to type in a remote session (on a German keyboard they are on AltGr) and they are not needed.
-* A condition has to be a word of its own. `[price=0]` is a normal text now and searches for the text "[price=0]" - until now the brackets were part of the syntax. A keyword that names a field without a readable condition, e.g. `price > abc`, does not match (as before).
-* The name of a category is a single word: `category~kaffee` searches for the category "kaffee", `category~kaffee tee` searches for the category "kaffee" and for the text "tee".
-
-##### [2026-11-03] - Version 0.15.0.39
-
-* When the turbo scan loads a sub category, the name of the sub category is checked (together with the name of its main category) by a search for a category. `[category~kaffee]` therefore matches the products of the sub category "Getränke, Kaffee & Tee" of the category "Lebensmittel & Getränke".
-
-##### [2026-11-03] - Version 0.15.0.38
-
-* New: the keywords of the notification can search for the category of a product: `[category~getränke]` matches every product of a category whose name contains "getränke". At least one keyword or one category is needed, so a price can be searched together with a category: `[price=0] [category~getränke]` notifies about all products with the price 0 of the category "Lebensmittel & Getränke".
-* The category of a product is read from the page it was found on (the side bar shows the selected category), it is not stored in the database. Products of the background scan are found on the unfiltered list, so they have no category until a scan of their category (e.g. by the turbo scan) sees them - then they are checked once more, so that a search for the category can match them after all.
-
-##### [2026-11-03] - Version 0.15.0.37
-
-* New: the search for the products of the database can search for a price now, with the same conditions as the keywords: `[price >= 10]`, `[price < 5]`, `[price = 12.50]` and so on. A condition can be combined with a text (`kaffee [price >= 10]`) or used alone (`[price < 5]`) - a price can be searched without a keyword. Only the products whose price is known are searched, all other products are not part of the result.
-
-##### [2026-11-03] - Version 0.15.0.36
-
-* The scan settings are grouped in the settings menu now: the switch "Enable Background Scan" and the button that starts a new scan are above the delay of the background scan, and every scan has its own heading ("Background scan", "Fast scan").
-
-##### [2026-11-03] - Version 0.15.0.35
-
-* New: the fast scan can be switched off now (the setting "Enable fast scan", it is above its interval). A fast scan that is running when it is switched off stops.
-* The settings have a heading above the delays and the limits now, so that the settings after the turbo scan do not look like a part of it.
-
-##### [2026-11-03] - Version 0.15.0.32
-
-* New: the turbo scan. It loads the first page of the categories that are selected in the settings again and again (default: every 30 seconds), so that a new product of one of those categories is found within a minute. The categories are selected with checkboxes in the settings; a main category selects all of its sub categories, so that the products are not loaded twice. The products are stored and the notifications work like they do for the products of the background scan.
-* The turbo scan runs in the same loop as the background scan, one page at a time, so that the requests are not made in parallel. The loop runs as well when the background scan is switched off and only the turbo scan is switched on.
-
-##### [2026-11-03] - Version 0.15.0.26
-
-* New: the settings have a button that starts the background scan from its beginning (it is above the keywords). A scan that is running is set back to the first page, a scan that waits for the next round is started again. The button is greyed out and without function while the background scan is switched off.
-
-##### [2026-11-03] - Version 0.15.0.24
-
-* The tooltip of the keyword setting warns about unspecific keywords: a keyword with a price condition loads the price of every match, so an unspecific keyword like `black [price>50]` can get the account blocked by Amazon.
-
-##### [2026-11-03] - Version 0.15.0.23
-
-* **Warning:** a keyword with a price condition loads the price of **every** product whose text matches the keyword. If the keyword is not specific, that are a lot of products and therefore a lot of requests to Amazon, and Amazon blocks the account temporarily if too many requests are made in a short time. An example is `black [price>50]`: the word "black" occurs in a very large number of product titles, so the price of hundreds of products is requested one after the other. A blocked account does not only stop the price details, it also affects the other requests of the script, e.g. the pages of the scan. Use a keyword that is as specific as possible - a keyword with several words only matches if all of them occur in the description (a regular expression works as well) - and watch the messages in the console, the script logs every request as `AVE: Loading the details of ...`.
-* Fix: if the database was deleted with the button in the settings while the scan was running, the state of the scan (the stage and the page) was kept. The scan therefore continued at the page where the deleted database stopped, e.g. at page 67, instead of starting at the beginning. The state of AVE is cleared now, so it starts like after a long time. The delete does not hang anymore while the scan is running either.
-
-##### [2026-11-03] - Version 0.15.0.22
-
-* New: a keyword with several words matches if all of the words occur in the description of a product, the order of the words and the distance between them do not matter. Before, the words had to stand next to each other in the given order, so `toaster white` did not find "a nice toaster and a white cable".
-
-##### [2026-11-03] - Version 0.15.0.21
-
-* Fix: a keyword whose price condition stands between two words, e.g. `toaster [price > 100] white`, looked for a text with extra spaces in it (`toaster   white`) and therefore never matched. The spaces around the condition are removed together with it now.
-
-##### [2026-11-03] - Version 0.15.0.20
-
-* Fix: the search for the keywords only checks the products that were just added to the database now. Before, it checked all new products after every scanned page, so the price details of a product were requested again and again, which made Amazon block the account for a while. Every product is checked once, so its details are requested at most once.
-
-##### [2026-11-03] - Version 0.15.0.18
-
-* New: the fast scan has its own interval now, it is the new setting "Fast scan interval" (default 5 minutes). Before, the interval was derived from the delay per page of the background scan: the fast scan waited 15 pages before it started again. A shorter delay per page therefore made it run much more often, about every 40 seconds with a delay of 2000/1000 milliseconds.
-
-##### [2026-11-02] - Version 0.15.0.16
-
-* New: the tiles of the products with variations show the range from the lowest to the highest price of the variations, the currency is shown once at the end of the range. Products without variations show their price as before, products without a known price show no price as before.
-* New: the prices of all variations are stored in the database. The products of an older version keep their prices, they do not have to be requested from Amazon again.
-* New: the delay between the requests for the variations of a product is the setting `VariationRequestDelay` (default 500 milliseconds). The real delay is random between 50 percent and 150 percent of the value, so that the requests are not sent in a fixed rhythm. The setting is in the settings menu with the other numeric values.
-* New: the pause between two products of the queue of the price details is the setting `ProductDetailsRequestDelay` (default 1500 milliseconds). The real pause is random between 50 percent and 150 percent of the value. It is not the delay of the background scan, that one is set with the settings "Background Scan Min. Delay per Page" and "Background Scan Randomness per Page". A low value can lead to a temporary block of the account by Amazon, so the value can be increased if that happens.
-* New: the keywords of the notification can contain price conditions, e.g. `toaster [price >= 10] [price < 20]`. The product has to match the keyword and the price conditions, a keyword that only has price conditions never matches. The operators are `=` and `==` (one of the prices is equal), `!=` and `<>` (none of the prices is equal), `<` and `<=` (the lowest price is lower), `>` and `>=` (the highest price is higher). The price can use the dot or the comma as the decimal separator, so that it does not depend on the language of the user. A thousand separator is not allowed, the input is normalized if possible.
-* The prices for the price conditions are only loaded, after the keyword of the configuration matched the description of the product. They are loaded independently of the setting `EnableDetailsOnFavorite`, because the conditions can not be checked without the prices. If the price conditions do not match, the product is not notified and not marked as favorite, so that it is checked again at the next scan.
-* The notification of a keyword match is sent after the prices of the product were loaded, so that the price is known, when the notification arrives.
-* Fix: the script did not start, if the database was created with an older version of AVE. The check for duplicated ASINs used a part of the database that does not exist while the database is upgraded.
+* The script did not start with a database that was created by an older version of AVE.
+* If the database was deleted with the button in the settings while the scan was running, the scan continued at the page where the deleted database stopped, e.g. at page 67. The state of AVE is cleared now, so that it starts at the beginning, and the delete does not hang while the scan is running either.
+* A keyword with several words matches if all of the words occur in the description, the order and the distance do not matter. Before, the words had to stand next to each other in the given order, so `toaster white` did not find "a nice toaster and a white cable".
+* The search for the keywords only checks the products that were just added to the database. Before, it checked all new products after every scanned page, so the details of a product were requested again and again - that could block the account for a while.
 
 ##### [2026-11-01] - Version 0.15.0
 
