@@ -388,6 +388,38 @@ const SCENARIOS = [
         }
     },
     {
+        name: 'Keyword-Treffer mit Gotify: die Trefferzeilen stehen vor der Beschreibung',
+        expectNotification: true,
+        expectText: 'Keyword-Treffer: wichtig',
+        expectTextBefore: ['Keyword-Treffer: wichtig', 'Ein WICHTIGES Produkt'],
+        opts: {
+            gotify: true,
+            keywords: ['wichtig'],
+            newProducts: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ],
+            entries: [
+                {
+                    id: 'p1',
+                    description_full: 'Ein WICHTIGES Produkt',
+                    isNew: 1,
+                    isFav: 0,
+                    isNotified: 0,
+                    data_asin: 'ASIN1',
+                    data_img_url: 'img'
+                }
+            ]
+        }
+    },
+    {
         name: 'Keyword-Treffer mit Desktop-Notification',
         expectText: 'Keyword-Treffer: wichtig',
         opts: {
@@ -565,6 +597,15 @@ const SCENARIOS = [
         // Der Text der Benachrichtigung nennt die Gruende des Treffers.
         if (_scenario.expectText && !_new.log.some((_l) => _l.includes(_scenario.expectText))) {
             _diffs.push(`text missing: ${_scenario.expectText}`);
+        }
+
+        // Die Trefferzeilen stehen vor der Beschreibung des Produkts.
+        if (_scenario.expectTextBefore) {
+            const _line = _new.log.find((_l) => _l.startsWith('gotify:') || _l.startsWith('desktop:')) || '';
+            const [_first, _second] = _scenario.expectTextBefore;
+            if (_line.indexOf(_first) < 0 || _line.indexOf(_first) > _line.indexOf(_second)) {
+                _diffs.push(`order wrong: "${_first}" before "${_second}"`);
+            }
         }
 
         if (_diffs.length === 0) {

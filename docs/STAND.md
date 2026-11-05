@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.54` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.55` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 18 erfolgreich (`npm run verify`) |
@@ -299,7 +299,9 @@ Release erledigt und wurde geschlossen.
   Remote-Sitzung nicht tippbar). Der Name einer Kategorie ist **ein** Wort
   (`category~kaffee tee` → Kategorie "kaffee" + Text "tee").
 * Die Benachrichtigungen (**Desktop und Gotify**) nennen den Grund des Treffers
-  in **bis zu drei Zeilen**: `Keyword-Treffer: <keyword>`,
+  in **bis zu drei Zeilen vor der Beschreibung des Produkts** (0.15.0.55; in der
+  Gotify-Nachricht stehen sie damit an derselben Stelle wie in der
+  Desktop-Benachrichtigung): `Keyword-Treffer: <keyword>`,
   `Preis-Treffer: <Preis des Produkts, bei Varianten die Spanne>` und
   `Kategorie-Treffer: <Name der Kategorie>`. Eine Zeile nur, wenn es die Art des
   Treffers gab. Gebildet von `formatMatchLines()` (i18n `notifications`:

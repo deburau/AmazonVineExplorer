@@ -83,7 +83,7 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
-##### [2026-11-04] - Version 0.15.0.54
+##### [2026-11-04] - Version 0.15.0.55
 
 **Prices of the variations**
 
@@ -108,7 +108,7 @@ only the products that were just added to the database are checked by the keywor
 
 **Notifications**
 
-* The desktop notification and the message of Gotify name the reason for the match in up to three lines: `Keyword-Treffer: …`, `Preis-Treffer: …` and `Kategorie-Treffer: …` (one line per kind of a match).
+* The desktop notification and the message of Gotify name the reason for the match in up to three lines above the description of the product: `Keyword-Treffer: …`, `Preis-Treffer: …` and `Kategorie-Treffer: …` (one line per kind of a match).
 
 **Scans and settings**
 
