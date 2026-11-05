@@ -14,7 +14,7 @@ Chats nachvollziehbar bleibt.
 | Branch | `dev-0.16.0` (in `main` gemergt) |
 | Version im User-Script | `0.16.0` |
 | Release-Commit | `chore(release): prepare the version 0.16.0` auf `dev-0.16.0` |
-| `main` | aktualisiert (Merge-Commit `chore(release): merge the version 0.16.0`) |
+| `main` | aktualisiert (Merge-Commit `ff19eaa`, `Merge branch 'dev-0.16.0' into main`) |
 | Datenbank | Version 5 (die Version 4 aus dem Release 0.15.0 + die Preise der Varianten) |
 | Changelog | ein Eintrag für 0.16.0 (er war ein Eintrag für alle Patch-Versionen 0.15.0.x) |
 

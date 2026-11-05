@@ -10,7 +10,7 @@ reicht ein `git clone` – der Stand ist danach identisch.
 ```bash
 git clone https://github.com/deburau/AmazonVineExplorer.git
 cd AmazonVineExplorer
-git checkout dev-0.16.0          # der Arbeits-Branch
+git checkout dev-0.17.0          # der Arbeits-Branch
 npm install                       # nur für ESLint nötig (node_modules ist ignoriert)
 ```
 
@@ -18,7 +18,7 @@ Kontrolle:
 
 ```bash
 git log --oneline -1              # der letzte Commit des Branches
-grep "@version" VineExplorer.user.js   # erwartet: 0.15.0
+grep "@version" VineExplorer.user.js   # erwartet: 0.16.0.1
 npx eslint .                      # erwartet: keine Ausgabe
 ```
 
@@ -60,13 +60,14 @@ Beim ersten Push nach dem Wechsel fragt Git nach Benutzername und Passwort:
 
 | Branch | Zweck | Push erlaubt? |
 |---|---|---|
-| `dev-0.16.0` | aktuelle Entwicklung | **ja**, ohne Nachfrage |
+| `dev-0.17.0` | aktuelle Entwicklung | **ja**, ohne Nachfrage |
+| `dev-0.16.0` | Entwicklungsstand von Release 0.16.0 | nach Absprache |
 | `dev-0.15.0` | Entwicklungsstand von Release 0.15.0 | nach Absprache |
 | `main` | veröffentlichte Version für die Nutzer | **nur auf ausdrückliche Anforderung** |
 | `dev-0.11.x` | alte Entwicklungsstände | nach Absprache |
 
-`main` ist auf `75bb04b` und **darf nicht** angefasst werden, solange das nicht
-ausdrücklich vereinbart wurde.
+`main` ist auf `ff19eaa` (Release 0.16.0) und **darf nicht** angefasst werden,
+solange das nicht ausdrücklich vereinbart wurde.
 
 ---
 
@@ -173,7 +174,7 @@ Das Userscript wird **nicht** aus dem Repo installiert, sondern aus dem Raw-Link
 Branches, in dem entwickelt wird:
 
 ```
-https://raw.githubusercontent.com/deburau/AmazonVineExplorer/dev-0.16.0/VineExplorer.user.js
+https://raw.githubusercontent.com/deburau/AmazonVineExplorer/dev-0.17.0/VineExplorer.user.js
 ```
 
 > Der `@updateURL` im Script zeigt bewusst auf `main`. Das Script aktualisiert sich
@@ -201,9 +202,9 @@ füllt sie dann mit ~36 Produkten der ersten Seite).
 
 ## 5. Empfohlene Reihenfolge auf dem neuen System
 
-1. `git clone` + `git checkout dev-0.16.0` + `npm install`
+1. `git clone` + `git checkout dev-0.17.0` + `npm install`
 2. `npx eslint .` → muss ohne Ausgabe durchlaufen
-3. `git log --oneline -1` → `23cddfd`
+3. `git log --oneline -1` → der letzte Commit des Branches
 4. pi installieren + Modell/Key konfigurieren
 5. (optional) `~/.pi/agent/sessions/` kopieren, um den Chat fortzusetzen
 6. Browser + Tampermonkey + Script aus dem Dev-Branch installieren
@@ -311,8 +312,8 @@ bleiben davon unberührt, weil `exclude` nur unversionierte Dateien betrifft.
 
 | Punkt | Stand |
 |---|---|
-| Branch | `dev-0.16.0` |
-| Version | `0.15.0` |
-| `main` | enthält den Stand von `dev-0.15.0` (Release 0.15.0) |
+| Branch | `dev-0.17.0` |
+| Version | `0.16.0.1` |
+| `main` | enthält das Release 0.16.0 (Merge-Commit `ff19eaa`) |
 | Arbeitsverzeichnis | sauber, keine offenen Änderungen |
 | Tests | manuell (Browser) für das Verhalten, `npm run verify` für die Refactorings |
