@@ -124,8 +124,6 @@ const mainFile = [
     'hasSelectedSubCategory',
     'getCategoryId',
     'getCategoryTextById',
-    'getMatchImageName',
-    'aveMatchImageUrl',
     'aveExpandCategoryNames',
     'aveExpandKeywordAbbreviations',
     'aveGetCategoryNames',

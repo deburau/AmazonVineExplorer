@@ -21,9 +21,6 @@
  *   - die Spanne bei den Preisen der Varianten
  *   - eine andere Waehrung, ein unbekannter Preis
  *   - eine Kategoriebedingung ohne bekannte Kategorie (keine Zeile)
- *   - der Name des Symbols zu den Zeilen (getMatchImageName()), und dass die
- *     Bilddatei dazu im Verzeichnis images/ liegt - in der grossen Fassung und in
- *     der kleinen Fassung fuer die Nachricht von Gotify (aveMatchImageUrl())
  *
  * Das Skript prueft das aktuelle Verhalten gegen erwartete Werte. Es vergleicht
  * nicht eine alte mit einer neuen Implementierung, weil die Zeilen der
@@ -52,13 +49,9 @@ function readSource(name) {
 const mainSrc = readSource('VineExplorer.user.js');
 
 // Die Funktion, die die Zeilen bildet, und ihre Helfer.
-const CODE = [
-    extractBody(mainSrc, 'getTaxPrices'),
-    extractBody(mainSrc, 'formatTaxPrize'),
-    extractBody(mainSrc, 'formatMatchLines'),
-    extractBody(mainSrc, 'getMatchImageName'),
-    extractBody(mainSrc, 'aveMatchImageUrl')
-].join('\n\n');
+const CODE = [extractBody(mainSrc, 'getTaxPrices'), extractBody(mainSrc, 'formatTaxPrize'), extractBody(mainSrc, 'formatMatchLines')].join(
+    '\n\n'
+);
 
 // Die Preise werden mit der Sprache des Systems formatiert, darum wird die
 // Erwartung genauso berechnet wie im Script selbst.
@@ -92,33 +85,6 @@ function matchLines(entry, prod, categoryText = '') {
     const _ctx = vm.createContext(sandbox);
     vm.runInContext(CODE, _ctx, { filename: 'match_lines.js' });
     return vm.runInContext(`formatMatchLines(${JSON.stringify(entry)}, ${JSON.stringify(prod)}, ${JSON.stringify(categoryText)})`, _ctx);
-}
-
-/**
- * Ruft getMatchImageName() in einer Sandbox aus.
- * @param {object} entry Das geparste Keyword
- * @returns {string} Der Name des Symbols
- */
-function matchImageName(entry) {
-    const sandbox = { console: { log: () => {}, warn: () => {}, error: () => {} }, Array, Object, JSON, String };
-    sandbox.globalThis = sandbox;
-    const _ctx = vm.createContext(sandbox);
-    vm.runInContext(CODE, _ctx, { filename: 'match_lines.js' });
-    return vm.runInContext(`getMatchImageName(${JSON.stringify(entry)})`, _ctx);
-}
-
-/**
- * Ruft aveMatchImageUrl() in einer Sandbox aus.
- * @param {string} name Der Name des Symbols
- * @param {boolean} small true fuer die kleine Fassung
- * @returns {string} Die URL
- */
-function matchImageUrl(name, small) {
-    const sandbox = { console: { log: () => {}, warn: () => {}, error: () => {} }, Array, Object, JSON, String };
-    sandbox.globalThis = sandbox;
-    const _ctx = vm.createContext(sandbox);
-    vm.runInContext(CODE, _ctx, { filename: 'match_lines.js' });
-    return vm.runInContext(`aveMatchImageUrl(${JSON.stringify(name)}, ${small ? 'true' : 'false'})`, _ctx);
 }
 
 /**
@@ -224,48 +190,12 @@ function check(testCase) {
     console.log(`         erwartet: ${JSON.stringify(testCase.expected)}  bekommen: ${JSON.stringify(_lines)}`);
 }
 
-/**
- * Prueft den Namen des Symbols und ob die Bilddatei dazu im Repository liegt.
- * @param {object} entry Das geparste Keyword
- * @param {string} expected Der erwartete Dateiname ohne Endung
- */
-function checkImageName(entry, expected) {
-    _checks++;
-    const _name = matchImageName(entry);
-    const _big = path.join(REPO_ROOT, 'images', `${_name}.png`);
-    const _small = path.join(REPO_ROOT, 'images', `${_name}_small.png`);
-    const _url = matchImageUrl(_name, true);
-    const _problems = [];
-    if (_name !== expected) _problems.push(`erwartet "${expected}", bekommen "${_name}"`);
-    if (!fs.existsSync(_big)) _problems.push('grosse Bilddatei fehlt');
-    if (!fs.existsSync(_small)) _problems.push('kleine Bilddatei fehlt');
-    if (!_url.endsWith(`/main/images/${expected}_small.png`)) _problems.push(`URL falsch: ${_url}`);
-    if (_problems.length > 0) {
-        _errors++;
-        console.log(`  FAIL Symbol ${expected}: ${_problems.join(', ')}`);
-        return;
-    }
-    console.log(`  OK   Symbol ${_name}.png und ${_name}_small.png (Dateien und URL vorhanden)`);
-}
-
 console.log('Zeilen der Benachrichtigung pruefen (Keyword, Preis, Kategorie)');
 console.log('='.repeat(70));
 
 for (const _testCase of CASES) {
     check(_testCase);
 }
-
-console.log('');
-console.log('Symbol der Benachrichtigung pruefen (Dateien in images/)');
-console.log('-'.repeat(70));
-checkImageName(entry({ keyword: 'kaffee' }), 'vine_logo_match_k');
-checkImageName(entry({ conditions: [{ op: '>', price: 1 }] }), 'vine_logo_match_p');
-checkImageName(entry({ categories: [{ text: 'kaffee' }] }), 'vine_logo_match_c');
-checkImageName(entry({ keyword: 'kaffee', categories: [{ text: 'kaffee' }] }), 'vine_logo_match_k_c');
-checkImageName(entry({ keyword: 'kaffee', conditions: [{ op: '>', price: 1 }] }), 'vine_logo_match_k_p');
-checkImageName(entry({ categories: [{ text: 'kaffee' }], conditions: [{ op: '>', price: 1 }] }), 'vine_logo_match_c_p');
-checkImageName(ALL_THREE, 'vine_logo_match_k_c_p');
-checkImageName(entry({}), 'vine_logo_match_none');
 
 console.log('');
 console.log('='.repeat(70));

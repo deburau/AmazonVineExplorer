@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.16.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.15.0.53` (in Entwicklung, Release 0.16.0 vorbereitet) |
+| Version im User-Script | `0.15.0.54` (in Entwicklung, Release 0.16.0 vorbereitet) |
 | Letztes Release | **0.15.0** (auf `main`, veröffentlicht, Merge-Commit `75bb04b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 18 erfolgreich (`npm run verify`) |
@@ -25,7 +25,6 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.40 | Bedingungen ohne Klammern | bestätigt |
 | 0.15.0.38 / 0.15.0.39 | Kategoriebedingungen, Unterkategoriename beim Turbo-Scan | bestätigt |
 | 0.15.0.41 | Zeilen der Benachrichtigung (Keyword/Preis/Kategorie) | bestätigt |
-| 0.15.0.42 / 0.15.0.43 | Symbol der Desktop-Benachrichtigung + kleine Grafik in Gotify | **offen** |
 | 0.15.0.44 | Neues Keyword oben in der Liste | **offen** |
 | 0.15.0.45 / 0.15.0.46 | Abkürzungen der Bedingungen (jede Verkürzung) | **offen** |
 | 0.15.0.47 | Verbatim-Strings in doppelten Anführungszeichen | **offen** |
@@ -299,27 +298,6 @@ Release erledigt und wurde geschlossen.
   auf einer deutschen Tastatur AltGr-Kombinationen und waren in einer
   Remote-Sitzung nicht tippbar). Der Name einer Kategorie ist **ein** Wort
   (`category~kaffee tee` → Kategorie "kaffee" + Text "tee").
-* Das **Symbol** der Desktop-Benachrichtigung zeigt die Art des Treffers: Ringe mit
-  **K** (Keyword, oben links), **C** (Kategorie, unten links) und **P** (Preis,
-  unten rechts) aus dem Google-Font **Nunito Black 900**, innen transparent. Die
-  Dateien liegen in `images/vine_logo_match_<kombi>.png` (8 Stück, 512×512),
-  erzeugt mit `.unotes/make_match_badges.py` (nicht im Repo, braucht Pillow + die
-  Schrift, beides optional – sonst werden die Buchstaben als Formen gezeichnet).
-  Die Zuordnung Trefferart → Dateiname macht `getMatchImageName()`; sie wird von
-  `verify_match_lines.js` **inklusive Existenz der Bilddatei** geprüft.
-  `desktopNotifikation()` bekommt den Namen als sechsten Parameter; das alte
-  "wichtige" Logo (`vine_logo_important.png`, roter Ring) wird nicht mehr benutzt.
-  **Die Bilder liegen fest auf `main`** (Raw-URL), darum wurden sie als reine
-  Asset-Commits auch dorthin gepusht (`258b120`, danach `59cf8a3`).
-* **Gotify** kann das Symbol einer Nachricht nicht setzen (die offizielle Doku
-  `gotify/website/docs/msgextras.md` kennt nur `client::display.contentType`,
-  `client::notification.click.url` und `client::notification.bigImageUrl`; das
-  Symbol oben links ist das Bild der **Anwendung** und gilt für alle Nachrichten).
-  Darum steht die **kleine Fassung** des Ring-Bildes (64×64, `…_small.png`) in einer
-  **eigenen ersten Zeile** der Nachricht, also oben links über dem Produktbild
-  (`aveMatchImageUrl(name, true)`); vorher stand sie in der Zeile des Produktbilds
-  und landete dadurch rechts unten. Markdown kann keine Bildgröße setzen, deshalb
-  eigene kleine Dateien.
 * Die Benachrichtigungen (**Desktop und Gotify**) nennen den Grund des Treffers
   in **bis zu drei Zeilen**: `Keyword-Treffer: <keyword>`,
   `Preis-Treffer: <Preis des Produkts, bei Varianten die Spanne>` und
@@ -453,8 +431,7 @@ oft der Pfad lief.
 | `VineExplorer.user.js` (~4900 Zeilen) | Hauptdatei, alle Funktionen |
 | `globals.js` | Konstanten, Settings, Session-Management |
 | `scripts/verify/` | Verifikationsskripte für die Refactorings und die Features |
-| `vine_logo*.png` (Wurzel) | Projekt-Logos. Sie bleiben **im Wurzelverzeichnis**: die veröffentlichten Versionen laden `main/vine_logo.png` und `main/vine_logo_notification_image.png` zur Laufzeit, ein Umzug nach `images/` würde bei noch nicht aktualisierten Clients ein fehlendes Benachrichtigungssymbol erzeugen (Raw-URLs leiten nicht weiter). Beschlossen am 2026-11-04. |
-| `images/` | die **generierten** Ring-Bilder für die Benachrichtigungen (`vine_logo_match_<kombi>.png` in 512×512 und `<…>_small.png` in 64×64) |
+| `vine_logo*.png` (Wurzel) | Projekt-Logos. Sie bleiben **im Wurzelverzeichnis**: die veröffentlichten Versionen laden `main/vine_logo.png` und `main/vine_logo_notification_image.png` zur Laufzeit, ein Umzug würde bei noch nicht aktualisierten Clients ein fehlendes Benachrichtigungssymbol erzeugen (Raw-URLs leiten nicht weiter). |
 | `scripts/check_css_syntax.js` | prüft die CSS auf Kommentare mit falscher Syntax |
 | `scripts/check_settings_keys.js` | prüft die Schlüssel der Einstellungen und dass alle Text-Kategorien in jeder Sprache die gleichen Schlüssel haben |
 | `scripts/check_state_keys.js` | prüft, dass jeder localStorage-Schlüssel in `AVE_LOCAL_STORAGE_KEYS` steht |
