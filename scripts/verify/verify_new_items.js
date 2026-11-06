@@ -1,5 +1,5 @@
 /**
- * verify_new_products_btn.js
+ * verify_new_items.js
  *
  * Vergleicht die alte (git HEAD) und die neue Implementierung von
  * processNewItems() (in der alten Version updateNewProductsBtn()). Beide werden in
@@ -12,7 +12,7 @@
  *   3. die Aenderungen an Badge und Seitentitel
  *   4. die Aenderungen an den Produkten (isNotified, isFav)
  *
- * Usage: node scripts/verify/verify_new_products_btn.js
+ * Usage: node scripts/verify/verify_new_items.js
  */
 
 const vm = require('vm');
@@ -63,7 +63,7 @@ const NEW_NAMES = [
 
 const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
 
-const { old: oldCode, new: newCode } = prepareWithConstants('verify_new_products_btn.js', OLD_NAMES, NEW_NAMES, CONSTANT_NAMES);
+const { old: oldCode, new: newCode } = prepareWithConstants('verify_new_items.js', OLD_NAMES, NEW_NAMES, CONSTANT_NAMES);
 
 /**
  * Baut eine Sandbox und fuehrt processNewItems() (alte Version: updateNewProductsBtn())

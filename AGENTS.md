@@ -139,7 +139,7 @@ The baseline is only used for the comparison, it is never part of the build.
 | `verify_scan.js` | The local storage accesses of the background scan over seven scenarios |
 | `verify_db_helpers.js` | The database accesses of `cleanUpDatabase()` and the marking of the products |
 | `verify_settings_ui.js` | The created DOM of all nine setting types |
-| `verify_new_products_btn.js` | The notifications, the badge and the page title of the new entries button |
+| `verify_new_items.js` | The notifications, the badge and the page title of the new entries (`processNewItems()`) |
 | `verify_init.js` | The created DOM and the calls of the page initialisation |
 | `verify_details_on_favorite.js` | The requests of the price details when a product is marked as favorite |
 | `verify_site_detection.js` | The detection of the Vine pages against a table of 16 URLs |

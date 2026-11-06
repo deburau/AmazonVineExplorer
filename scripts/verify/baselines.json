@@ -2,7 +2,7 @@
     "verify_scan.js": "16136fe2776eef4b1672a65d0f448479c8976b58",
     "verify_db_helpers.js": "c6535091e554903f7ef343c1bf3dca9ddadf11a7",
     "verify_settings_ui.js": "1e6b6e9ff99719c55ae01ce82a0cc2f2ef036884",
-    "verify_new_products_btn.js": "e41a914a302533148a5906a072ca7ceef67aeb56",
+    "verify_new_items.js": "e41a914a302533148a5906a072ca7ceef67aeb56",
     "verify_init.js": "c8bbc875e5faffad26e8b7727444dd6d3ef3a184",
     "verify_details_on_favorite.js": "d7988b6db3ed6324d20af0d50c52b7e48a30efe4"
 }

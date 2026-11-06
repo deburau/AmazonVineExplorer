@@ -308,7 +308,7 @@ Release erledigt und wurde geschlossen.
   tragen die Logzeilen wieder den Namen ihrer eigenen Funktion
   (`matchesKeyword()`, `checkKeywordsForProduct()`, `matchesPriceConditions()`,
   `searchKeywordsInProducts()`); vorher stand dort überall
-  `updateNewProductsBtn():`. Die Wächter `verify_new_products_btn.js` (führt je
+  `updateNewProductsBtn():`. Die Wächter `verify_new_items.js` (führt je
   Seite den passenden Namen aus) und `verify_init.js` (beide Namen schreiben
   dasselbe Etikett) bleiben „identisch".
 * **Meldung des Datenbank-Events** (0.15.0.56): `DB_HANDLER.#fireDataChangedEvent()`
@@ -330,7 +330,7 @@ Release erledigt und wurde geschlossen.
   Kategorien, das Parsen und die Vergleiche, Klammern als Text),
   `verify_search.js` (20 Fälle) und `verify_match_lines.js` (10 Fälle: die Zeilen
   der Benachrichtigung; zwei Textprüfungen zusätzlich in
-  `verify_new_products_btn.js`).
+  `verify_new_items.js`).
 * **Kategoriebedingungen** in den Keywords (`category~getränke`):
   `parseCategoryCondition()` + `matchCategoryConditions()` (Teilstring, klein
   geschrieben, alle Bedingungen müssen passen). Es muss ein **Keyword oder eine
