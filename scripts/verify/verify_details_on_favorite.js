@@ -37,6 +37,7 @@ const NEW_NAMES = [
     'formatTaxPrize',
     'normalizePriceInput',
     'parsePriceCondition',
+    'parseGotifyPriorityCondition',
     'parseKeywordConfig',
     // Die Funktion, die prueft, ob ein Wort eine Verkuerzung eines Feldnamens ist.
     'aveIsConditionWord',
@@ -54,7 +55,7 @@ const NEW_NAMES = [
     'getProductDetailsRequestDelay'
 ];
 
-const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
+const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue', 'GOTIFY_PRIORITY_MIN', 'GOTIFY_PRIORITY_MAX'];
 
 // Die echte requestProductDetails() wird mit extrahiert, damit der Test den
 // echten Code prueft und nicht einen Nachbau.

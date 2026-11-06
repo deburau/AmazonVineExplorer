@@ -28,7 +28,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const { extractBody } = require('./lib/verify_helpers');
+const { extractBody, extractConstants } = require('./lib/verify_helpers');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
@@ -45,6 +45,8 @@ const mainSrc = readSource('VineExplorer.user.js');
 
 // Die Suche benutzt die Funktionen der Keywords, sie werden mit geprueft.
 const CODE = [
+    // Die Grenzen der Prioritaet einer Gotify-Nachricht (siehe parseKeywordConfig()).
+    extractConstants(mainSrc, ['GOTIFY_PRIORITY_MIN', 'GOTIFY_PRIORITY_MAX']),
     extractBody(mainSrc, 'stringToRegex'),
     extractBody(mainSrc, 'normalizePriceInput'),
     extractBody(mainSrc, 'parsePriceCondition'),
@@ -52,6 +54,7 @@ const CODE = [
     extractBody(mainSrc, 'aveSplitQuotedWords'),
     extractBody(mainSrc, 'aveUnquoteKeywordPart'),
     extractBody(mainSrc, 'parseCategoryCondition'),
+    extractBody(mainSrc, 'parseGotifyPriorityCondition'),
     extractBody(mainSrc, 'parseKeywordConfig'),
     extractBody(mainSrc, 'getTaxPrices'),
     extractBody(mainSrc, 'matchPriceConditions'),

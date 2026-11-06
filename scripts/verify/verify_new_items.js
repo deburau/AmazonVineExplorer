@@ -43,6 +43,7 @@ const NEW_NAMES = [
     // Die Funktionen fuer die Bedingungen der Keywords.
     'normalizePriceInput',
     'parsePriceCondition',
+    'parseGotifyPriorityCondition',
     'parseKeywordConfig',
     // Die Funktion, die prueft, ob ein Wort eine Verkuerzung eines Feldnamens ist.
     'aveIsConditionWord',
@@ -61,7 +62,7 @@ const NEW_NAMES = [
     'getProductDetailsRequestDelay'
 ];
 
-const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue'];
+const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue', 'GOTIFY_PRIORITY_MIN', 'GOTIFY_PRIORITY_MAX'];
 
 const { old: oldCode, new: newCode } = prepareWithConstants('verify_new_items.js', OLD_NAMES, NEW_NAMES, CONSTANT_NAMES);
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.2
+// @version      0.16.0.3
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -43,7 +43,7 @@
    aveIsConditionWord, aveSplitQuotedWords, aveUnquoteKeywordPart, backGroundTileScanner,
    btnEventhandlerClick, checkKeywordsForProduct,
    cleanUpDatabase, getPageCategoryText, hasCategoryCondition, matchCategoryConditions, matchesKeyword,
-   matchesKeywordEntry, matchesPriceConditions, parseCategoryCondition,
+   matchesKeywordEntry, matchesPriceConditions, parseCategoryCondition, parseGotifyPriorityCondition,
    scanLoop, scanStepBackground,
    colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
@@ -55,7 +55,7 @@
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, formatMatchLines, formatTaxPrize, getContrastColor, getFastScanState,
-   getFastScanIntervalSeconds, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
+   getFastScanIntervalSeconds, getGotifyPriority, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
    getScanDelay, getTaxPrices,
    getTilesFromURL, getTurboScanCategories, getTurboScanIndex, getTurboScanIntervalSeconds,
    getUrlParameter, getVariationRequestDelay, gotifyNotification, isTurboScanDue,
@@ -5235,10 +5235,12 @@ function normalizePriceInput(value) {
 /**
  * Replaces the abbreviations of the conditions of a keyword with the full words.
  *
- * The user can write "p>=10" instead of "price>=10" and "c=kaffee" instead of
- * "category=kaffee". A keyword of the settings is stored with the full words, so
+ * The user can write "p>=10" instead of "price>=10", "c=kaffee" instead of
+ * "category=kaffee" and "g=8" instead of "gotifyPriority=8". A keyword of the
+ * settings is stored with the full words, so
  * that the list always shows them. The abbreviations are understood as well (see
- * parsePriceCondition() and parseCategoryCondition()), so that they work in the
+ * parsePriceCondition(), parseCategoryCondition() and
+ * parseGotifyPriorityCondition()), so that they work in the
  * search bar and in a keyword that was stored before.
  *
  * NOTE: Only a word that stands directly in front of the operator is replaced,
@@ -5251,6 +5253,7 @@ function aveExpandKeywordAbbreviations(text) {
     return String(text ?? '').replace(/\b([a-z]+)\s*(?=[=!<>])/gi, (_match, _word) => {
         if (aveIsConditionWord(_word, 'price')) return 'price';
         if (aveIsConditionWord(_word, 'category')) return 'category';
+        if (aveIsConditionWord(_word, 'gotifyPriority')) return 'gotifyPriority';
         return _match;
     });
 }
@@ -5359,10 +5362,11 @@ function aveUnquoteKeywordPart(part) {
  * Checks if a word is a shortening of the name of a field of a condition.
  *
  * Every shortening works: "p", "pr", "pri", "pric" and "price" as well as "c",
- * "ca", "cat", "cate" and so on up to "category". That makes the conditions easier
+ * "ca", "cat", "cate" and so on up to "category" and "g", "go", "got", "goti" and
+ * so on up to "gotifyPriority". That makes the conditions easier
  * to type, especially in a remote session where single keys get lost.
  *
- * @param {string} word The word to check (e.g. "p" or "cat")
+ * @param {string} word The word to check (e.g. "p", "cat" or "g")
  * @param {string} [field] The name of the field, if only one of them is allowed
  * @returns {boolean} true if the word is a shortening of the name of the field
  */
@@ -5370,7 +5374,7 @@ function aveIsConditionWord(word, field = null) {
     const _word = String(word ?? '').toLowerCase();
     if (_word.length === 0) return false;
     if (field) return String(field).toLowerCase().startsWith(_word);
-    return 'price'.startsWith(_word) || 'category'.startsWith(_word);
+    return 'price'.startsWith(_word) || 'category'.startsWith(_word) || 'gotifypriority'.startsWith(_word);
 }
 
 /**
@@ -5400,10 +5404,11 @@ function parsePriceCondition(text) {
  * Parses the keyword of the configuration.
  *
  * A keyword can contain price conditions, e.g.
- * "toaster price >= 10 price < 20", and searches for a category, e.g.
- * "kaffee category~getränke". The text without the conditions is the keyword
+ * "toaster price >= 10 price < 20", searches for a category, e.g.
+ * "kaffee category=getränke", and names the priority of its Gotify message, e.g.
+ * "toaster gotifyPriority=8". The text without the conditions is the keyword
  * itself, the conditions are checked against the prices and the category of the
- * product.
+ * product, the priority is used for the notification (see getGotifyPriority()).
  *
  * NOTE: A condition has to be a word of its own, the space between the name of
  * the field and the value is optional. Brackets are part of the text, so
@@ -5413,11 +5418,11 @@ function parsePriceCondition(text) {
  * "kaffee" and for the text "tee".
  *
  * @param {string} config The keyword of the configuration
- * @returns {{keyword: string, conditions: object[], categories: object[], valid: boolean}} The parsed keyword
+ * @returns {{keyword: string, conditions: object[], categories: object[], gotifyPriority: number|null, valid: boolean}} The parsed keyword
  */
 function parseKeywordConfig(config) {
     const _text = String(config ?? '');
-    const _result = { keyword: _text, conditions: [], categories: [], valid: true };
+    const _result = { keyword: _text, conditions: [], categories: [], gotifyPriority: null, valid: true };
 
     // NOTE: Only a keyword with a condition is parsed. The keywords can be regular
     // expressions and they can contain the name of a field, so it is checked if a
@@ -5435,6 +5440,9 @@ function parseKeywordConfig(config) {
     const _conditions = [];
     const _categories = [];
     const _keywordWords = [];
+    // NOTE: The priority of the message is the last condition that was read, a
+    // keyword with two of them uses the second one.
+    let _gotifyPriority = null;
     // NOTE: A part in double quotes is one word, so that a verbatim string like
     // "kaffee bohnen" stays together (see aveSplitQuotedWords()).
     const _words = aveSplitQuotedWords(_text);
@@ -5442,20 +5450,28 @@ function parseKeywordConfig(config) {
     /**
      * Reads a condition from the words of the keyword.
      * @param {number} index The position of the first word
-     * @returns {{count: number, condition: object|null, category: object|null}|null} The condition and its number of words
+     * @returns {{count: number, condition: object|null, category: object|null, priority: object|null}|null} The condition and its number of words
      */
     const _readCondition = (index) => {
         for (let count = 1; count <= 3 && index + count <= _words.length; count++) {
             const _condition = parsePriceCondition(_words.slice(index, index + count).join(' '));
-            if (_condition) return { count, condition: _condition, category: null };
+            if (_condition) return { count, condition: _condition, category: null, priority: null };
         }
 
-        // The name of a category is one word ("category~kaffee") or the operator
-        // is written with spaces ("category ~ kaffee").
+        // The name of a category is one word ("category=kaffee") or the operator
+        // is written with spaces ("category = kaffee").
         for (const count of [1, 3]) {
             if (index + count > _words.length) continue;
             const _category = parseCategoryCondition(_words.slice(index, index + count).join(' '));
-            if (_category) return { count, condition: null, category: _category };
+            if (_category) return { count, condition: null, category: _category, priority: null };
+        }
+
+        // The priority of the message is one word ("gotifyPriority=8") or the
+        // operator is written with spaces ("gotifyPriority = 8").
+        for (const count of [1, 3]) {
+            if (index + count > _words.length) continue;
+            const _priority = parseGotifyPriorityCondition(_words.slice(index, index + count).join(' '));
+            if (_priority) return { count, condition: null, category: null, priority: _priority };
         }
         return null;
     };
@@ -5468,6 +5484,7 @@ function parseKeywordConfig(config) {
         }
         if (_found.condition) _conditions.push(_found.condition);
         if (_found.category) _categories.push(_found.category);
+        if (_found.priority) _gotifyPriority = _found.priority.priority;
         i += _found.count - 1;
     }
 
@@ -5485,6 +5502,7 @@ function parseKeywordConfig(config) {
     _result.keyword = _keyword;
     _result.conditions = _conditions;
     _result.categories = _categories;
+    _result.gotifyPriority = _gotifyPriority;
     return _result;
 }
 
@@ -5515,6 +5533,38 @@ function parseCategoryCondition(text) {
     const _text = aveUnquoteKeywordPart(_match[3]).toLowerCase();
     if (_text.length === 0) return null;
     return { op: _match[2], text: _text };
+}
+
+/**
+ * Parses a condition for the priority of the Gotify message of a keyword.
+ *
+ * The format of a condition is "gotifyPriority=<value>", the spaces around the
+ * operator are optional, e.g. "gotifyPriority=8" and "gotifyPriority = 8" are the
+ * same. Every shortening of the word is allowed, e.g. "g", "go" or "got" (see
+ * aveIsConditionWord()).
+ *
+ * NOTE: The value is the priority of the message, it is a whole number on the
+ * scale of Gotify (0 to 10). Only "=" and "==" are allowed, because a priority is
+ * a value and not a range. Without the condition the messages are sent with the
+ * priority of the settings (see getGotifyPriority()).
+ *
+ * @param {string} text The text of the condition
+ * @returns {{priority: number}|null} The condition, or null if it is not valid
+ */
+function parseGotifyPriorityCondition(text) {
+    const _match = /^\s*([a-z]+)\s*(==|=)\s*(.+?)\s*$/i.exec(String(text ?? ''));
+    if (!_match) return null;
+    // NOTE: Every shortening of "gotifyPriority" is allowed (see aveIsConditionWord()).
+    if (!aveIsConditionWord(_match[1], 'gotifyPriority')) return null;
+
+    // NOTE: Only a plain number is a priority, so "8.5" and "-1" are not valid and
+    // the keyword is reported as broken (see parseKeywordConfig()).
+    const _value = String(_match[3]).trim();
+    if (!/^\d+$/.test(_value)) return null;
+
+    const _priority = Number.parseInt(_value, 10);
+    if (_priority < GOTIFY_PRIORITY_MIN || _priority > GOTIFY_PRIORITY_MAX) return null;
+    return { priority: _priority };
 }
 
 /**
@@ -5808,15 +5858,19 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
         }
         if (SETTINGS.GotifyUrl) {
             // NOTE: The reasons for the match stand before the description of the
-            // product, like in the desktop notification.
+            // product, like in the desktop notification. The priority of the
+            // message is the one that the keyword named, if it named one.
             if (_prod.link) {
                 gotifyNotification(
                     `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`,
-                    _prod
+                    _prod,
+                    _entry.gotifyPriority
                 );
             } else {
                 gotifyNotification(
-                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`
+                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`,
+                    null,
+                    _entry.gotifyPriority
                 );
             }
         }
@@ -6068,19 +6122,52 @@ function desktopNotifikation(title, message, image = null, requireInteraction = 
     }
 }
 
+/** The lowest and the highest priority that Gotify accepts (0 to 10). */
+const GOTIFY_PRIORITY_MIN = 0;
+const GOTIFY_PRIORITY_MAX = 10;
+/** The priority that is used, if neither the keyword nor the setting names one. */
+const GOTIFY_PRIORITY_DEFAULT = 5;
+
+/**
+ * Returns the priority of a Gotify message.
+ *
+ * A keyword can name the priority of its own notification (see
+ * parseGotifyPriorityCondition()). Without it the messages are sent with the
+ * priority of the settings (GotifyPriority).
+ *
+ * NOTE: A value that is not on the scale of Gotify (0 to 10) is replaced by the
+ * default, so that a broken setting does not stop the notifications.
+ *
+ * @param {number|null} [priority] The priority that the keyword named
+ * @returns {number} The priority of the message
+ */
+function getGotifyPriority(priority = null) {
+    const _value = priority === null || priority === undefined || priority === '' ? SETTINGS.GotifyPriority : priority;
+    const _priority = Number.parseInt(_value, 10);
+    if (!Number.isInteger(_priority) || _priority < GOTIFY_PRIORITY_MIN || _priority > GOTIFY_PRIORITY_MAX) {
+        if (SETTINGS.DebugLevel > 1)
+            console.log(`getGotifyPriority(): "${_value}" is not a priority between 0 and 10, the default is used`);
+        return GOTIFY_PRIORITY_DEFAULT;
+    }
+    return _priority;
+}
+
 /**
  * Sends a notification to the Gotify server.
  *
  * @param {string} message The text of the notification
  * @param {Product} [prod] The product, if the notification belongs to one
+ * @param {number|null} [priority] The priority of the message, if the keyword named one
  */
-function gotifyNotification(message, prod = null) {
+function gotifyNotification(message, prod = null, priority = null) {
     const url = SETTINGS.GotifyUrl + 'message?token=' + SETTINGS.GotifyToken;
+    // NOTE: Without a priority of the keyword the value of the settings is used.
+    const _priority = getGotifyPriority(priority);
     const bodyFormData = prod
         ? {
               title: `Amazon Vine Explorer - ${AVE_VERSION}`,
               message: message,
-              priority: 5,
+              priority: _priority,
               extras: {
                   'client::display': {
                       contentType: 'text/markdown'
@@ -6094,7 +6181,7 @@ function gotifyNotification(message, prod = null) {
         : {
               title: `Amazon Vine Explorer - ${AVE_VERSION}`,
               message: message,
-              priority: 5,
+              priority: _priority,
               extras: {
                   'client::display': {
                       contentType: 'text/markdown'

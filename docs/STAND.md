@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.17.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.16.0.2` (in Entwicklung, Release 0.17.0 vorbereitet) |
+| Version im User-Script | `0.16.0.3` (in Entwicklung, Release 0.17.0 vorbereitet) |
 | Letztes Release | **0.16.0** (auf `main`, veröffentlicht, Merge-Commit `ff19eaa`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 18 erfolgreich (`npm run verify`) |
@@ -35,6 +35,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.56 | Debug-Meldung mit Zählern (`EVENT - database changed …`) | ohne Befund |
 | 0.15.0.57 | Umbenennung `processNewItems()` | ohne Befund |
 | 0.16.0.2 | Virtuelle Kategorie „Alle Produkte“ im Turbo-Scan | bestätigt |
+| 0.16.0.3 | Einstellbare Priorität der Gotify-Nachrichten | **offen** |
 
 **„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
@@ -337,11 +338,12 @@ Release erledigt und wurde geschlossen.
   `Kategorie-Treffer: <Name der Kategorie>`. Eine Zeile nur, wenn es die Art des
   Treffers gab. Gebildet von `formatMatchLines()` (i18n `notifications`:
   `keywordMatch`, `priceMatch`, `categoryMatch`, de/en).
-* Wächter `scripts/verify/verify_keyword_conditions.js` (75 Fälle: Preise,
-  Kategorien, das Parsen und die Vergleiche, Klammern als Text),
-  `verify_search.js` (20 Fälle) und `verify_match_lines.js` (10 Fälle: die Zeilen
-  der Benachrichtigung; zwei Textprüfungen zusätzlich in
-  `verify_new_items.js`).
+* Wächter `scripts/verify/verify_keyword_conditions.js` (171 Fälle: Preise,
+  Kategorien, die Priorität der Gotify-Nachricht, das Parsen und die Vergleiche,
+  Klammern als Text), `verify_gotify_priority.js` (23 Fälle: die Anfrage an den
+  Server und die Priorität der Nachricht), `verify_search.js` (21 Fälle) und
+  `verify_match_lines.js` (10 Fälle: die Zeilen der Benachrichtigung; zwei
+  Textprüfungen zusätzlich in `verify_new_items.js`).
 * **Kategoriebedingungen** in den Keywords (`category~getränke`):
   `parseCategoryCondition()` + `matchCategoryConditions()` (Teilstring, klein
   geschrieben, alle Bedingungen müssen passen). Es muss ein **Keyword oder eine
@@ -429,6 +431,17 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   `SETTINGS.TurboScanCategories` steht. Die Zeile hat keinen Pfeil
   (`toggleSettingsCategoryChildren()` kehrt für sie sofort zurück), damit sie wie eine
   Hauptkategorie aussieht.
+* **Einstellbare Priorität der Gotify-Nachrichten** (0.16.0.3): die Gotify-Settings
+  stehen unter der eigenen Überschrift `TITLE_GOTIFY`, das neue Feld
+  `GotifyPriority` (Typ `number`, 0–10, Standard **5**) steht unter dem
+  Anwendungstoken. Ein Keyword kann mit `gotifyPriority=<n>` eine eigene Priorität
+  für seine Treffer setzen (`parseGotifyPriorityCondition()`, jede Abkürzung wie bei
+  `price`/`category`, nur `=` und `==`, gespeichert wird das ganze Wort über
+  `aveExpandKeywordAbbreviations()`); ohne Angabe gilt die Einstellung
+  (`getGotifyPriority()`, Werte außerhalb 0–10 fallen auf den Standard zurück).
+  `gotifyNotification(message, prod, priority)` schreibt sie in den Payload.
+  Wächter: `scripts/verify/verify_gotify_priority.js` (23 Fälle) und die
+  `gotifyPriority`-Fälle in `verify_keyword_conditions.js`.
 * **Umbau der Steuerung:** eine einzige Schleife mit Prioritäten
   (Turbo → Fast → BG → Cleanup, Verzögerung vorne) – Plan, Risiken und die
   Verifikationsstrategie stehen in **`docs/SCAN-LOOP.md`**. **Schritte 1 und 2
@@ -500,7 +513,7 @@ npm run verify
 `npm run verify` startet alle Skripte unter `scripts/verify/`. Ein neues Skript
 gehört in `scripts/verify/` und nutzt `lib/verify_helpers.js`.
 
-### Die 18 Verifikationen
+### Die 19 Verifikationen
 
 **Baseline-Vergleiche** prüfen, dass ein Refactoring das Verhalten **nicht** ändert
 (alt ↔ neu, gleiche Nebenwirkungen). **Feature-Tests** prüfen das aktuelle Verhalten
@@ -517,13 +530,14 @@ gegen erwartete Werte.
 | `verify_settings_categories.js` | Feature | die Kategorieauswahl des Turbo-Scans inkl. „Alle Produkte" (32 Fälle) |
 | `verify_site_detection.js` | Feature | die Erkennung der Vine-Seiten (16 URLs) |
 | `verify_search.js` | Feature | die Suche in der Suchleiste (21 Fälle) |
-| `verify_keyword_conditions.js` | Feature | das Parsen und Vergleichen der Bedingungen (127 Fälle) |
+| `verify_keyword_conditions.js` | Feature | das Parsen und Vergleichen der Bedingungen inkl. `gotifyPriority` (171 Fälle) |
+| `verify_gotify_priority.js` | Feature | die Priorität der Gotify-Nachrichten (23 Fälle) |
 | `verify_keyword_order.js` | Feature | die Reihenfolge der Keywords (22 Fälle) |
 | `verify_match_lines.js` | Feature | die Trefferzeilen der Benachrichtigung (10 Fälle) |
 | `verify_category_load.js` | Feature | das Hintergrundladen der Kategorien (26 Fälle) |
 | `verify_category_tree.js` | Feature | das Parsen des Kategoriebaums (24 Fälle) |
 | `verify_tax_prizes.js` | Feature | die Migration der Variantenpreise (14 Fälle) |
-| `verify_turbo_scan.js` | Feature | den Turbo-Scan (27 Fälle) |
+| `verify_turbo_scan.js` | Feature | den Turbo-Scan (34 Fälle) |
 | `verify_fast_scan_interval.js` | Feature | den Takt des Fast-Scans (15 Fälle) |
 | `verify_request_delay.js` | Feature | die Wartezeiten der Detail-Requests (20 Fälle) |
 
