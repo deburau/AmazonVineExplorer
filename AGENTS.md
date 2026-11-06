@@ -144,6 +144,15 @@ The baseline is only used for the comparison, it is never part of the build.
 | `verify_details_on_favorite.js` | The requests of the price details when a product is marked as favorite |
 | `verify_site_detection.js` | The detection of the Vine pages against a table of 16 URLs |
 
+The table names the verifications that guard a **refactoring**. Some of them are
+**feature tests** that check the current behaviour against expected values
+(`verify_site_detection.js`, `verify_search.js`, `verify_match_lines.js`,
+`verify_keyword_conditions.js`, `verify_keyword_order.js`, `verify_category_load.js`,
+`verify_tax_prizes.js`, `verify_turbo_scan.js` and the ones for the settings, the fast
+scan interval and the request delay). The **complete list** with the number of the
+test cases and what each script checks is in `docs/STAND.md`; `npm run verify` runs
+all of them (18 scripts at the moment).
+
 **NOTE:** `verify_site_detection.js` is the only script that does not compare an
 old with a new implementation. It checks the current behaviour against expected
 values, because the support for the language segment of the URL is a change of

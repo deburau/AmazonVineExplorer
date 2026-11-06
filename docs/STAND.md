@@ -25,15 +25,19 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.40 | Bedingungen ohne Klammern | bestätigt |
 | 0.15.0.38 / 0.15.0.39 | Kategoriebedingungen, Unterkategoriename beim Turbo-Scan | bestätigt |
 | 0.15.0.41 | Zeilen der Benachrichtigung (Keyword/Preis/Kategorie) | bestätigt |
-| 0.15.0.44 | Neues Keyword oben in der Liste | **offen** |
-| 0.15.0.45 / 0.15.0.46 | Abkürzungen der Bedingungen (jede Verkürzung) | **offen** |
-| 0.15.0.47 | Verbatim-Strings in doppelten Anführungszeichen | **offen** |
-| 0.15.0.48 | Kategoriename wird beim Speichern vervollständigt | **offen** |
-| 0.15.0.49 / 0.15.0.50 | Vollständige Kategorienliste im Hintergrund (Wartezeit wie der Scan) | **offen** |
-| 0.15.0.51 / 0.15.0.52 | Kategorie-Operatoren wie beim Preis, eine Kategorie je Produkt | **offen** |
+| 0.15.0.44 | Neues Keyword oben in der Liste | ohne Befund |
+| 0.15.0.45 / 0.15.0.46 | Abkürzungen der Bedingungen (jede Verkürzung) | ohne Befund |
+| 0.15.0.47 | Verbatim-Strings in doppelten Anführungszeichen | ohne Befund |
+| 0.15.0.48 | Kategoriename wird beim Speichern vervollständigt | ohne Befund |
+| 0.15.0.49 / 0.15.0.50 | Vollständige Kategorienliste im Hintergrund (Wartezeit wie der Scan) | ohne Befund |
+| 0.15.0.51 / 0.15.0.52 | Kategorie-Operatoren wie beim Preis, eine Kategorie je Produkt | ohne Befund |
+| 0.15.0.54 | Trefferzeilen in Gotify stehen vor der Beschreibung | ohne Befund |
+| 0.15.0.56 | Debug-Meldung mit Zählern (`EVENT - database changed …`) | ohne Befund |
+| 0.15.0.57 | Umbenennung `processNewItems()` | ohne Befund |
 
-Alle für das Release 0.16.0 vorgesehenen Änderungen sind damit im Browser
-getestet.
+**„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
+benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
+Einzelne Features wurden dafür nicht abgehakt getestet.
 
 ## Was in dieser Session gemacht wurde
 
