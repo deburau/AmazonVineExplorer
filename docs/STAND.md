@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.17.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.16.0.1` (in Entwicklung, Release 0.17.0 vorbereitet) |
+| Version im User-Script | `0.16.0.2` (in Entwicklung, Release 0.17.0 vorbereitet) |
 | Letztes Release | **0.16.0** (auf `main`, veröffentlicht, Merge-Commit `ff19eaa`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 18 erfolgreich (`npm run verify`) |
@@ -34,6 +34,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.54 | Trefferzeilen in Gotify stehen vor der Beschreibung | ohne Befund |
 | 0.15.0.56 | Debug-Meldung mit Zählern (`EVENT - database changed …`) | ohne Befund |
 | 0.15.0.57 | Umbenennung `processNewItems()` | ohne Befund |
+| 0.16.0.2 | Virtuelle Kategorie „Alle Produkte“ im Turbo-Scan | **offen** |
 
 **„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
@@ -362,7 +363,7 @@ Release erledigt und wurde geschlossen.
   (drei Leerzeichen) und fand damit nie etwas. Der Leerraum um die Bedingung
   verschwindet jetzt mit ihr (`parseKeywordConfig()`).
 
-### Turbo-Scan (Konzept, noch nicht implementiert)
+### Turbo-Scan (das Konzept, umgesetzt in 0.15.0.32)
 
 **Nächster geplanter Schritt.** Ziel: neue Produkte in einer kleinen, vom
 Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
@@ -393,7 +394,7 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   Request**; nur wenn die Seite sie nicht hat bzw. der Cache leer ist, wird die
   Seite per `fetch` im Hintergrund geladen. Cache in `AVE_CATEGORY_CACHE`,
   Wächter `verify_category_tree.js` (24 Fälle) und
-  `verify_settings_categories.js` (27 Fälle).
+  `verify_settings_categories.js` (32 Fälle).
 * **Turbo-Scan ist umgesetzt** (0.15.0.32):
   **Kein Seiten-Hash:** Ein Zwischenstand (0.15.0.33) hat das Parsen der Tiles
   übersprungen, wenn ein Hash der Produkt-Ids gleich blieb. Das war **nicht** die
@@ -407,9 +408,17 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   Turbo vor BG, eine Seite pro Schritt) und benutzt `backGroundTileScanner()` –
   dadurch werden neue Produkte gespeichert und die Keyword-Suche läuft wie
   gewohnt. Die Schleife startet, wenn **einer** der beiden Scans an ist.
-  Wächter: `scripts/verify/verify_turbo_scan.js` (21 Fälle). **Der Turbo-Scan selbst fehlt noch** – die
-  Einstellungen haben bis dahin keine Wirkung, darum gibt es noch keinen
-  Changelog-Eintrag.
+  Wächter: `scripts/verify/verify_turbo_scan.js` (34 Fälle).
+* **Virtuelle Kategorie „Alle Produkte“** im Turbo-Scan (0.16.0.2): die Liste der
+  Kategorien in den Einstellungen endet mit dem Eintrag `TURBO_SCAN_ALL_CATEGORY_ID`
+  (`'all'`, Label aus i18n `settings.turboScanAllItems`, de „Alle Produkte“). Ist er
+  angehakt, lädt `scanStepTurbo()` als **letzten Schritt einer Runde** die normale
+  erste Produktseite (`?queue=all_items&pn=&cn=&page=1`, wie der Background-Scan) –
+  `parseTurboScanCategory('all')` liefert dafür leere Nummern und
+  `getTurboScanCategories()` hängt den Eintrag **immer ans Ende**, egal wo er in
+  `SETTINGS.TurboScanCategories` steht. Die Zeile hat keinen Pfeil
+  (`toggleSettingsCategoryChildren()` kehrt für sie sofort zurück), damit sie wie eine
+  Hauptkategorie aussieht.
 * **Umbau der Steuerung:** eine einzige Schleife mit Prioritäten
   (Turbo → Fast → BG → Cleanup, Verzögerung vorne) – Plan, Risiken und die
   Verifikationsstrategie stehen in **`docs/SCAN-LOOP.md`**. **Schritte 1 und 2
@@ -495,7 +504,7 @@ gegen erwartete Werte.
 | `verify_new_items.js` | Baseline | Benachrichtigungen, Abzeichen und Seitentitel von `processNewItems()` |
 | `verify_init.js` | Baseline | DOM und Aufrufe der Seiten-Initialisierung (31 Schritte) |
 | `verify_details_on_favorite.js` | Baseline | die Requests der Preisdetails beim Favorisieren |
-| `verify_settings_categories.js` | Baseline | das DOM der Kategorieauswahl des Turbo-Scans |
+| `verify_settings_categories.js` | Feature | die Kategorieauswahl des Turbo-Scans inkl. „Alle Produkte" (32 Fälle) |
 | `verify_site_detection.js` | Feature | die Erkennung der Vine-Seiten (16 URLs) |
 | `verify_search.js` | Feature | die Suche in der Suchleiste (21 Fälle) |
 | `verify_keyword_conditions.js` | Feature | das Parsen und Vergleichen der Bedingungen (127 Fälle) |

@@ -83,6 +83,10 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
+##### [2026-11-05] - Version 0.16.0.2
+
+* New: the list of the categories of the turbo scan has the virtual category **"Alle Produkte"** (translated) at its end. When it is switched on, the turbo scan loads the normal first page of the products as the **last step of a round** - after all the other selected categories - so that a round ends with the unfiltered list. A round is complete with that step, so the waiting time of the next round starts after it.
+
 ##### [2026-11-05] - Version 0.16.0.1
 
 * The development continues on the branch `dev-0.17.0`, the version was raised to prepare the next release.

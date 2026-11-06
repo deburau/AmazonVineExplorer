@@ -37,6 +37,7 @@ const I18N = {
             header: (title, version) => `Einstellungen ${title} - Version ${version}`,
             languageLabel: 'Sprache',
             categoriesLoading: 'Kategorien werden geladen ...',
+            turboScanAllItems: 'Alle Produkte',
             categoriesError:
                 'Die Kategorien konnten nicht geladen werden. Öffne die Einstellungen einmal auf einer normalen Vine-Seite (vine/vine-items).'
         },
@@ -234,6 +235,7 @@ const I18N = {
             header: (title, version) => `Settings ${title} - Version ${version}`,
             languageLabel: 'Language',
             categoriesLoading: 'Loading the categories ...',
+            turboScanAllItems: 'All products',
             categoriesError: 'The categories could not be loaded. Open the settings once on a normal Vine page (vine/vine-items).'
         },
         settingsLabels: {

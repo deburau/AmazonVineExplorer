@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.1
+// @version      0.16.0.2
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2901,6 +2901,21 @@ async function renderSettingsCategories(dat, listElement) {
         // that the user sees the selected categories at once.
         if (hasSelectedSubCategory(dat, _parent.pn)) await toggleSettingsCategoryChildren(dat, _item, _parent);
     }
+
+    // NOTE: The virtual category "Alle Produkte" stands at the end of the list. It
+    // has no sub categories, so it gets no arrow (the empty element keeps the label
+    // in line with the names of the other categories).
+    const _allItems = createSettingsCategoryRow(
+        dat,
+        { name: translate('settings', 'turboScanAllItems', 'Alle Produkte'), count: null, pn: TURBO_SCAN_ALL_CATEGORY_ID, cn: '' },
+        false
+    );
+    // NOTE: The arrow of the row is emptied instead of being replaced, so that the
+    // label keeps its place (see toggleSettingsCategoryChildren(), it does nothing for
+    // the virtual category).
+    _allItems.toggle.innerText = '';
+    _allItems.toggle.style.cursor = 'default';
+    listElement.appendChild(_allItems.row);
 }
 
 /**
@@ -2971,6 +2986,9 @@ function createSettingsCategoryRow(dat, category, isSubCategory, parentSelected 
  * @returns {Promise<void>} Resolves when the sub categories are shown or hidden
  */
 async function toggleSettingsCategoryChildren(dat, item, category) {
+    // NOTE: The virtual category "Alle Produkte" has no sub categories.
+    if (category.pn === TURBO_SCAN_ALL_CATEGORY_ID) return;
+
     if (item.children.style.display === 'block') {
         item.children.style.display = 'none';
         item.toggle.innerText = '▸';
@@ -4167,6 +4185,16 @@ const TURBO_SCAN_INTERVAL_SECONDS = 30;
 const MIN_TURBO_SCAN_INTERVAL_SECONDS = 10;
 
 /**
+ * The id of the virtual category "Alle Produkte" of the turbo scan.
+ *
+ * It is an entry of the category list in the settings, but it is not a category of
+ * Amazon: the step loads the normal first page of the products (the same URL as the
+ * background scan) when it is the turn of this id. The id has no numbers, so
+ * parseTurboScanCategory() returns empty numbers for it.
+ */
+const TURBO_SCAN_ALL_CATEGORY_ID = 'all';
+
+/**
  * Returns the interval of the turbo scan.
  *
  * The interval is counted from the end of the last round, so that every category
@@ -4190,7 +4218,12 @@ function getTurboScanIntervalSeconds() {
  */
 function getTurboScanCategories() {
     const _stored = Array.isArray(SETTINGS.TurboScanCategories) ? SETTINGS.TurboScanCategories : [];
-    return _stored.filter((entry) => typeof entry === 'string' && /^\d+(\/\d+)?$/.test(entry));
+    const _categories = _stored.filter((entry) => typeof entry === 'string' && /^\d+(\/\d+)?$/.test(entry));
+
+    // NOTE: The virtual category "Alle Produkte" is loaded at the end of the round,
+    // after all the categories of Amazon, whatever the order in the settings is.
+    if (_stored.includes(TURBO_SCAN_ALL_CATEGORY_ID)) _categories.push(TURBO_SCAN_ALL_CATEGORY_ID);
+    return _categories;
 }
 
 /**
@@ -4232,6 +4265,10 @@ async function getCategoryTextById(id) {
  * @returns {{pn: string, cn: string}} The numbers of the category
  */
 function parseTurboScanCategory(id) {
+    // NOTE: The virtual category "Alle Produkte" has no numbers, the empty numbers
+    // make the step load the normal first page of the products.
+    if (String(id) === TURBO_SCAN_ALL_CATEGORY_ID) return { pn: '', cn: '' };
+
     const _parts = String(id).split('/');
     return { pn: _parts[0], cn: _parts[1] || '' };
 }
