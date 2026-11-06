@@ -34,7 +34,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.54 | Trefferzeilen in Gotify stehen vor der Beschreibung | ohne Befund |
 | 0.15.0.56 | Debug-Meldung mit Zählern (`EVENT - database changed …`) | ohne Befund |
 | 0.15.0.57 | Umbenennung `processNewItems()` | ohne Befund |
-| 0.16.0.2 | Virtuelle Kategorie „Alle Produkte“ im Turbo-Scan | **offen** |
+| 0.16.0.2 | Virtuelle Kategorie „Alle Produkte“ im Turbo-Scan | bestätigt |
 
 **„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
