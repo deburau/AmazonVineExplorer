@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.14
+// @version      0.16.0.15
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -353,17 +353,22 @@ window.onscroll = () => {
     // ONSCROLL Event handler
     var _top = 5;
     // NOTE: The buttons are stuck to the top in both modes, so that they stay visible
-    // while scrolling - also in the narrow column of the rotated buttons (see
-    // addLeftSideButtons()).
-    stickElementToTopScrollEVhandler('ave-btn-allseen', `${_top}px`);
-    _top = _top + 35;
-
-    if (SETTINGS.EnableBtnMarkAllAsSeen) {
-        stickElementToTopScrollEVhandler('ave-btn-db-allseen', `${_top}px`);
+    // while scrolling (see addLeftSideButtons()). In the narrow column the rotated
+    // buttons are tall, so not the single buttons are stuck (they would overlap, the
+    // distance between them is made for the flat buttons), but the whole column.
+    if (SETTINGS.DisableCategories) {
+        stickElementToTopScrollEVhandler('ave-left-buttons', `${_top}px`);
+    } else {
+        stickElementToTopScrollEVhandler('ave-btn-allseen', `${_top}px`);
         _top = _top + 35;
-    }
 
-    stickElementToTopScrollEVhandler('ave-btn-backtotop', `${_top}px`);
+        if (SETTINGS.EnableBtnMarkAllAsSeen) {
+            stickElementToTopScrollEVhandler('ave-btn-db-allseen', `${_top}px`);
+            _top = _top + 35;
+        }
+
+        stickElementToTopScrollEVhandler('ave-btn-backtotop', `${_top}px`);
+    }
 
     if (currentMainPage == PAGETYPE.ALL) handleInfiniteScroll();
 };
@@ -870,8 +875,11 @@ function getVerticalButtonsCss() {
         flex-direction: column;
         align-items: center;
         gap: 4px;
-        width: 100% !important;
-        max-width: 100% !important;
+        /* NOTE: A fixed width (not 100 %) is needed, because the column is stuck to the
+           top while scrolling and then its containing block is the window. */
+        width: 24px !important;
+        min-width: 24px !important;
+        max-width: 24px !important;
         margin: 0 !important;
         padding: 0 !important;
         border: 0 !important;

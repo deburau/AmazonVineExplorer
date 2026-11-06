@@ -139,8 +139,8 @@ contains(_css, 'box-sizing: border-box', 'Die Breite schliesst den Rand ein');
 contains(_css, '> *:not(#ave-left-buttons)', 'Alles ausser den Buttons wird ausgeblendet');
 contains(_css, 'display: none', 'Die Kategorien werden ausgeblendet');
 contains(_css, '#ave-left-buttons', 'Das CSS nennt den Container der Buttons');
-contains(_css, 'width: 100% !important', 'Der Container ist so breit wie die Spalte (parent-node von Amazon ist 240px breit)');
-contains(_css, 'max-width: 100% !important', 'Der Container wird nicht breiter als die Spalte');
+contains(_css, 'width: 24px !important', 'Der Container ist so breit wie die Spalte (parent-node von Amazon ist 240px breit)');
+contains(_css, 'max-width: 24px !important', 'Der Container wird nicht breiter als die Spalte');
 contains(_css, 'display: flex', 'Die Buttons stehen untereinander');
 contains(_css, 'flex-direction: column', 'Die Buttons stehen in einer Spalte');
 // 5. Der Wrapper der Seitenleiste (Amazon) wird ebenfalls schmal.
@@ -165,8 +165,13 @@ notContains(_css, '.a-button', 'Das CSS kaempft nicht mehr mit den Regeln von Am
 notContains(_css, '#ave-left-buttons button', 'Das CSS sucht keinen <button>');
 contains(SIDE_BUTTONS_SOURCE, 'createVerticalButton', 'Die schmalen Buttons werden ohne das Markup von Amazon gebaut');
 contains(SIDE_BUTTONS_SOURCE, 'getLeftSideButtonStyle(bgColor, false)', 'Die normalen Buttons behalten ihr Markup');
-contains(SCROLL_SOURCE, "stickElementToTopScrollEVhandler('ave-btn-allseen'", 'Der Scroll-Handler haengt den Button oben fest');
-notContains(SCROLL_SOURCE, 'if (!SETTINGS.DisableCategories)', 'Der Button bleibt auch in der schmalen Spalte sichtbar');
+contains(SCROLL_SOURCE, "stickElementToTopScrollEVhandler('ave-btn-allseen'", 'Der Scroll-Handler haengt die flachen Buttons oben fest');
+contains(
+    SCROLL_SOURCE,
+    "stickElementToTopScrollEVhandler('ave-left-buttons'",
+    'In der schmalen Spalte wird die ganze Spalte oben festgehaengt'
+);
+contains(SCROLL_SOURCE, 'if (SETTINGS.DisableCategories)', 'Der Scroll-Handler unterscheidet die beiden Modi');
 
 if (_errors === 0) {
     console.log(`  alle ${_checks} Faelle sind ok`);
