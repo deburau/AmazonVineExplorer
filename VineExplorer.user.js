@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.6
+// @version      0.16.0.7
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -852,11 +852,18 @@ function getVerticalButtonsCss() {
         align-items: center;
         gap: 4px;
     }
-    /* The buttons are rotated by 90 degrees, so they need almost no width. */
-    #ave-left-buttons button {
+    /* NOTE: A button of AVE is a span with the class "a-button", its text stands in
+       a span with the class "a-button-text" (see createButton()). The writing mode is
+       inherited by the inner spans, the whole button is turned by 180 degrees, so
+       that the text stands upright and is read from the bottom. */
+    #ave-left-buttons .a-button,
+    #ave-left-buttons .a-button-inner,
+    #ave-left-buttons .a-button-text {
         writing-mode: vertical-rl;
-        transform: rotate(180deg);
         white-space: nowrap;
+    }
+    #ave-left-buttons .a-button {
+        transform: rotate(180deg);
     }
     `;
 }

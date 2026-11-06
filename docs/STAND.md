@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.17.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.16.0.6` (in Entwicklung, Release 0.17.0 vorbereitet) |
+| Version im User-Script | `0.16.0.7` (in Entwicklung, Release 0.17.0 vorbereitet) |
 | Letztes Release | **0.16.0** (auf `main`, veröffentlicht, Merge-Commit `ff19eaa`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 18 erfolgreich (`npm run verify`) |
@@ -37,6 +37,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.16.0.2 | Virtuelle Kategorie „Alle Produkte“ im Turbo-Scan | bestätigt |
 | 0.16.0.5 | Einstellbare Priorität der Gotify-Nachrichten + Testnachricht-Button | **offen** |
 | 0.16.0.6 | Buttons bleiben bei deaktivierten Kategorien (gedreht, Issue #32) | **offen** |
+| 0.16.0.7 | Korrektur: die Drehung trifft die echten Button-Elemente (`span.a-button`) | **offen** |
 
 **„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
@@ -440,7 +441,13 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   `getLeftSideButtonStyle()`); `addVerticalButtonsStyle()` hängt das CSS einmal in den Kopf
   der Seite. Solange die Spalte schmal ist, hängt `window.onscroll` die Buttons nicht mehr
   oben fest, damit sie kein Produkt überdecken.
-  Wächter: `scripts/verify/verify_left_side_buttons.js` (20 Fälle).
+  Wächter: `scripts/verify/verify_left_side_buttons.js` (25 Fälle).
+
+  **Nachtrag 0.16.0.7:** `createButton()` erzeugt **keinen `<button>`**, sondern
+  `<span class="a-button">` mit inneren Spans – der Selektor `#ave-left-buttons button`
+  traf nichts, darum waren die Buttons weiter waagerecht. Das CSS zielt jetzt auf
+  `.a-button`, `.a-button-inner` und `.a-button-text`; der Wächter prüft zusätzlich, dass
+  das CSS zu den Klassen passt, die `createButton()` setzt.
 * **Einstellbare Priorität der Gotify-Nachrichten** (0.16.0.5): die Gotify-Settings
   stehen unter der eigenen Überschrift `TITLE_GOTIFY`, das neue Feld
   `GotifyPriority` (Typ `number`, 0–10, Standard **5**) steht unter dem
@@ -548,7 +555,7 @@ gegen erwartete Werte.
 | `verify_search.js` | Feature | die Suche in der Suchleiste (21 Fälle) |
 | `verify_keyword_conditions.js` | Feature | das Parsen und Vergleichen der Bedingungen inkl. `gotifyPriority` (173 Fälle) |
 | `verify_gotify_priority.js` | Feature | die Priorität der Gotify-Nachrichten und die Testnachricht (36 Fälle) |
-| `verify_left_side_buttons.js` | Feature | die Buttons der linken Seite in der schmalen Spalte (20 Fälle) |
+| `verify_left_side_buttons.js` | Feature | die Buttons der linken Seite in der schmalen Spalte (25 Fälle) |
 | `verify_keyword_order.js` | Feature | die Reihenfolge der Keywords (22 Fälle) |
 | `verify_match_lines.js` | Feature | die Trefferzeilen der Benachrichtigung (10 Fälle) |
 | `verify_category_load.js` | Feature | das Hintergrundladen der Kategorien (26 Fälle) |
