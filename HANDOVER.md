@@ -63,11 +63,17 @@ Beim ersten Push nach dem Wechsel fragt Git nach Benutzername und Passwort:
 | `dev-0.17.0` | aktuelle Entwicklung | **ja**, ohne Nachfrage |
 | `dev-0.16.0` | Entwicklungsstand von Release 0.16.0 | nach Absprache |
 | `dev-0.15.0` | Entwicklungsstand von Release 0.15.0 | nach Absprache |
+| `dev-0.14.0` | Entwicklungsstand von Release 0.14.0 | nach Absprache |
+| `dev-0.13.0` | Entwicklungsstand von Release 0.13.0 | nach Absprache |
 | `main` | veröffentlichte Version für die Nutzer | **nur auf ausdrückliche Anforderung** |
-| `dev-0.11.x` | alte Entwicklungsstände | nach Absprache |
 
 `main` ist auf `ff19eaa` (Release 0.16.0) und **darf nicht** angefasst werden,
 solange das nicht ausdrücklich vereinbart wurde.
+
+Die alten Entwicklungs- und Release-Branches `dev-0.11.19` … `dev-0.11.31a` und
+`dev-0.12.1` wurden am 2026-11-06 **gelöscht** (lokal und auf GitHub). Ihr Inhalt
+ist vollständig in `main` enthalten (`git merge-base --is-ancestor` für jeden Branch
+geprüft), es geht also nichts verloren.
 
 ---
 

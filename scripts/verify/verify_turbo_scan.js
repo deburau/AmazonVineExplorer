@@ -44,7 +44,7 @@ function readSource(name) {
 const mainSrc = readSource('VineExplorer.user.js');
 
 const CODE = [
-    extractConstants(mainSrc, ['TURBO_SCAN_INTERVAL_SECONDS', 'MIN_TURBO_SCAN_INTERVAL_SECONDS']),
+    extractConstants(mainSrc, ['TURBO_SCAN_INTERVAL_SECONDS', 'MIN_TURBO_SCAN_INTERVAL_SECONDS', 'TURBO_SCAN_ALL_CATEGORY_ID']),
     extractBody(mainSrc, 'getTurboScanIntervalSeconds'),
     extractBody(mainSrc, 'getTurboScanCategories'),
     extractBody(mainSrc, 'parseTurboScanCategory'),
@@ -168,6 +168,22 @@ check(
     vm.runInContext('parseTurboScanCategory("10925031/87837030")', _listSandbox._ctx),
     'Eine Unterkategorie hat beide Nummern'
 );
+// Die virtuelle Kategorie "Alle Produkte" hat keine Nummern: daraus wird die
+// normale erste Produktseite (siehe scanStepTurbo()).
+check({ pn: '', cn: '' }, vm.runInContext('parseTurboScanCategory("all")', _listSandbox._ctx), 'Die virtuelle Kategorie hat keine Nummern');
+
+// --- Die virtuelle Kategorie "Alle Produkte" in der Liste ---
+const _allSandbox = createSandbox({ categories: ['all', '10925031'] });
+check(
+    ['10925031', 'all'],
+    vm.runInContext('getTurboScanCategories()', _allSandbox._ctx),
+    'Die virtuelle Kategorie steht am Ende, auch wenn sie zuerst gespeichert wurde'
+);
+check(
+    ['10925031'],
+    vm.runInContext('getTurboScanCategories()', createSandbox({ categories: ['10925031'] })._ctx),
+    'Ohne die virtuelle Kategorie bleibt die Liste wie sie ist'
+);
 
 // --- Die Faelligkeit ---
 const _dueCases = [
@@ -277,6 +293,28 @@ check(0, vm.runInContext('getTurboScanIndex()', _wrongIndex._ctx), 'Ein Index au
         ['options {"categoryText":"Garten > Gartendeko"}'],
         _sub._log.filter((l) => l.startsWith('options ')),
         'Der Scanner bekommt den Namen der Haupt- und der Unterkategorie'
+    );
+
+    // Die virtuelle Kategorie "Alle Produkte": sie wird als letztes geladen und
+    // die Runde ist mit ihr zu Ende.
+    const _allItems = createSandbox({
+        enabled: true,
+        categories: ['10925031', 'all'],
+        interval: 30,
+        stored: { AVE_TURBO_SCAN_CATEGORY_INDEX: 1 }
+    });
+    await vm.runInContext('scanStepTurbo()', _allItems._ctx);
+    check(
+        ['scan https://www.amazon.de/vine/vine-items?queue=all_items&pn=&cn=&page=1'],
+        _allItems._log.filter((l) => l.startsWith('scan ')),
+        'Die virtuelle Kategorie laedt die normale erste Produktseite'
+    );
+    check('0', _allItems._store.get('AVE_TURBO_SCAN_CATEGORY_INDEX'), 'Mit der virtuellen Kategorie ist die Runde zu Ende');
+    check(String(NOW), _allItems._store.get('AVE_TURBO_SCAN_LAST_TIME'), 'Nach der virtuellen Kategorie beginnt die Wartezeit');
+    check(
+        ['text: Turbo Scanner: 2 / 2'],
+        _allItems._log.filter((l) => l.startsWith('text: ')),
+        'Der Text der Anzeige nennt die Position der virtuellen Kategorie'
     );
 
     // Eine Unterkategorie einer anderen Hauptkategorie.

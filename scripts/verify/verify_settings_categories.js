@@ -27,7 +27,7 @@
  */
 
 const vm = require('vm');
-const { extractBody, currentSource, finish } = require('./lib/verify_helpers');
+const { extractBody, extractConstants, currentSource, finish } = require('./lib/verify_helpers');
 
 /**
  * Minimales DOM-Mock. Es merkt sich die Zuhoerer, damit der Test klicken kann.
@@ -183,13 +183,17 @@ const NEW_NAMES = [
 
 // Es gibt keine alte Version dieser Funktionen, sie werden aus der aktuellen
 // Datei gezogen.
-const newCode = NEW_NAMES.map((name) => {
-    try {
-        return extractBody(currentSource(), name);
-    } catch {
-        return `/* ${name} not present */`;
-    }
-}).join('\n\n');
+const newCode = [
+    // Die Kennung der virtuellen Kategorie "Alle Produkte".
+    extractConstants(currentSource(), ['TURBO_SCAN_ALL_CATEGORY_ID']),
+    NEW_NAMES.map((name) => {
+        try {
+            return extractBody(currentSource(), name);
+        } catch {
+            return `/* ${name} not present */`;
+        }
+    }).join('\n\n')
+].join('\n\n');
 
 let _errors = 0;
 
@@ -217,10 +221,19 @@ function check(ok, label) {
     const _texts = findAll(_plain.element, (el) => el._innerText && el._innerText.includes('(')).map((el) => el._innerText);
 
     check(_plain.log.includes('getVineCategoryParents'), 'Die Hauptkategorien werden geladen');
-    check(_checkboxes.length === 2, 'Es gibt eine Checkbox je Hauptkategorie');
+    // Zwei Hauptkategorien und die virtuelle Kategorie "Alle Produkte".
+    check(_checkboxes.length === 3, 'Es gibt eine Checkbox je Hauptkategorie und fuer "Alle Produkte"');
     check(
-        JSON.stringify(_checkboxes.map((c) => c.value)) === JSON.stringify(['3167641', '10925031']),
-        'Die Checkbox traegt die Nummer der Kategorie als Wert'
+        JSON.stringify(_checkboxes.map((c) => c.value)) === JSON.stringify(['3167641', '10925031', 'all']),
+        'Die Checkbox traegt die Nummer der Kategorie als Wert, "Alle Produkte" steht am Ende'
+    );
+    check(
+        _checkboxes[2].value === 'all' && _checkboxes[2].checked === false,
+        'Die virtuelle Kategorie hat die Kennung "all" und ist nicht angehakt'
+    );
+    check(
+        findAll(_plain.element, (el) => el._innerText === 'Alle Produkte').length === 1,
+        'Die virtuelle Kategorie traegt ihren uebersetzten Namen'
     );
     check(
         JSON.stringify(_texts) === JSON.stringify(['Küche, Haushalt & Wohnen (13602)', 'Garten (1249)']),
@@ -239,7 +252,7 @@ function check(ok, label) {
 
     const _openCheckboxes = findAll(_plain.element, (el) => el.tagName === 'INPUT');
     check(_plain.log.includes('getVineCategoryChildren 10925031'), 'Beim Aufklappen werden die Unterkategorien geladen');
-    check(_openCheckboxes.length === 4, 'Die Unterkategorien werden angezeigt');
+    check(_openCheckboxes.length === 5, 'Die Unterkategorien werden angezeigt');
     check(
         _openCheckboxes.some((c) => c.value === '10925031/87837030'),
         'Eine Unterkategorie wird mit der Nummer der Haupt- und der Unterkategorie gespeichert'
@@ -333,7 +346,7 @@ function check(ok, label) {
         _selected.log.includes('getVineCategoryChildren 10925031'),
         'Mit einer ausgewaehlten Unterkategorie wird die Hauptkategorie geladen'
     );
-    check(_selectedCheckboxes.length === 4, 'Die Unterkategorien sind gleich sichtbar');
+    check(_selectedCheckboxes.length === 5, 'Die Unterkategorien sind gleich sichtbar');
     check(
         _selectedCheckboxes.find((c) => c.value === '10925031/87837030').checked === true,
         'Die ausgewaehlte Unterkategorie ist angehakt'

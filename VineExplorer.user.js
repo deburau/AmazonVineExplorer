@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0
+// @version      0.17.0
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -38,12 +38,13 @@
 
 /* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
+   addVerticalButtonsStyle, createVerticalButton, getLeftSideButtonStyle, getVerticalButtonsCss,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
    addProductToKeywordSearch, aveExpandCategoryNames, aveExpandKeywordAbbreviations, aveGetCategoryNames,
    aveIsConditionWord, aveSplitQuotedWords, aveUnquoteKeywordPart, backGroundTileScanner,
    btnEventhandlerClick, checkKeywordsForProduct,
    cleanUpDatabase, getPageCategoryText, hasCategoryCondition, matchCategoryConditions, matchesKeyword,
-   matchesKeywordEntry, matchesPriceConditions, parseCategoryCondition,
+   matchesKeywordEntry, matchesPriceConditions, parseCategoryCondition, parseGotifyPriorityCondition,
    scanLoop, scanStepBackground,
    colorToHex, completeDelayedInit, componentToHex, createButton, createFavStarElement,
    createFirstSeenElement, createInfiniteScrollSite, createNavButton, createNewSite,
@@ -55,7 +56,8 @@
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, formatMatchLines, formatTaxPrize, getContrastColor, getFastScanState,
-   getFastScanIntervalSeconds, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
+   getFastScanIntervalSeconds, getGotifyPriority, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
+   sendGotifyTestMessage,
    getScanDelay, getTaxPrices,
    getTilesFromURL, getTurboScanCategories, getTurboScanIndex, getTurboScanIntervalSeconds,
    getUrlParameter, getVariationRequestDelay, gotifyNotification, isTurboScanDue,
@@ -350,15 +352,23 @@ ave_eventhandler.on('ave-database-changed', (event) => {
 window.onscroll = () => {
     // ONSCROLL Event handler
     var _top = 5;
-    stickElementToTopScrollEVhandler('ave-btn-allseen', `${_top}px`);
-    _top = _top + 35;
-
-    if (SETTINGS.EnableBtnMarkAllAsSeen) {
-        stickElementToTopScrollEVhandler('ave-btn-db-allseen', `${_top}px`);
+    // NOTE: The buttons are stuck to the top in both modes, so that they stay visible
+    // while scrolling (see addLeftSideButtons()). In the narrow column the rotated
+    // buttons are tall, so not the single buttons are stuck (they would overlap, the
+    // distance between them is made for the flat buttons), but the whole column.
+    if (SETTINGS.DisableCategories) {
+        stickElementToTopScrollEVhandler('ave-left-buttons', `${_top}px`);
+    } else {
+        stickElementToTopScrollEVhandler('ave-btn-allseen', `${_top}px`);
         _top = _top + 35;
-    }
 
-    stickElementToTopScrollEVhandler('ave-btn-backtotop', `${_top}px`);
+        if (SETTINGS.EnableBtnMarkAllAsSeen) {
+            stickElementToTopScrollEVhandler('ave-btn-db-allseen', `${_top}px`);
+            _top = _top + 35;
+        }
+
+        stickElementToTopScrollEVhandler('ave-btn-backtotop', `${_top}px`);
+    }
 
     if (currentMainPage == PAGETYPE.ALL) handleInfiniteScroll();
 };
@@ -800,8 +810,157 @@ function reloadPageWithSubpageTarget(target) {
 }
 
 /**
+ * Returns the style of a button on the left side of the page.
+ *
+ * A button of the normal side bar is wide and shows its text in a line. If the
+ * categories are switched off, the products get the space of the side bar, so the
+ * buttons stand in a narrow column and are rotated by 90 degrees (see
+ * getVerticalButtonsCss()).
+ *
+ * @param {string} bgColor The background color of the button
+ * @param {boolean} vertical true, if the button is rotated
+ * @returns {string} The value for the style attribute of the button
+ */
+function getLeftSideButtonStyle(bgColor, vertical) {
+    if (vertical) {
+        // NOTE: "width: auto" makes the box as narrow as the rotated text, the small
+        // padding keeps a distance to the border of the column (the text stands along
+        // the height of the button, so the padding can be small).
+        return `width: auto; padding: 8px 4px; background-color: ${bgColor};`;
+    }
+    return `width: 240px; background-color: ${bgColor};`;
+}
+
+/**
+ * Returns the CSS of the narrow column of the buttons.
+ *
+ * The rules are only used if the categories are switched off (see
+ * addLeftSideButtons()). The side bar of Amazon keeps the buttons of AVE and hides
+ * everything else, so that the products get the space of the categories.
+ *
+ * @returns {string} The CSS of the column
+ */
+function getVerticalButtonsCss() {
+    return `
+    /* The side bar keeps the buttons of AVE, the categories are hidden. It is as
+       narrow as the rotated buttons need and it has no padding of its own, so that
+       the buttons stand at the left edge of the page. */
+    #vvp-browse-nodes-container {
+        width: 24px !important;
+        min-width: 24px !important;
+        max-width: 24px !important;
+        padding: 0 !important;
+        margin-left: 0 !important;
+        box-sizing: border-box !important;
+    }
+    #vvp-browse-nodes-container > *:not(#ave-left-buttons) {
+        display: none !important;
+    }
+    /* NOTE: The wrapper of the side bar belongs to Amazon (AVE does not use it) and
+       it is wider than the side bar itself. It is narrowed as well, so that the
+       products get that space too. */
+    #vvp-filter-container {
+        width: 24px !important;
+        min-width: 24px !important;
+        max-width: 24px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+    }
+    /* NOTE: The div carries the class "parent-node" of Amazon, which makes it 240
+       pixels wide. Without the width the buttons are centered in that wide box and
+       stand far right, so the width is set to the width of the column. */
+    #ave-left-buttons {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        /* NOTE: A fixed width (not 100 %) is needed, because the column is stuck to the
+           top while scrolling and then its containing block is the window. */
+        width: 24px !important;
+        min-width: 24px !important;
+        max-width: 24px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        background: none !important;
+    }
+    /* NOTE: The buttons of the narrow column are divs with a class of their own (see
+       createVerticalButton()). The markup of Amazon (the class "a-button") is not used,
+       because its rules (a large line height and a width of its own) made the rotated
+       buttons wider than the column. The writing mode is vertical, so the text runs
+       along the height of the button and the line height is its width. */
+    #ave-left-buttons .ave-vertical-button {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        white-space: nowrap;
+        line-height: 1.1;
+        font-size: 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        user-select: none;
+        color: #111;
+    }
+    `;
+}
+
+/**
+ * Adds the CSS of the narrow column of the buttons to the head of the page.
+ *
+ * NOTE: The style element is only added once, because the buttons are rebuilt on
+ * every page of the scan (see addLeftSideButtons()).
+ */
+function addVerticalButtonsStyle() {
+    if (document.getElementById('ave-vertical-buttons-style')) return;
+
+    const _styleElement = document.createElement('style');
+    _styleElement.id = 'ave-vertical-buttons-style';
+    _styleElement.type = 'text/css';
+    _styleElement.textContent = getVerticalButtonsCss();
+
+    // The style element has to be the first element of the head, so that the rules
+    // of Amazon cannot overwrite it.
+    document.head.insertBefore(_styleElement, document.head.firstChild);
+}
+
+/**
+ * Creates a button of the narrow column.
+ *
+ * NOTE: The buttons of the normal side bar are built with the markup of Amazon (the
+ * class "a-button", see createButton()). Its rules (a large line height and its own
+ * width) made the rotated buttons wider than the column, so the buttons of the narrow
+ * column are simple divs with a class of their own (see getVerticalButtonsCss()).
+ *
+ * @param {string} text The text of the button
+ * @param {string} id The id of the button
+ * @param {string} bgColor The background color of the button
+ * @param {function} clickHandler The function that is called on a click
+ * @returns {Element} The created button
+ */
+function createVerticalButton(text, id, bgColor, clickHandler) {
+    const _button = document.createElement('div');
+    _button.setAttribute('id', id);
+    _button.setAttribute('class', 'ave-vertical-button');
+    _button.setAttribute('style', getLeftSideButtonStyle(bgColor, true));
+    _button.textContent = text;
+
+    _button.addEventListener('click', (event) => {
+        if (clickHandler) {
+            clickHandler(event);
+        } else {
+            alert(translate('notifications', 'nothingToSee', 'Hier gibt es nix zu sehen.\nZumindest noch nicht :P'));
+        }
+    });
+    return _button;
+}
+
+/**
  * Adds the buttons on the left side of the page (mark as seen, mark all as
  * seen and back to top).
+ *
+ * NOTE: If the categories are switched off, the buttons stay, but they are rotated
+ * by 90 degrees and stand in a narrow column (see getVerticalButtonsCss()), so that
+ * the products can use the space of the side bar.
  *
  * @param {boolean} forceClean Set to true to remove the existing buttons
  */
@@ -811,15 +970,28 @@ function addLeftSideButtons(forceClean) {
 
     if (forceClean) _nodesContainer.innerHTML = '';
 
+    const _vertical = Boolean(SETTINGS.DisableCategories);
+    if (_vertical) addVerticalButtonsStyle();
+
+    // NOTE: In the narrow column the buttons are built without the markup of Amazon
+    // (see createVerticalButton()), in the normal side bar as before.
+    const _makeButton = (text, id, bgColor, clickHandler) =>
+        _vertical
+            ? createVerticalButton(text, id, bgColor, clickHandler)
+            : createButton(text, id, getLeftSideButtonStyle(bgColor, false), clickHandler);
+
     const _div = _nodesContainer.appendChild(document.createElement('div'));
     _div.setAttribute('class', 'parent-node');
+    // The id is used by the CSS of the narrow column, it keeps this div and hides
+    // the categories of Amazon (see getVerticalButtonsCss()).
+    _div.id = 'ave-left-buttons';
 
-    _div.appendChild(document.createElement('p')); // A bit of Space above our Buttons
+    if (!_vertical) _div.appendChild(document.createElement('p')); // A bit of Space above our Buttons
 
-    const _setAllSeenBtn = createButton(
+    const _setAllSeenBtn = _makeButton(
         translate('buttons', 'markPageAsSeen', 'Seite als gesehen markieren'),
         'ave-btn-allseen',
-        `width: 240px; background-color: ${SETTINGS.BtnColorMarkCurrSiteAsSeen};`,
+        SETTINGS.BtnColorMarkCurrSiteAsSeen,
         () => {
             if (SETTINGS.DebugLevel > 10) console.log('Clicked All Seen Button');
             markAllCurrentSiteProductsAsSeen();
@@ -829,10 +1001,10 @@ function addLeftSideButtons(forceClean) {
     _div.appendChild(_setAllSeenBtn);
 
     if (SETTINGS.EnableBtnMarkAllAsSeen) {
-        const _setAllSeenDBBtn = createButton(
+        const _setAllSeenDBBtn = _makeButton(
             translate('buttons', 'markAllAsSeen', 'Alle als gesehen markieren'),
             'ave-btn-db-allseen',
-            `left: 0; width: 240px; background-color: ${SETTINGS.BtnColorMarkAllAsSeen};`,
+            SETTINGS.BtnColorMarkAllAsSeen,
             () => {
                 if (SETTINGS.DebugLevel > 10) console.log('Clicked All Seen Button');
                 setTimeout(() => {
@@ -861,10 +1033,10 @@ function addLeftSideButtons(forceClean) {
         _div.appendChild(_setAllSeenDBBtn);
     }
 
-    const _backToTopBtn = createButton(
+    const _backToTopBtn = _makeButton(
         translate('buttons', 'backToTop', 'Zum Seitenanfang'),
         'ave-btn-backtotop',
-        `width: 240px; background-color: ${SETTINGS.BtnColorBackToTop};`,
+        SETTINGS.BtnColorBackToTop,
         () => {
             if (SETTINGS.DebugLevel > 10) console.log('Clicked back to Top Button');
             window.scrollTo(0, 0);
@@ -2901,6 +3073,21 @@ async function renderSettingsCategories(dat, listElement) {
         // that the user sees the selected categories at once.
         if (hasSelectedSubCategory(dat, _parent.pn)) await toggleSettingsCategoryChildren(dat, _item, _parent);
     }
+
+    // NOTE: The virtual category "Alle Produkte" stands at the end of the list. It
+    // has no sub categories, so it gets no arrow (the empty element keeps the label
+    // in line with the names of the other categories).
+    const _allItems = createSettingsCategoryRow(
+        dat,
+        { name: translate('settings', 'turboScanAllItems', 'Alle Produkte'), count: null, pn: TURBO_SCAN_ALL_CATEGORY_ID, cn: '' },
+        false
+    );
+    // NOTE: The arrow of the row is emptied instead of being replaced, so that the
+    // label keeps its place (see toggleSettingsCategoryChildren(), it does nothing for
+    // the virtual category).
+    _allItems.toggle.innerText = '';
+    _allItems.toggle.style.cursor = 'default';
+    listElement.appendChild(_allItems.row);
 }
 
 /**
@@ -2971,6 +3158,9 @@ function createSettingsCategoryRow(dat, category, isSubCategory, parentSelected 
  * @returns {Promise<void>} Resolves when the sub categories are shown or hidden
  */
 async function toggleSettingsCategoryChildren(dat, item, category) {
+    // NOTE: The virtual category "Alle Produkte" has no sub categories.
+    if (category.pn === TURBO_SCAN_ALL_CATEGORY_ID) return;
+
     if (item.children.style.display === 'block') {
         item.children.style.display = 'none';
         item.toggle.innerText = '▸';
@@ -4167,6 +4357,16 @@ const TURBO_SCAN_INTERVAL_SECONDS = 30;
 const MIN_TURBO_SCAN_INTERVAL_SECONDS = 10;
 
 /**
+ * The id of the virtual category "Alle Produkte" of the turbo scan.
+ *
+ * It is an entry of the category list in the settings, but it is not a category of
+ * Amazon: the step loads the normal first page of the products (the same URL as the
+ * background scan) when it is the turn of this id. The id has no numbers, so
+ * parseTurboScanCategory() returns empty numbers for it.
+ */
+const TURBO_SCAN_ALL_CATEGORY_ID = 'all';
+
+/**
  * Returns the interval of the turbo scan.
  *
  * The interval is counted from the end of the last round, so that every category
@@ -4190,7 +4390,12 @@ function getTurboScanIntervalSeconds() {
  */
 function getTurboScanCategories() {
     const _stored = Array.isArray(SETTINGS.TurboScanCategories) ? SETTINGS.TurboScanCategories : [];
-    return _stored.filter((entry) => typeof entry === 'string' && /^\d+(\/\d+)?$/.test(entry));
+    const _categories = _stored.filter((entry) => typeof entry === 'string' && /^\d+(\/\d+)?$/.test(entry));
+
+    // NOTE: The virtual category "Alle Produkte" is loaded at the end of the round,
+    // after all the categories of Amazon, whatever the order in the settings is.
+    if (_stored.includes(TURBO_SCAN_ALL_CATEGORY_ID)) _categories.push(TURBO_SCAN_ALL_CATEGORY_ID);
+    return _categories;
 }
 
 /**
@@ -4232,6 +4437,10 @@ async function getCategoryTextById(id) {
  * @returns {{pn: string, cn: string}} The numbers of the category
  */
 function parseTurboScanCategory(id) {
+    // NOTE: The virtual category "Alle Produkte" has no numbers, the empty numbers
+    // make the step load the normal first page of the products.
+    if (String(id) === TURBO_SCAN_ALL_CATEGORY_ID) return { pn: '', cn: '' };
+
     const _parts = String(id).split('/');
     return { pn: _parts[0], cn: _parts[1] || '' };
 }
@@ -5198,10 +5407,12 @@ function normalizePriceInput(value) {
 /**
  * Replaces the abbreviations of the conditions of a keyword with the full words.
  *
- * The user can write "p>=10" instead of "price>=10" and "c=kaffee" instead of
- * "category=kaffee". A keyword of the settings is stored with the full words, so
+ * The user can write "p>=10" instead of "price>=10", "c=kaffee" instead of
+ * "category=kaffee" and "g=8" instead of "gotifyPriority=8". A keyword of the
+ * settings is stored with the full words, so
  * that the list always shows them. The abbreviations are understood as well (see
- * parsePriceCondition() and parseCategoryCondition()), so that they work in the
+ * parsePriceCondition(), parseCategoryCondition() and
+ * parseGotifyPriorityCondition()), so that they work in the
  * search bar and in a keyword that was stored before.
  *
  * NOTE: Only a word that stands directly in front of the operator is replaced,
@@ -5214,6 +5425,7 @@ function aveExpandKeywordAbbreviations(text) {
     return String(text ?? '').replace(/\b([a-z]+)\s*(?=[=!<>])/gi, (_match, _word) => {
         if (aveIsConditionWord(_word, 'price')) return 'price';
         if (aveIsConditionWord(_word, 'category')) return 'category';
+        if (aveIsConditionWord(_word, 'gotifyPriority')) return 'gotifyPriority';
         return _match;
     });
 }
@@ -5322,10 +5534,11 @@ function aveUnquoteKeywordPart(part) {
  * Checks if a word is a shortening of the name of a field of a condition.
  *
  * Every shortening works: "p", "pr", "pri", "pric" and "price" as well as "c",
- * "ca", "cat", "cate" and so on up to "category". That makes the conditions easier
+ * "ca", "cat", "cate" and so on up to "category" and "g", "go", "got", "goti" and
+ * so on up to "gotifyPriority". That makes the conditions easier
  * to type, especially in a remote session where single keys get lost.
  *
- * @param {string} word The word to check (e.g. "p" or "cat")
+ * @param {string} word The word to check (e.g. "p", "cat" or "g")
  * @param {string} [field] The name of the field, if only one of them is allowed
  * @returns {boolean} true if the word is a shortening of the name of the field
  */
@@ -5333,7 +5546,7 @@ function aveIsConditionWord(word, field = null) {
     const _word = String(word ?? '').toLowerCase();
     if (_word.length === 0) return false;
     if (field) return String(field).toLowerCase().startsWith(_word);
-    return 'price'.startsWith(_word) || 'category'.startsWith(_word);
+    return 'price'.startsWith(_word) || 'category'.startsWith(_word) || 'gotifypriority'.startsWith(_word);
 }
 
 /**
@@ -5363,10 +5576,11 @@ function parsePriceCondition(text) {
  * Parses the keyword of the configuration.
  *
  * A keyword can contain price conditions, e.g.
- * "toaster price >= 10 price < 20", and searches for a category, e.g.
- * "kaffee category~getränke". The text without the conditions is the keyword
+ * "toaster price >= 10 price < 20", searches for a category, e.g.
+ * "kaffee category=getränke", and names the priority of its Gotify message, e.g.
+ * "toaster gotifyPriority=8". The text without the conditions is the keyword
  * itself, the conditions are checked against the prices and the category of the
- * product.
+ * product, the priority is used for the notification (see getGotifyPriority()).
  *
  * NOTE: A condition has to be a word of its own, the space between the name of
  * the field and the value is optional. Brackets are part of the text, so
@@ -5376,11 +5590,11 @@ function parsePriceCondition(text) {
  * "kaffee" and for the text "tee".
  *
  * @param {string} config The keyword of the configuration
- * @returns {{keyword: string, conditions: object[], categories: object[], valid: boolean}} The parsed keyword
+ * @returns {{keyword: string, conditions: object[], categories: object[], gotifyPriority: number|null, valid: boolean}} The parsed keyword
  */
 function parseKeywordConfig(config) {
     const _text = String(config ?? '');
-    const _result = { keyword: _text, conditions: [], categories: [], valid: true };
+    const _result = { keyword: _text, conditions: [], categories: [], gotifyPriority: null, valid: true };
 
     // NOTE: Only a keyword with a condition is parsed. The keywords can be regular
     // expressions and they can contain the name of a field, so it is checked if a
@@ -5398,6 +5612,9 @@ function parseKeywordConfig(config) {
     const _conditions = [];
     const _categories = [];
     const _keywordWords = [];
+    // NOTE: The priority of the message is the last condition that was read, a
+    // keyword with two of them uses the second one.
+    let _gotifyPriority = null;
     // NOTE: A part in double quotes is one word, so that a verbatim string like
     // "kaffee bohnen" stays together (see aveSplitQuotedWords()).
     const _words = aveSplitQuotedWords(_text);
@@ -5405,20 +5622,28 @@ function parseKeywordConfig(config) {
     /**
      * Reads a condition from the words of the keyword.
      * @param {number} index The position of the first word
-     * @returns {{count: number, condition: object|null, category: object|null}|null} The condition and its number of words
+     * @returns {{count: number, condition: object|null, category: object|null, priority: object|null}|null} The condition and its number of words
      */
     const _readCondition = (index) => {
         for (let count = 1; count <= 3 && index + count <= _words.length; count++) {
             const _condition = parsePriceCondition(_words.slice(index, index + count).join(' '));
-            if (_condition) return { count, condition: _condition, category: null };
+            if (_condition) return { count, condition: _condition, category: null, priority: null };
         }
 
-        // The name of a category is one word ("category~kaffee") or the operator
-        // is written with spaces ("category ~ kaffee").
+        // The name of a category is one word ("category=kaffee") or the operator
+        // is written with spaces ("category = kaffee").
         for (const count of [1, 3]) {
             if (index + count > _words.length) continue;
             const _category = parseCategoryCondition(_words.slice(index, index + count).join(' '));
-            if (_category) return { count, condition: null, category: _category };
+            if (_category) return { count, condition: null, category: _category, priority: null };
+        }
+
+        // The priority of the message is one word ("gotifyPriority=8") or the
+        // operator is written with spaces ("gotifyPriority = 8").
+        for (const count of [1, 3]) {
+            if (index + count > _words.length) continue;
+            const _priority = parseGotifyPriorityCondition(_words.slice(index, index + count).join(' '));
+            if (_priority) return { count, condition: null, category: null, priority: _priority };
         }
         return null;
     };
@@ -5431,6 +5656,7 @@ function parseKeywordConfig(config) {
         }
         if (_found.condition) _conditions.push(_found.condition);
         if (_found.category) _categories.push(_found.category);
+        if (_found.priority) _gotifyPriority = _found.priority.priority;
         i += _found.count - 1;
     }
 
@@ -5448,6 +5674,7 @@ function parseKeywordConfig(config) {
     _result.keyword = _keyword;
     _result.conditions = _conditions;
     _result.categories = _categories;
+    _result.gotifyPriority = _gotifyPriority;
     return _result;
 }
 
@@ -5478,6 +5705,42 @@ function parseCategoryCondition(text) {
     const _text = aveUnquoteKeywordPart(_match[3]).toLowerCase();
     if (_text.length === 0) return null;
     return { op: _match[2], text: _text };
+}
+
+/**
+ * Parses a condition for the priority of the Gotify message of a keyword.
+ *
+ * The format of a condition is "gotifyPriority=<value>", the spaces around the
+ * operator are optional, e.g. "gotifyPriority=8" and "gotifyPriority = 8" are the
+ * same. Every shortening of the word is allowed, e.g. "g", "go" or "got" (see
+ * aveIsConditionWord()).
+ *
+ * NOTE: The operator is "=" and nothing else: the condition assigns the priority,
+ * it does not compare it, so "gotifyPriority==8" and "gotifyPriority!=8" are not
+ * valid. The value is a whole number on the scale of Gotify (0 to 10). Without the
+ * condition the messages are sent with the priority of the settings (see
+ * getGotifyPriority()).
+ *
+ * @param {string} text The text of the condition
+ * @returns {{priority: number}|null} The condition, or null if it is not valid
+ */
+function parseGotifyPriorityCondition(text) {
+    const _match = /^\s*([a-z]+)\s*=\s*(.+?)\s*$/i.exec(String(text ?? ''));
+    if (!_match) return null;
+    // NOTE: Every shortening of "gotifyPriority" is allowed (see aveIsConditionWord()).
+    if (!aveIsConditionWord(_match[1], 'gotifyPriority')) return null;
+
+    // NOTE: Only a plain number is a priority, so "8.5", "-1" and "=8" (from
+    // "gotifyPriority==8") are not valid and the keyword is reported as broken (see
+    // parseKeywordConfig()).
+    // NOTE: The operator is a part of the regular expression and not a group, so the
+    // value is the second group.
+    const _value = String(_match[2]).trim();
+    if (!/^\d+$/.test(_value)) return null;
+
+    const _priority = Number.parseInt(_value, 10);
+    if (_priority < GOTIFY_PRIORITY_MIN || _priority > GOTIFY_PRIORITY_MAX) return null;
+    return { priority: _priority };
 }
 
 /**
@@ -5771,15 +6034,19 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
         }
         if (SETTINGS.GotifyUrl) {
             // NOTE: The reasons for the match stand before the description of the
-            // product, like in the desktop notification.
+            // product, like in the desktop notification. The priority of the
+            // message is the one that the keyword named, if it named one.
             if (_prod.link) {
                 gotifyNotification(
                     `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`,
-                    _prod
+                    _prod,
+                    _entry.gotifyPriority
                 );
             } else {
                 gotifyNotification(
-                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`
+                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`,
+                    null,
+                    _entry.gotifyPriority
                 );
             }
         }
@@ -6031,19 +6298,52 @@ function desktopNotifikation(title, message, image = null, requireInteraction = 
     }
 }
 
+/** The lowest and the highest priority that Gotify accepts (0 to 10). */
+const GOTIFY_PRIORITY_MIN = 0;
+const GOTIFY_PRIORITY_MAX = 10;
+/** The priority that is used, if neither the keyword nor the setting names one. */
+const GOTIFY_PRIORITY_DEFAULT = 5;
+
+/**
+ * Returns the priority of a Gotify message.
+ *
+ * A keyword can name the priority of its own notification (see
+ * parseGotifyPriorityCondition()). Without it the messages are sent with the
+ * priority of the settings (GotifyPriority).
+ *
+ * NOTE: A value that is not on the scale of Gotify (0 to 10) is replaced by the
+ * default, so that a broken setting does not stop the notifications.
+ *
+ * @param {number|null} [priority] The priority that the keyword named
+ * @returns {number} The priority of the message
+ */
+function getGotifyPriority(priority = null) {
+    const _value = priority === null || priority === undefined || priority === '' ? SETTINGS.GotifyPriority : priority;
+    const _priority = Number.parseInt(_value, 10);
+    if (!Number.isInteger(_priority) || _priority < GOTIFY_PRIORITY_MIN || _priority > GOTIFY_PRIORITY_MAX) {
+        if (SETTINGS.DebugLevel > 1)
+            console.log(`getGotifyPriority(): "${_value}" is not a priority between 0 and 10, the default is used`);
+        return GOTIFY_PRIORITY_DEFAULT;
+    }
+    return _priority;
+}
+
 /**
  * Sends a notification to the Gotify server.
  *
  * @param {string} message The text of the notification
  * @param {Product} [prod] The product, if the notification belongs to one
+ * @param {number|null} [priority] The priority of the message, if the keyword named one
  */
-function gotifyNotification(message, prod = null) {
+function gotifyNotification(message, prod = null, priority = null) {
     const url = SETTINGS.GotifyUrl + 'message?token=' + SETTINGS.GotifyToken;
+    // NOTE: Without a priority of the keyword the value of the settings is used.
+    const _priority = getGotifyPriority(priority);
     const bodyFormData = prod
         ? {
               title: `Amazon Vine Explorer - ${AVE_VERSION}`,
               message: message,
-              priority: 5,
+              priority: _priority,
               extras: {
                   'client::display': {
                       contentType: 'text/markdown'
@@ -6057,7 +6357,7 @@ function gotifyNotification(message, prod = null) {
         : {
               title: `Amazon Vine Explorer - ${AVE_VERSION}`,
               message: message,
-              priority: 5,
+              priority: _priority,
               extras: {
                   'client::display': {
                       contentType: 'text/markdown'
@@ -6079,6 +6379,28 @@ function gotifyNotification(message, prod = null) {
             console.error('Error:', err);
         }
     });
+}
+
+/**
+ * Sends a test message to the Gotify server.
+ *
+ * The message is sent with the priority of the settings (GotifyPriority), so that
+ * the button shows which priority the messages of the notifications have (see
+ * getGotifyPriority()). The test message belongs to no product, so it has no target
+ * and no image.
+ *
+ * @returns {boolean} true if the message was sent
+ */
+function sendGotifyTestMessage() {
+    if (!SETTINGS.GotifyUrl || !SETTINGS.GotifyToken) {
+        console.warn('sendGotifyTestMessage(): the address or the token of the Gotify server is missing.');
+        return false;
+    }
+
+    const _message = translate('notifications', 'gotifyTestMessage', `Test message of Amazon Vine Explorer ${AVE_VERSION}`, AVE_VERSION);
+    console.log(`sendGotifyTestMessage(): sending "${_message}" with the priority ${getGotifyPriority()}`);
+    gotifyNotification(_message);
+    return true;
 }
 
 /**

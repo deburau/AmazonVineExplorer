@@ -5,8 +5,9 @@
  * Prueft die Bedingungen der Keywords (Preis und Kategorie).
  *
  * Ein Keyword kann Preisbedingungen enthalten, z. B.
- * "toaster price>=10 price<20", und Kategoriebedingungen, z. B.
- * "category=getraenke". Ein Text oder eine Kategorie muss angegeben sein, nur
+ * "toaster price>=10 price<20", Kategoriebedingungen, z. B.
+ * "category=getraenke", und die Prioritaet seiner Gotify-Nachricht, z. B.
+ * "gotifyPriority=8". Ein Text oder eine Kategorie muss angegeben sein, nur
  * Preisbedingungen koennen nie matchen.
  *
  * NOTE: Die Bedingungen stehen ohne Klammern und sind immer ein eigenes Wort,
@@ -20,6 +21,8 @@
  *   - der Vergleich der Bedingungen mit den Preisen (matchPriceConditions())
  *   - das Parsen einer Kategoriebedingung (parseCategoryCondition())
  *   - der Vergleich der Kategorie mit dem Namen der Kategorie (matchCategoryConditions())
+ *   - das Parsen der Prioritaet einer Gotify-Nachricht (parseGotifyPriorityCondition())
+ *   - die Prioritaet der Nachricht (getGotifyPriority(): Keyword schlaegt Einstellung)
  *
  * Das Skript prueft das aktuelle Verhalten gegen erwartete Werte. Es vergleicht
  * nicht eine alte mit einer neuen Implementierung, weil die Preisbedingungen
@@ -32,7 +35,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const { extractBody } = require('./lib/verify_helpers');
+const { extractBody, extractConstants } = require('./lib/verify_helpers');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
@@ -51,13 +54,18 @@ const mainSrc = readSource('VineExplorer.user.js');
 // aus der echten Datei geschnitten, damit der Test die echte Implementierung
 // prueft und keinen Nachbau.
 const CODE = [
+    // Die Grenzen der Prioritaet einer Gotify-Nachricht.
+    extractConstants(mainSrc, ['GOTIFY_PRIORITY_MIN', 'GOTIFY_PRIORITY_MAX', 'GOTIFY_PRIORITY_DEFAULT']),
     extractBody(mainSrc, 'normalizePriceInput'),
     extractBody(mainSrc, 'parsePriceCondition'),
     extractBody(mainSrc, 'aveIsConditionWord'),
     extractBody(mainSrc, 'parseCategoryCondition'),
+    extractBody(mainSrc, 'parseGotifyPriorityCondition'),
     extractBody(mainSrc, 'parseKeywordConfig'),
     extractBody(mainSrc, 'matchPriceConditions'),
     extractBody(mainSrc, 'matchCategoryConditions'),
+    // Die Prioritaet der Nachricht (Keyword schlaegt Einstellung).
+    extractBody(mainSrc, 'getGotifyPriority'),
     // Das Zerlegen in Woerter und verbatim-Strings und der Textvergleich.
     extractBody(mainSrc, 'aveSplitQuotedWords'),
     extractBody(mainSrc, 'aveUnquoteKeywordPart'),
@@ -67,7 +75,7 @@ const CODE = [
 
 const sandbox = {
     console: { log: () => {}, warn: () => {}, error: () => {} },
-    SETTINGS: { DebugLevel: 0 },
+    SETTINGS: { DebugLevel: 0, GotifyPriority: 5 },
     Math,
     Number,
     Array,
@@ -85,6 +93,8 @@ const parsePriceCondition = vm.runInContext('parsePriceCondition', ctx);
 const parseKeywordConfig = vm.runInContext('parseKeywordConfig', ctx);
 const matchPriceConditions = vm.runInContext('matchPriceConditions', ctx);
 const parseCategoryCondition = vm.runInContext('parseCategoryCondition', ctx);
+const parseGotifyPriorityCondition = vm.runInContext('parseGotifyPriorityCondition', ctx);
+const getGotifyPriority = vm.runInContext('getGotifyPriority', ctx);
 const matchesKeyword = vm.runInContext('matchesKeyword', ctx);
 const matchCategoryConditions = vm.runInContext('matchCategoryConditions', ctx);
 
@@ -155,6 +165,55 @@ const CATEGORY_CONDITION_CASES = [
     { label: 'Eine Kategorie ohne Operator', input: 'category getraenke', expected: null },
     { label: 'Die Tilde ist kein Operator mehr', input: 'category~getraenke', expected: null },
     { label: 'Ein unbekanntes Feld', input: 'kategorie=getraenke', expected: null }
+];
+
+/**
+ * Die erwarteten Ergebnisse des Parsens der Prioritaet einer Gotify-Nachricht.
+ * null bedeutet, dass der Text keine gueltige Bedingung ist.
+ */
+const PRIORITY_CONDITION_CASES = [
+    { label: 'Eine Prioritaet', input: 'gotifyPriority=8', expected: { priority: 8 } },
+    { label: 'Eine Prioritaet mit Leerzeichen', input: 'gotifyPriority = 8', expected: { priority: 8 } },
+    { label: 'Zwei Gleichheitszeichen sind keine Zuweisung', input: 'gotifyPriority==8', expected: null },
+    { label: 'Die kleinste Prioritaet', input: 'gotifyPriority=0', expected: { priority: 0 } },
+    { label: 'Die groesste Prioritaet', input: 'gotifyPriority=10', expected: { priority: 10 } },
+    { label: 'Eine Abkuerzung mit einem Buchstaben', input: 'g=8', expected: { priority: 8 } },
+    { label: 'Eine Abkuerzung mit zwei Buchstaben', input: 'go=8', expected: { priority: 8 } },
+    { label: 'Eine Abkuerzung mit drei Buchstaben', input: 'got=8', expected: { priority: 8 } },
+    { label: 'Eine Abkuerzung mit sechs Buchstaben', input: 'gotify=8', expected: { priority: 8 } },
+    { label: 'Eine Abkuerzung mit acht Buchstaben', input: 'gotifypr=8', expected: { priority: 8 } },
+    { label: 'Alles klein geschrieben', input: 'gotifypriority=8', expected: { priority: 8 } },
+    { label: 'Alles gross geschrieben', input: 'GOTIFYPRIORITY=8', expected: { priority: 8 } },
+    { label: 'Eine fuehrende Null', input: 'gotifyPriority=08', expected: { priority: 8 } },
+    { label: 'Ueber der groessten Prioritaet', input: 'gotifyPriority=11', expected: null },
+    { label: 'Unter der kleinsten Prioritaet', input: 'gotifyPriority=-1', expected: null },
+    { label: 'Eine Kommazahl', input: 'gotifyPriority=8.5', expected: null },
+    { label: 'Ein Text als Wert', input: 'gotifyPriority=hoch', expected: null },
+    { label: 'Ein fehlender Wert', input: 'gotifyPriority=', expected: null },
+    { label: 'Ein ungueltiger Operator', input: 'gotifyPriority!=8', expected: null },
+    { label: 'Ein Vergleich als Operator', input: 'gotifyPriority>8', expected: null },
+    { label: 'Das Feld fuer den Preis', input: 'price=8', expected: null },
+    { label: 'Das Feld fuer die Kategorie', input: 'category=8', expected: null },
+    { label: 'Ein unbekanntes Feld', input: 'prioritaet=8', expected: null }
+];
+
+/**
+ * Die erwarteten Ergebnisse der Prioritaet der Nachricht.
+ * priority ist der Wert des Keywords (null, wenn es keinen nennt), setting ist
+ * der Wert der Einstellung.
+ */
+const PRIORITY_RESOLVE_CASES = [
+    { label: 'Das Keyword schlaegt die Einstellung', priority: 8, setting: 5, expected: 8 },
+    { label: 'Ohne Priority im Keyword gilt die Einstellung', priority: null, setting: 3, expected: 3 },
+    { label: 'Das Keyword darf die kleinste Prioritaet setzen', priority: 0, setting: 5, expected: 0 },
+    { label: 'Das Keyword darf die groesste Prioritaet setzen', priority: 10, setting: 5, expected: 10 },
+    { label: 'Ein Text als Einstellung ergibt den Standard', priority: null, setting: 'abc', expected: 5 },
+    { label: 'Eine Einstellung ueber der Skala ergibt den Standard', priority: null, setting: 11, expected: 5 },
+    { label: 'Eine Einstellung unter der Skala ergibt den Standard', priority: null, setting: -1, expected: 5 },
+    { label: 'Eine fehlende Einstellung ergibt den Standard', priority: null, setting: undefined, expected: 5 },
+    { label: 'Eine leere Einstellung ergibt den Standard', priority: null, setting: '', expected: 5 },
+    { label: 'Eine Einstellung als Text', priority: null, setting: '7', expected: 7 },
+    { label: 'Der Standard ist 5', priority: null, setting: null, expected: 5 }
 ];
 
 /**
@@ -286,106 +345,112 @@ const KEYWORD_CASES = [
     {
         label: 'Ein einfaches Keyword bleibt unveraendert',
         input: 'toaster',
-        expected: { keyword: 'toaster', conditions: [], categories: [], valid: true }
+        expected: { keyword: 'toaster', conditions: [], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Ein regulaerer Ausdruck bleibt unveraendert',
         input: '/wicht.*produkt/i',
-        expected: { keyword: '/wicht.*produkt/i', conditions: [], categories: [], valid: true }
+        expected: { keyword: '/wicht.*produkt/i', conditions: [], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Ein Keyword mit einer Preisbedingung',
         input: 'toaster price >= 10',
-        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
+        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Eine Preisbedingung ohne Leerzeichen',
         input: 'toaster price>=10',
-        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
+        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Die Abkuerzung p fuer price',
         input: 'toaster p>=10',
-        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
+        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Die Abkuerzung pr fuer price',
         input: 'toaster pr < 20',
-        expected: { keyword: 'toaster', conditions: [{ op: '<', price: 20 }], categories: [], valid: true }
+        expected: { keyword: 'toaster', conditions: [{ op: '<', price: 20 }], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Die Abkuerzung c fuer category',
         input: 'kaffee c=getraenke',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], valid: true }
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], gotifyPriority: null, valid: true }
     },
     {
         label: 'Die Abkuerzung cat fuer category',
         input: 'kaffee cat = getraenke',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], valid: true }
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], gotifyPriority: null, valid: true }
     },
     {
         label: 'Beide Abkuerzungen zusammen',
         input: 'p=0 c=getränke',
-        expected: { keyword: '', conditions: [{ op: '=', price: 0 }], categories: [{ op: '=', text: 'getränke' }], valid: true }
+        expected: {
+            keyword: '',
+            conditions: [{ op: '=', price: 0 }],
+            categories: [{ op: '=', text: 'getränke' }],
+            gotifyPriority: null,
+            valid: true
+        }
     },
     {
         label: 'Jede Verkuerzung von price: pri',
         input: 'toaster pri>=10',
-        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
+        expected: { keyword: 'toaster', conditions: [{ op: '>=', price: 10 }], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Jede Verkuerzung von price: pric',
         input: 'toaster pric < 20',
-        expected: { keyword: 'toaster', conditions: [{ op: '<', price: 20 }], categories: [], valid: true }
+        expected: { keyword: 'toaster', conditions: [{ op: '<', price: 20 }], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Jede Verkuerzung von category: ca',
         input: 'kaffee ca=getraenke',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], valid: true }
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], gotifyPriority: null, valid: true }
     },
     {
         label: 'Jede Verkuerzung von category: cate',
         input: 'kaffee cate=getraenke',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], valid: true }
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], gotifyPriority: null, valid: true }
     },
     {
         label: 'Jede Verkuerzung von category: categ',
         input: 'kaffee categ = tee',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'tee' }], valid: true }
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'tee' }], gotifyPriority: null, valid: true }
     },
     {
         // "ca" verkuerzt "category", der Operator ist der eines Preises: der Name
         // der Kategorie wird alphabetisch mit "10" verglichen.
         label: 'Eine Verkuerzung von category mit einem Ordnungs-Operator',
         input: 'ca>=10',
-        expected: { keyword: '', conditions: [], categories: [{ op: '>=', text: '10' }], valid: true }
+        expected: { keyword: '', conditions: [], categories: [{ op: '>=', text: '10' }], gotifyPriority: null, valid: true }
     },
     {
         // Die Tilde ist kein Operator mehr, der Text bleibt also ein Keyword.
         label: 'Die Tilde macht keine Bedingung mehr',
         input: 'toaster pri~ x',
-        expected: { keyword: 'toaster pri~ x', conditions: [], categories: [], valid: true }
+        expected: { keyword: 'toaster pri~ x', conditions: [], categories: [], gotifyPriority: null, valid: true }
     },
     {
         // "preis" beginnt mit "pr" und "p", ist aber ein Text.
         label: 'Ein Wort, das nur mit der Abkuerzung beginnt, bleibt Text',
         input: 'preis>=10',
-        expected: { keyword: 'preis>=10', conditions: [], categories: [], valid: true }
+        expected: { keyword: 'preis>=10', conditions: [], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Ein einzelnes p bleibt Text',
         input: 'p',
-        expected: { keyword: 'p', conditions: [], categories: [], valid: true }
+        expected: { keyword: 'p', conditions: [], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Ein einzelnes c bleibt Text',
         input: 'c',
-        expected: { keyword: 'c', conditions: [], categories: [], valid: true }
+        expected: { keyword: 'c', conditions: [], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Ein Komma als Dezimaltrennzeichen',
         input: 'kaffee price>=10,50',
-        expected: { keyword: 'kaffee', conditions: [{ op: '>=', price: 10.5 }], categories: [], valid: true }
+        expected: { keyword: 'kaffee', conditions: [{ op: '>=', price: 10.5 }], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Ein Keyword mit zwei Preisbedingungen',
@@ -397,41 +462,48 @@ const KEYWORD_CASES = [
                 { op: '<', price: 20 }
             ],
             categories: [],
+            gotifyPriority: null,
             valid: true
         }
     },
     {
         label: 'Eine Preisbedingung ohne Keyword',
         input: 'price >= 10',
-        expected: { keyword: '', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
+        expected: { keyword: '', conditions: [{ op: '>=', price: 10 }], categories: [], gotifyPriority: null, valid: true }
     },
     {
         // Die Bedingung steht in der Mitte: die Leerzeichen drumherum muessen
         // mitverschwinden, sonst sucht das Script nach "toaster   white".
         label: 'Eine Bedingung zwischen zwei Woertern',
         input: 'toaster price > 100 white',
-        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], categories: [], valid: true }
+        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Eine Bedingung am Anfang',
         input: 'price > 100 toaster white',
-        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], categories: [], valid: true }
+        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Eine Bedingung am Ende',
         input: 'toaster white price > 100',
-        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], categories: [], valid: true }
+        expected: { keyword: 'toaster white', conditions: [{ op: '>', price: 100 }], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Ein Keyword mit einer Kategoriebedingung',
         input: 'kaffee category=getraenke',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], valid: true }
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'getraenke' }], gotifyPriority: null, valid: true }
     },
     {
         // Der Ausdruck der Anforderung: ein Preis ohne Keyword, nur mit Kategorie.
         label: 'Nur Bedingungen ohne Keyword',
         input: 'price=0 category=getränke',
-        expected: { keyword: '', conditions: [{ op: '=', price: 0 }], categories: [{ op: '=', text: 'getränke' }], valid: true }
+        expected: {
+            keyword: '',
+            conditions: [{ op: '=', price: 0 }],
+            categories: [{ op: '=', text: 'getränke' }],
+            gotifyPriority: null,
+            valid: true
+        }
     },
     {
         label: 'Zwei Kategoriebedingungen',
@@ -443,49 +515,50 @@ const KEYWORD_CASES = [
                 { op: '=', text: 'lebensmittel' },
                 { op: '=', text: 'tee' }
             ],
+            gotifyPriority: null,
             valid: true
         }
     },
     {
         label: 'Ein verbatim-String bleibt im Keyword erhalten',
         input: 'kaffee "bohnen extra"',
-        expected: { keyword: 'kaffee "bohnen extra"', conditions: [], categories: [], valid: true }
+        expected: { keyword: 'kaffee "bohnen extra"', conditions: [], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Ein verbatim-String als Kategoriename',
         input: 'category="kaffee tee" kaffee',
-        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'kaffee tee' }], valid: true }
+        expected: { keyword: 'kaffee', conditions: [], categories: [{ op: '=', text: 'kaffee tee' }], gotifyPriority: null, valid: true }
     },
     {
         label: 'Ein verbatim-String neben einer Preisbedingung',
         input: '"kaffee bohnen" p>=10',
-        expected: { keyword: '"kaffee bohnen"', conditions: [{ op: '>=', price: 10 }], categories: [], valid: true }
+        expected: { keyword: '"kaffee bohnen"', conditions: [{ op: '>=', price: 10 }], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Eine kaputte Preisbedingung macht das Keyword ungueltig',
         input: 'toaster price > abc',
-        expected: { keyword: 'toaster price > abc', conditions: [], categories: [], valid: false }
+        expected: { keyword: 'toaster price > abc', conditions: [], categories: [], gotifyPriority: null, valid: false }
     },
     {
         label: 'Eine kaputte Kategoriebedingung macht das Keyword ungueltig',
         input: 'kaffee category=',
-        expected: { keyword: 'kaffee category=', conditions: [], categories: [], valid: false }
+        expected: { keyword: 'kaffee category=', conditions: [], categories: [], gotifyPriority: null, valid: false }
     },
     {
         label: 'Ein Keyword mit dem Wort price, aber ohne Bedingung',
         input: 'special price',
-        expected: { keyword: 'special price', conditions: [], categories: [], valid: true }
+        expected: { keyword: 'special price', conditions: [], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Ein Keyword mit dem Wort category, aber ohne Bedingung',
         input: 'category',
-        expected: { keyword: 'category', conditions: [], categories: [], valid: true }
+        expected: { keyword: 'category', conditions: [], categories: [], gotifyPriority: null, valid: true }
     },
     {
         // Die Klammern sind kein Teil der Syntax mehr: der Text wird gesucht.
         label: 'Klammern sind Text und keine Bedingung',
         input: '[price=0]',
-        expected: { keyword: '[price=0]', conditions: [], categories: [], valid: true }
+        expected: { keyword: '[price=0]', conditions: [], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Auch eine Kategoriebedingung in Klammern ist Text',
@@ -494,13 +567,14 @@ const KEYWORD_CASES = [
             keyword: 'kaffee [category~getränke]',
             conditions: [],
             categories: [],
+            gotifyPriority: null,
             valid: true
         }
     },
     {
         label: 'Nur die englischen Feldnamen sind Bedingungen',
         input: 'kaffee preis>=10',
-        expected: { keyword: 'kaffee preis>=10', conditions: [], categories: [], valid: true }
+        expected: { keyword: 'kaffee preis>=10', conditions: [], categories: [], gotifyPriority: null, valid: true }
     },
     {
         label: 'Ein anderer Feldname ist keine Bedingung',
@@ -509,7 +583,92 @@ const KEYWORD_CASES = [
             keyword: 'toaster data_estimated_tax_prices >= 10',
             conditions: [],
             categories: [],
+            gotifyPriority: null,
             valid: true
+        }
+    },
+    {
+        label: 'Ein Keyword mit einer Prioritaet',
+        input: 'toaster gotifyPriority=8',
+        expected: { keyword: 'toaster', conditions: [], categories: [], gotifyPriority: 8, valid: true }
+    },
+    {
+        label: 'Eine abgekuerzte Prioritaet',
+        input: 'toaster g=8',
+        expected: { keyword: 'toaster', conditions: [], categories: [], gotifyPriority: 8, valid: true }
+    },
+    {
+        label: 'Eine Prioritaet mit Leerzeichen um den Operator',
+        input: 'toaster gotifyPriority = 8',
+        expected: { keyword: 'toaster', conditions: [], categories: [], gotifyPriority: 8, valid: true }
+    },
+    {
+        label: 'Eine Prioritaet vor dem Keyword',
+        input: 'gotifyPriority=8 toaster',
+        expected: { keyword: 'toaster', conditions: [], categories: [], gotifyPriority: 8, valid: true }
+    },
+    {
+        label: 'Eine Prioritaet zwischen zwei Woertern',
+        input: 'toaster gotifyPriority=8 white',
+        expected: { keyword: 'toaster white', conditions: [], categories: [], gotifyPriority: 8, valid: true }
+    },
+    {
+        label: 'Eine Prioritaet zusammen mit Preis und Kategorie',
+        input: 'toaster price>=10 category=kaffee gotifyPriority=9',
+        expected: {
+            keyword: 'toaster',
+            conditions: [{ op: '>=', price: 10 }],
+            categories: [{ op: '=', text: 'kaffee' }],
+            gotifyPriority: 9,
+            valid: true
+        }
+    },
+    {
+        label: 'Zwei Prioritaeten: die zweite gilt',
+        input: 'toaster gotifyPriority=3 gotifyPriority=8',
+        expected: { keyword: 'toaster', conditions: [], categories: [], gotifyPriority: 8, valid: true }
+    },
+    {
+        label: 'Eine Prioritaet ohne Keyword ist kein Treffer',
+        input: 'gotifyPriority=8',
+        expected: { keyword: '', conditions: [], categories: [], gotifyPriority: 8, valid: true }
+    },
+    {
+        label: 'Eine Prioritaet ueber der Skala macht das Keyword ungueltig',
+        input: 'toaster gotifyPriority=11',
+        expected: { keyword: 'toaster gotifyPriority=11', conditions: [], categories: [], gotifyPriority: null, valid: false }
+    },
+    {
+        label: 'Eine Prioritaet mit Text als Wert macht das Keyword ungueltig',
+        input: 'toaster gotifyPriority=hoch',
+        expected: {
+            keyword: 'toaster gotifyPriority=hoch',
+            conditions: [],
+            categories: [],
+            gotifyPriority: null,
+            valid: false
+        }
+    },
+    {
+        label: 'Zwei Gleichheitszeichen machen das Keyword ungueltig',
+        input: 'toaster gotifyPriority==8',
+        expected: {
+            keyword: 'toaster gotifyPriority==8',
+            conditions: [],
+            categories: [],
+            gotifyPriority: null,
+            valid: false
+        }
+    },
+    {
+        label: 'Ein Vergleich macht das Keyword ungueltig',
+        input: 'toaster gotifyPriority!=8',
+        expected: {
+            keyword: 'toaster gotifyPriority!=8',
+            conditions: [],
+            categories: [],
+            gotifyPriority: null,
+            valid: false
         }
     }
 ];
@@ -680,6 +839,16 @@ for (const _case of CATEGORY_CONDITION_CASES) {
     check(_case.expected, parseCategoryCondition(_case.input), _case.label);
 }
 
+for (const _case of PRIORITY_CONDITION_CASES) {
+    check(_case.expected, parseGotifyPriorityCondition(_case.input), _case.label);
+}
+
+for (const _case of PRIORITY_RESOLVE_CASES) {
+    sandbox.SETTINGS.GotifyPriority = _case.setting;
+    check(_case.expected, getGotifyPriority(_case.priority), _case.label);
+}
+sandbox.SETTINGS.GotifyPriority = 5;
+
 for (const _case of CATEGORY_MATCH_CASES) {
     check(_case.expected, matchCategoryConditions(_case.categories, _case.categoryText), _case.label);
 }
@@ -700,6 +869,8 @@ const _total =
     PRICE_CASES.length +
     CONDITION_CASES.length +
     CATEGORY_CONDITION_CASES.length +
+    PRIORITY_CONDITION_CASES.length +
+    PRIORITY_RESOLVE_CASES.length +
     KEYWORD_CASES.length +
     CATEGORY_MATCH_CASES.length +
     MATCH_CASES.length +

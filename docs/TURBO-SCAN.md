@@ -6,7 +6,7 @@
 > des Chats nicht verloren gehen.
 >
 > Wächter: `scripts/verify/verify_category_tree.js` (24 Fälle),
-> `verify_settings_categories.js` (27 Fälle), `verify_turbo_scan.js` (21 Fälle).
+> `verify_settings_categories.js` (32 Fälle), `verify_turbo_scan.js` (34 Fälle).
 
 ## Ziel
 
@@ -133,18 +133,24 @@ Der Fast-Scan-Intervall mit diesen Parametern:
 6. **Doku:** Changelog-Eintrag, `docs/STAND.md`, `AGENTS.md` (falls neue
    Konventionen entstehen).
 
+## Erledigt / hinfällig
+
+* **Namen auflösen kostet einen Request:** *erledigt.* Die Kategorien werden in den
+  Einstellungen als Liste mit **Nummern** angehakt (`createSettingsCategoriesElement()`,
+  `TURBO_SCAN_ALL_CATEGORY_ID` für „Alle Produkte"), die Unterkategorien einer
+  Hauptkategorie lädt `getVineCategoryChildren()` und hält sie einen Tag im Cache –
+  seit 0.16.0.49/0.50 wird die vollständige Liste sogar im Hintergrund geladen. Von
+  Hand wird nichts mehr aufgelöst.
+* **Komfort: URL aus der Adresszeile einfügen:** *hinfällig.* Die Liste mit den
+  Checkboxen ersetzt das Eintippen von Nummern; die Kategorienliste wird aus Vine
+  gelesen und im Cache gehalten (siehe oben).
+
 ## Offene Punkte
 
-* **Namen auflösen kostet einen Request:** Die Unterkategorien stehen nur für
-  die *ausgewählte* Hauptkategorie im DOM. Ein Eintrag wie
-  `Garten > Gartendeko` braucht daher einmalig einen Seitenaufruf der
-  Hauptkategorie, um die `cn`-Nummer zu finden. Bei **Nummern**
-  (`10925031/87837030`) entfällt das komplett – das spricht für Nummern.
-* **Komfort:** Vorschlag zur Aufnahme in die Liste: die **URL aus der
-  Adresszeile** einfügen (`...?queue=all_items&pn=10925031&cn=87837030`), AVE
-  zieht `pn`/`cn` heraus. Dann muss man keine Nummern von Hand suchen.
 * **Takt und Anzahl** der Kategorien sind frei konfigurierbar; sinnvoll sind
   1–2 Kategorien (siehe Kostentabelle).
 * Amazon-Rate-Limit: Der Turbo-Scan erzeugt zusätzliche Seitenaufrufe. Die
   Einstellungen für die Verzögerungen (`BackGroundScanDelayPerPage`,
-  `BackGroundScannerRandomness`) gelten auch hier.
+  `BackGroundScannerRandomness`) gelten auch hier; das Laden der Kategorienliste im
+  Hintergrund benutzt dieselben Werte (`getScanDelay()`) und hat Vorrang vor dem
+  Scan.

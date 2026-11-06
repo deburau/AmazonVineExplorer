@@ -78,7 +78,7 @@ erledigt, sogar in der strengeren Form „nur die neu hinzugekommenen Produkte".
 
 ## Verifikation der umgesetzten Maßnahme
 
-* `verify_new_products_btn.js`, neues Paar von Szenarien:
+* `verify_new_items.js` (damals `verify_new_products_btn.js`), neues Paar von Szenarien:
   * „Nur neue Produkte werden geprüft: das Produkt wurde gerade hinzugefügt" →
     Benachrichtigung, ein Detail-Request.
   * „Produkte, die schon in der Datenbank sind, werden nicht geprüft" → **keine**

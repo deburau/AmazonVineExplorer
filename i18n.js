@@ -25,7 +25,8 @@ const I18N = {
             keywordMatch: (keyword) => `Keyword-Treffer: ${keyword}`,
             priceMatch: (price) => `Preis-Treffer: ${price}`,
             categoryMatch: (category) => `Kategorie-Treffer: ${category}`,
-            loadingCategories: (done, total) => `Kategorien werden geladen: ${done} / ${total}`
+            loadingCategories: (done, total) => `Kategorien werden geladen: ${done} / ${total}`,
+            gotifyTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version}`
         },
         share: {
             myFSE: 'Mein FSE',
@@ -37,6 +38,7 @@ const I18N = {
             header: (title, version) => `Einstellungen ${title} - Version ${version}`,
             languageLabel: 'Sprache',
             categoriesLoading: 'Kategorien werden geladen ...',
+            turboScanAllItems: 'Alle Produkte',
             categoriesError:
                 'Die Kategorien konnten nicht geladen werden. Öffne die Einstellungen einmal auf einer normalen Vine-Seite (vine/vine-items).'
         },
@@ -65,8 +67,11 @@ const I18N = {
             EnableBtnMarkAllAsSeen: 'Button Alles als gesehen markieren',
             ShowFirstSeen: 'Erst gesehen statt zuletzt gesehen',
             DesktopNotifikationKeywords: 'Desktop-Benachrichtigung Keywords',
+            TITLE_GOTIFY: 'Gotify',
             GotifyUrl: 'URL des Gotify-Servers',
             GotifyToken: 'Gotify Anwendungstoken',
+            GotifyPriority: 'Priorität der Gotify-Nachrichten',
+            BUTTON_GOTIFY_TEST: 'Testnachricht senden',
             BackGroundScanDelayPerPage: 'Background Scan Min. Delay pro Seite (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness pro Seite (ms)',
             TITLE_FAST_SCAN: 'Fast-Scan',
@@ -118,7 +123,8 @@ const I18N = {
             EnableFullWidth: 'Nutzt die volle Breite des Displays.',
             DarkMode: 'Aktiviert den Dark Mode (Neuladen nötig).',
             DisableAmazonNavbar: 'Blendet die Amazon Navbar aus.',
-            DisableCategories: 'Blendet die Kategorien aus.',
+            DisableCategories:
+                'Blendet die Kategorien aus. Die Buttons „Seite als gesehen markieren“, „Alle als gesehen markieren“ und „Zum Seitenanfang“ bleiben erhalten und werden um 90° gedreht in einer schmalen Spalte angezeigt.',
             DisableFooter: 'Blendet die Fußzeile aus.',
             DisableSuggestions: 'Blendet die Vorschläge aus.',
             DisableBtnPotLuck: 'Blendet den Button PotLuck (FSE) aus.',
@@ -138,9 +144,14 @@ const I18N = {
             EnableBtnMarkAllAsSeen: 'Zeigt den Button „Alle als gesehen markieren“ an.',
             ShowFirstSeen: 'Zeigt das Datum des ersten statt des letzten Auftretens.',
             DesktopNotifikationKeywords:
-                'Keywords für Benachrichtigung und Auto-Favorit. Mehrere Wörter müssen alle vorkommen, die Reihenfolge ist egal. Preisbedingungen wie price>=10 laden den Preis jedes Treffers – ein unspezifisches Keyword wie "schwarz price>50" kann zu einer Sperre durch Amazon führen, darum lieber mehrere Wörter angeben. Kategoriebedingungen prüfen den Namen der Kategorie mit denselben Operatoren wie beim Preis: = und == (der Name ist es genau), != und <> (er ist es nicht), < und <= (alphabetisch davor), > und >= (danach), z. B. category="kaffee tee" oder category!=garten. Ein Produkt hat genau eine Kategorie; ist die Kategorie der Seite ein Pfad (Haupt > Unter), zählt der letzte Name. Die Bedingungen stehen ohne Klammern und sind immer ein eigenes Wort. Die Wörter dürfen abgekürzt werden – jedes Stück zählt: p, pr, pri … für price und c, ca, cat … für category. Gespeichert wird immer das ganze Wort. Ein Teil in doppelten Anführungszeichen wird genau so gesucht, mit Leerzeichen: "kaffee bohnen" passt nur, wenn das so im Text steht – ohne Anführungszeichen müssen nur alle Wörter irgendwo vorkommen. Für Kategorienamen gilt das genauso: category="kaffee tee". Ein Kategoriename wird beim Speichern vervollständigt (bei = und !=), sofern er in der Kategorieliste steht: aus category=lebens wird category="Lebensmittel & Getränke".',
+                'Keywords für Benachrichtigung und Auto-Favorit. Mehrere Wörter müssen alle vorkommen, die Reihenfolge ist egal. Preisbedingungen wie price>=10 laden den Preis jedes Treffers – ein unspezifisches Keyword wie "schwarz price>50" kann zu einer Sperre durch Amazon führen, darum lieber mehrere Wörter angeben. Kategoriebedingungen prüfen den Namen der Kategorie mit denselben Operatoren wie beim Preis: = und == (der Name ist es genau), != und <> (er ist es nicht), < und <= (alphabetisch davor), > und >= (danach), z. B. category="kaffee tee" oder category!=garten. Ein Produkt hat genau eine Kategorie; ist die Kategorie der Seite ein Pfad (Haupt > Unter), zählt der letzte Name. Die Bedingungen stehen ohne Klammern und sind immer ein eigenes Wort. Die Wörter dürfen abgekürzt werden – jedes Stück zählt: p, pr, pri … für price und c, ca, cat … für category. Gespeichert wird immer das ganze Wort. Ein Teil in doppelten Anführungszeichen wird genau so gesucht, mit Leerzeichen: "kaffee bohnen" passt nur, wenn das so im Text steht – ohne Anführungszeichen müssen nur alle Wörter irgendwo vorkommen. Für Kategorienamen gilt das genauso: category="kaffee tee". Ein Kategoriename wird beim Speichern vervollständigt (bei = und !=), sofern er in der Kategorieliste steht: aus category=lebens wird category="Lebensmittel & Getränke". Mit gotifyPriority=<n> setzt ein Keyword die Priorität seiner Gotify-Nachricht (nur mit =, die Priorität wird zugewiesen und nicht verglichen; Wert 0 bis 10, ohne Angabe gilt die Einstellung), z. B. toaster gotifyPriority=8. Das Wort darf wie die anderen abgekürzt werden: g, go, got, goti …',
+            TITLE_GOTIFY: 'Gotify',
             GotifyUrl: 'Adresse des Gotify-Servers, z. B. https://gotify.example.com',
             GotifyToken: 'Authentifizierungs-Token der Gotify-Anwendung.',
+            GotifyPriority:
+                'Priorität, mit der die Gotify-Nachrichten verschickt werden. 0 ist der kleinste und 10 der größte Wert. Ein Keyword kann für seine Treffer eine andere Priorität angeben (gotifyPriority=8, die Priorität wird zugewiesen und nicht verglichen).',
+            BUTTON_GOTIFY_TEST:
+                'Verschickt eine Testnachricht an den Gotify-Server – mit der Priorität aus der Einstellung darüber. Der Button ist grau, solange Adresse oder Token fehlen.',
             BackGroundScanDelayPerPage: 'Min. Wartezeit pro Seite in Millisekunden.',
             BackGroundScannerRandomness: 'Max. zufällige Wartezeit pro Seite in Millisekunden.',
             FastScanIntervalSeconds:
@@ -222,7 +233,8 @@ const I18N = {
             keywordMatch: (keyword) => `Keyword match: ${keyword}`,
             priceMatch: (price) => `Price match: ${price}`,
             categoryMatch: (category) => `Category match: ${category}`,
-            loadingCategories: (done, total) => `Loading the categories: ${done} / ${total}`
+            loadingCategories: (done, total) => `Loading the categories: ${done} / ${total}`,
+            gotifyTestMessage: (version) => `Test message of Amazon Vine Explorer ${version}`
         },
         share: {
             myFSE: 'My FSE',
@@ -234,6 +246,7 @@ const I18N = {
             header: (title, version) => `Settings ${title} - Version ${version}`,
             languageLabel: 'Language',
             categoriesLoading: 'Loading the categories ...',
+            turboScanAllItems: 'All products',
             categoriesError: 'The categories could not be loaded. Open the settings once on a normal Vine page (vine/vine-items).'
         },
         settingsLabels: {
@@ -261,8 +274,11 @@ const I18N = {
             EnableBtnMarkAllAsSeen: 'Enable Button Mark all as seen',
             ShowFirstSeen: 'Show first seen instead of last seen',
             DesktopNotifikationKeywords: 'Desktop Notification Highlight Keywords',
+            TITLE_GOTIFY: 'Gotify',
             GotifyUrl: 'URL of the Gotify Server',
             GotifyToken: 'Gotify application token',
+            GotifyPriority: 'Priority of the Gotify messages',
+            BUTTON_GOTIFY_TEST: 'Send a test message',
             BackGroundScanDelayPerPage: 'Background Scan Per Page Min Delay (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness per Page (ms)',
             TITLE_FAST_SCAN: 'Fast scan',
@@ -314,7 +330,8 @@ const I18N = {
             EnableFullWidth: 'Uses the full width of the display.',
             DarkMode: 'Enables the dark mode (reload required).',
             DisableAmazonNavbar: 'Hides the Amazon navbar.',
-            DisableCategories: 'Hides the categories.',
+            DisableCategories:
+                'Hides the categories. The buttons "Mark page as seen", "Mark all as seen" and "Back to top" stay and are shown rotated by 90 degrees in a narrow column.',
             DisableFooter: 'Hides the footer.',
             DisableSuggestions: 'Hides the suggestions.',
             DisableBtnPotLuck: 'Hides the PotLuck button (FSE).',
@@ -334,9 +351,14 @@ const I18N = {
             EnableBtnMarkAllAsSeen: 'Shows the "Mark all as seen" button.',
             ShowFirstSeen: 'Shows the date of the first appearance instead of the last one.',
             DesktopNotifikationKeywords:
-                'Keywords for the notification and the auto favorite. All words of a keyword have to occur, the order does not matter. Price conditions like price>=10 load the price of every match – an unspecific keyword like "black price>50" can get the account blocked by Amazon, so use several words. Category conditions check the name of the category with the same operators as a price: = and == (the name is exactly the text), != and <> (it is not), < and <= (before the text in the alphabet), > and >= (behind it), e.g. category="kaffee tee" or category!=garden. A product has exactly one category; when the category of the page is a path (main > sub), the last name counts. The conditions are written without brackets and they are always a word of their own. The words can be shortened - every beginning works: p, pr, pri ... for price and c, ca, cat ... for category. The whole word is stored in every case. A part in double quotes is searched as it is, spaces included: "kaffee bohnen" matches only if that text stands in the description - without the quotes all words have to occur somewhere. The same works for the name of a category: category="kaffee tee". While a keyword is stored, a category name is completed (= and != only) if it is in the list of the categories: category=lebens becomes category="Lebensmittel & Getränke".',
+                'Keywords for the notification and the auto favorite. All words of a keyword have to occur, the order does not matter. Price conditions like price>=10 load the price of every match – an unspecific keyword like "black price>50" can get the account blocked by Amazon, so use several words. Category conditions check the name of the category with the same operators as a price: = and == (the name is exactly the text), != and <> (it is not), < and <= (before the text in the alphabet), > and >= (behind it), e.g. category="kaffee tee" or category!=garden. A product has exactly one category; when the category of the page is a path (main > sub), the last name counts. The conditions are written without brackets and they are always a word of their own. The words can be shortened - every beginning works: p, pr, pri ... for price and c, ca, cat ... for category. The whole word is stored in every case. A part in double quotes is searched as it is, spaces included: "kaffee bohnen" matches only if that text stands in the description - without the quotes all words have to occur somewhere. The same works for the name of a category: category="kaffee tee". While a keyword is stored, a category name is completed (= and != only) if it is in the list of the categories: category=lebens becomes category="Lebensmittel & Getränke". A keyword sets the priority of its Gotify message with gotifyPriority=<n> (= only, the priority is assigned and not compared; value 0 to 10, without it the setting is used), e.g. toaster gotifyPriority=8. The word can be shortened like the others: g, go, got, goti ...',
+            TITLE_GOTIFY: 'Gotify',
             GotifyUrl: 'Address of the Gotify server, e.g. https://gotify.example.com',
             GotifyToken: 'Authentication token of the Gotify application.',
+            GotifyPriority:
+                'Priority of the Gotify messages. 0 is the lowest and 10 the highest value. A keyword can name another priority for its matches (gotifyPriority=8, the priority is assigned and not compared).',
+            BUTTON_GOTIFY_TEST:
+                'Sends a test message to the Gotify server, with the priority of the setting above. The button is grey as long as the address or the token is missing.',
             BackGroundScanDelayPerPage: 'Minimum wait time per page in milliseconds.',
             BackGroundScannerRandomness: 'Maximum random wait time per page in milliseconds.',
             FastScanIntervalSeconds:

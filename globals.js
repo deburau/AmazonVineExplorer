@@ -490,6 +490,9 @@ SETTINGS_USERCONFIG_DEFINES.push({
     inputPlaceholder: 'Type in your highlight keywords one per line and click outside to submit',
     description: 'Create a List of words u want to Highlight if Product desciption containes one or more of them'
 });
+// NOTE: The settings of Gotify stand under their own heading, because they only
+// matter for the users who use a Gotify server.
+SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Gotify', description: '', key: 'TITLE_GOTIFY' });
 SETTINGS_USERCONFIG_DEFINES.push({
     key: 'GotifyUrl',
     type: 'url',
@@ -501,6 +504,25 @@ SETTINGS_USERCONFIG_DEFINES.push({
     type: 'password',
     name: 'Gotify application token',
     description: 'The authenticatin token of your Gotify application'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'GotifyPriority',
+    type: 'number',
+    min: 0,
+    max: 10,
+    name: 'Priority of the Gotify messages',
+    description:
+        'The priority of the Gotify messages. 0 is the lowest and 10 the highest value. A keyword can name another priority for its matches (gotifyPriority).'
+});
+SETTINGS_USERCONFIG_DEFINES.push({
+    type: 'button',
+    key: 'BUTTON_GOTIFY_TEST',
+    name: 'Send a test message',
+    bgColor: 'rgb(0, 160, 255)',
+    description: 'Sends a test message to the Gotify server, with the priority of the setting above.',
+    // The button needs the address and the token of the server.
+    btnEnabled: () => Boolean(SETTINGS.GotifyUrl && SETTINGS.GotifyToken),
+    btnClick: () => sendGotifyTestMessage()
 });
 SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Background scan', description: '', key: 'TITLE_BACKGROUND_SCAN' });
 SETTINGS_USERCONFIG_DEFINES.push({
@@ -841,6 +863,7 @@ class SETTINGS_DEFAULT {
     DesktopNotifikationKeywords = [];
     GotifyUrl = '';
     GotifyToken = '';
+    GotifyPriority = 5;
     CssProductNewTag = 'border: 2mm ridge rgba(218, 247, 166, .6); background-color: rgba(218, 247, 166, .2)';
     CssProductSaved = 'border: 2mm ridge rgba(105, 163, 0, .6); background-color: rgba(105, 163, 0, .2)';
     CssProductFavTag = 'border: 2mm ridge rgba(255, 255, 102, .6); background-color: rgba(255, 255, 102, .2)';
@@ -1206,9 +1229,12 @@ async function fastStyleChanges() {
             });
         }
 
+        // NOTE: The categories are switched off, but the buttons of AVE stay: the
+        // side bar becomes a narrow column and the categories in it are hidden by
+        // the CSS of the buttons (see getVerticalButtonsCss()).
         if (SETTINGS.DisableCategories) {
             waitForStyleElement('#vvp-browse-nodes-container', (elem) => {
-                if (elem) elem.style.display = 'none';
+                if (elem) elem.style.display = '';
             });
         }
 

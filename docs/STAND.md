@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.17.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.16.0.1` (in Entwicklung, Release 0.17.0 vorbereitet) |
+| Version im User-Script | `0.17.0` (Release 0.17.0, veröffentlicht) |
 | Letztes Release | **0.16.0** (auf `main`, veröffentlicht, Merge-Commit `ff19eaa`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 18 erfolgreich (`npm run verify`) |
@@ -25,15 +25,41 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.40 | Bedingungen ohne Klammern | bestätigt |
 | 0.15.0.38 / 0.15.0.39 | Kategoriebedingungen, Unterkategoriename beim Turbo-Scan | bestätigt |
 | 0.15.0.41 | Zeilen der Benachrichtigung (Keyword/Preis/Kategorie) | bestätigt |
-| 0.15.0.44 | Neues Keyword oben in der Liste | **offen** |
-| 0.15.0.45 / 0.15.0.46 | Abkürzungen der Bedingungen (jede Verkürzung) | **offen** |
-| 0.15.0.47 | Verbatim-Strings in doppelten Anführungszeichen | **offen** |
-| 0.15.0.48 | Kategoriename wird beim Speichern vervollständigt | **offen** |
-| 0.15.0.49 / 0.15.0.50 | Vollständige Kategorienliste im Hintergrund (Wartezeit wie der Scan) | **offen** |
-| 0.15.0.51 / 0.15.0.52 | Kategorie-Operatoren wie beim Preis, eine Kategorie je Produkt | **offen** |
+| 0.15.0.44 | Neues Keyword oben in der Liste | ohne Befund |
+| 0.15.0.45 / 0.15.0.46 | Abkürzungen der Bedingungen (jede Verkürzung) | ohne Befund |
+| 0.15.0.47 | Verbatim-Strings in doppelten Anführungszeichen | ohne Befund |
+| 0.15.0.48 | Kategoriename wird beim Speichern vervollständigt | ohne Befund |
+| 0.15.0.49 / 0.15.0.50 | Vollständige Kategorienliste im Hintergrund (Wartezeit wie der Scan) | ohne Befund |
+| 0.15.0.51 / 0.15.0.52 | Kategorie-Operatoren wie beim Preis, eine Kategorie je Produkt | ohne Befund |
+| 0.15.0.54 | Trefferzeilen in Gotify stehen vor der Beschreibung | ohne Befund |
+| 0.15.0.56 | Debug-Meldung mit Zählern (`EVENT - database changed …`) | ohne Befund |
+| 0.15.0.57 | Umbenennung `processNewItems()` | ohne Befund |
+| 0.16.0.2 | Virtuelle Kategorie „Alle Produkte“ im Turbo-Scan | bestätigt |
+| 0.16.0.5 | Einstellbare Priorität der Gotify-Nachrichten + Testnachricht-Button | bestätigt |
+| 0.16.0.6 | Buttons bleiben bei deaktivierten Kategorien (gedreht, Issue #32) | bestätigt |
+| 0.16.0.7 | Korrektur: die Drehung trifft die echten Button-Elemente (`span.a-button`) | bestätigt |
+| 0.16.0.8 | Korrektur: schmalere Spalte (30 px) und links am Rand (kein Padding von Amazon) | bestätigt |
+| 0.16.0.9 | Korrektur: `#ave-left-buttons` ist 240 px breit (Amazon `.parent-node`) – Breite auf die Spalte begrenzt | bestätigt |
+| 0.16.0.10 | Der Wrapper `#vvp-filter-container` (98 px) wird ebenfalls schmal | bestätigt |
+| 0.16.0.11 | Korrektur: Spalte 24 px, Zeilenhöhe 1.2 (Amazon-Line-height war die Breite), Schrift 12 px, Padding 8px 1px | bestätigt |
+| 0.16.0.12 | Korrektur: Button auf die Breite der Spalte begrenzt (`width: 100%`, `overflow: hidden`) | verworfen (Text wurde abgeschnitten) |
+| 0.16.0.13 | Eigene Buttons für die schmale Spalte (`createVerticalButton()`, Klasse `ave-vertical-button`) | bestätigt |
+| 0.16.0.14 | Mehr Abstand neben dem Text (`padding: 8px 4px`), Buttons bleiben beim Scrollen oben | bestätigt |
+| 0.16.0.15 | Korrektur: beim Scrollen wird die **ganze Spalte** festgehängt, nicht die einzelnen hohen Buttons (sie überlappten sich) | bestätigt |
 
-Alle für das Release 0.16.0 vorgesehenen Änderungen sind damit im Browser
-getestet.
+**„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
+benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
+Einzelne Features wurden dafür nicht abgehakt getestet.
+
+## Entschieden / zurückgestellt
+
+Diese Punkte wurden besprochen und bewusst **nicht** umgesetzt – sie sollen nicht
+wieder vorgeschlagen werden:
+
+| Punkt | Entscheidung |
+|---|---|
+| Schreib- und Loglast reduzieren (`ts_lastSeen` nur einmal pro Minute schreiben, Aufruf-Spuren erst ab `DebugLevel > 5`) | **entfällt** (Entscheidung des Maintainers, 2026-11-06) |
+| Vorsorge gegen Kontosperre (Notbremse/Queue-Limit für die Detail-Requests aus `docs/ANALYSE-DETAILS-REQUESTS.md`) | **auf unbestimmte Zeit zurückgestellt** (2026-11-06) |
 
 ## Was in dieser Session gemacht wurde
 
@@ -304,7 +330,7 @@ Release erledigt und wurde geschlossen.
   tragen die Logzeilen wieder den Namen ihrer eigenen Funktion
   (`matchesKeyword()`, `checkKeywordsForProduct()`, `matchesPriceConditions()`,
   `searchKeywordsInProducts()`); vorher stand dort überall
-  `updateNewProductsBtn():`. Die Wächter `verify_new_products_btn.js` (führt je
+  `updateNewProductsBtn():`. Die Wächter `verify_new_items.js` (führt je
   Seite den passenden Namen aus) und `verify_init.js` (beide Namen schreiben
   dasselbe Etikett) bleiben „identisch".
 * **Meldung des Datenbank-Events** (0.15.0.56): `DB_HANDLER.#fireDataChangedEvent()`
@@ -322,11 +348,12 @@ Release erledigt und wurde geschlossen.
   `Kategorie-Treffer: <Name der Kategorie>`. Eine Zeile nur, wenn es die Art des
   Treffers gab. Gebildet von `formatMatchLines()` (i18n `notifications`:
   `keywordMatch`, `priceMatch`, `categoryMatch`, de/en).
-* Wächter `scripts/verify/verify_keyword_conditions.js` (75 Fälle: Preise,
-  Kategorien, das Parsen und die Vergleiche, Klammern als Text),
-  `verify_search.js` (20 Fälle) und `verify_match_lines.js` (10 Fälle: die Zeilen
-  der Benachrichtigung; zwei Textprüfungen zusätzlich in
-  `verify_new_products_btn.js`).
+* Wächter `scripts/verify/verify_keyword_conditions.js` (173 Fälle: Preise,
+  Kategorien, die Priorität der Gotify-Nachricht, das Parsen und die Vergleiche,
+  Klammern als Text), `verify_gotify_priority.js` (23 Fälle: die Anfrage an den
+  Server und die Priorität der Nachricht), `verify_search.js` (21 Fälle) und
+  `verify_match_lines.js` (10 Fälle: die Zeilen der Benachrichtigung; zwei
+  Textprüfungen zusätzlich in `verify_new_items.js`).
 * **Kategoriebedingungen** in den Keywords (`category~getränke`):
   `parseCategoryCondition()` + `matchCategoryConditions()` (Teilstring, klein
   geschrieben, alle Bedingungen müssen passen). Es muss ein **Keyword oder eine
@@ -358,7 +385,7 @@ Release erledigt und wurde geschlossen.
   (drei Leerzeichen) und fand damit nie etwas. Der Leerraum um die Bedingung
   verschwindet jetzt mit ihr (`parseKeywordConfig()`).
 
-### Turbo-Scan (Konzept, noch nicht implementiert)
+### Turbo-Scan (das Konzept, umgesetzt in 0.15.0.32)
 
 **Nächster geplanter Schritt.** Ziel: neue Produkte in einer kleinen, vom
 Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
@@ -389,7 +416,7 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   Request**; nur wenn die Seite sie nicht hat bzw. der Cache leer ist, wird die
   Seite per `fetch` im Hintergrund geladen. Cache in `AVE_CATEGORY_CACHE`,
   Wächter `verify_category_tree.js` (24 Fälle) und
-  `verify_settings_categories.js` (27 Fälle).
+  `verify_settings_categories.js` (32 Fälle).
 * **Turbo-Scan ist umgesetzt** (0.15.0.32):
   **Kein Seiten-Hash:** Ein Zwischenstand (0.15.0.33) hat das Parsen der Tiles
   übersprungen, wenn ein Hash der Produkt-Ids gleich blieb. Das war **nicht** die
@@ -403,9 +430,88 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   Turbo vor BG, eine Seite pro Schritt) und benutzt `backGroundTileScanner()` –
   dadurch werden neue Produkte gespeichert und die Keyword-Suche läuft wie
   gewohnt. Die Schleife startet, wenn **einer** der beiden Scans an ist.
-  Wächter: `scripts/verify/verify_turbo_scan.js` (21 Fälle). **Der Turbo-Scan selbst fehlt noch** – die
-  Einstellungen haben bis dahin keine Wirkung, darum gibt es noch keinen
-  Changelog-Eintrag.
+  Wächter: `scripts/verify/verify_turbo_scan.js` (34 Fälle).
+* **Virtuelle Kategorie „Alle Produkte“** im Turbo-Scan (0.16.0.2): die Liste der
+  Kategorien in den Einstellungen endet mit dem Eintrag `TURBO_SCAN_ALL_CATEGORY_ID`
+  (`'all'`, Label aus i18n `settings.turboScanAllItems`, de „Alle Produkte“). Ist er
+  angehakt, lädt `scanStepTurbo()` als **letzten Schritt einer Runde** die normale
+  erste Produktseite (`?queue=all_items&pn=&cn=&page=1`, wie der Background-Scan) –
+  `parseTurboScanCategory('all')` liefert dafür leere Nummern und
+  `getTurboScanCategories()` hängt den Eintrag **immer ans Ende**, egal wo er in
+  `SETTINGS.TurboScanCategories` steht. Die Zeile hat keinen Pfeil
+  (`toggleSettingsCategoryChildren()` kehrt für sie sofort zurück), damit sie wie eine
+  Hauptkategorie aussieht.
+* **Buttons bleiben bei deaktivierten Kategorien** (0.16.0.6, Issue #32): `DisableCategories`
+  blendet die Seitenleiste `#vvp-browse-nodes-container` nicht mehr aus, sondern macht sie
+  zu einer **schmalen Spalte** (46 px). Das CSS aus `getVerticalButtonsCss()` blendet alles
+  darin aus **außer** `#ave-left-buttons` (dem Container der drei Buttons) und dreht die
+  Buttons (`writing-mode: vertical-rl` + `transform: rotate(180deg)`, Stil aus
+  `getLeftSideButtonStyle()`); `addVerticalButtonsStyle()` hängt das CSS einmal in den Kopf
+  der Seite. `window.onscroll` hängt die Buttons in **beiden** Modi oben fest, damit sie beim
+  Scrollen sichtbar bleiben (seit 0.16.0.14; vorher waren sie in der schmalen Spalte aus dem
+  Fluss genommen). **Seit 0.16.0.15** wird in der schmalen Spalte nicht jeder einzelne Button
+  festgehängt (die Abstände 5/40/75 px sind für die flachen Buttons gedacht, die hohen
+  gedrehten Buttons überlappten sich damit), sondern der Container `#ave-left-buttons` – die
+  Buttons behalten so ihre Reihenfolge und ihren Abstand (`gap: 4px`).
+  Wächter: `scripts/verify/verify_left_side_buttons.js` (40 Fälle).
+
+  **Nachtrag 0.16.0.7:** `createButton()` erzeugt **keinen `<button>`**, sondern
+  `<span class="a-button">` mit inneren Spans – der Selektor `#ave-left-buttons button`
+  traf nichts, darum waren die Buttons weiter waagerecht. Das CSS zielt jetzt auf
+  `.a-button`, `.a-button-inner` und `.a-button-text`; der Wächter prüft zusätzlich, dass
+  das CSS zu den Klassen passt, die `createButton()` setzt.
+
+  **Nachtrag 0.16.0.8:** Die Spalte ist nur noch **30 px** breit und das Padding der
+  Seitenleiste ist auf 0 gesetzt (`padding`, `margin-left`, `box-sizing`), damit die Buttons
+  am **linken Rand** stehen statt in die Produktspalte zu ragen. Das Padding der gedrehten
+  Buttons ist auf `10px 1px` verkleinert.
+
+  **Nachtrag 0.16.0.9:** Der Container `#ave-left-buttons` trägt die Klasse `parent-node`
+  von Amazon und war damit **240 px breit**; `align-items: center` zentrierte die Buttons
+  darin und schob sie nach rechts (Messung im Browser: `width: 240px`, `rect.left: 37.33`).
+  `width`/`max-width: 100%` begrenzen ihn jetzt auf die Breite der Spalte, das Padding, der
+  Rand und der Hintergrund von `parent-node` sind auf 0 bzw. `none` gesetzt.
+
+  **Nachtrag 0.16.0.10:** Der Wrapper der Seitenleiste `#vvp-filter-container` (in der
+  Messung 98 px, AVE benutzt ihn nicht) wird auf 30 px gesetzt, damit die Produkte auch
+  diesen Platz bekommen.
+
+  **Nachtrag 0.16.0.11:** Die Spalte ist nur noch **24 px** breit. In senkrechter Schrift
+  ist die **Zeilenhöhe** die Breite des Kastens – Amazons `.a-button-text` bringt eine große
+  mit, darum ist `line-height: 1.2 !important` (plus `font-size: 12px` und Padding
+  `8px 1px`) gesetzt; sonst wären die Buttons trotz schmaler Spalte breit.
+
+  **Nachtrag 0.16.0.12:** Der Button (`.a-button`) **und** sein Innenkasten (`.a-button-inner`)
+  bekommen `width`/`max-width: 100%` mit `box-sizing: border-box`, und der Container
+  `#ave-left-buttons` bekommt `overflow: hidden`. Damit ist der Button **auf die Breite der
+  Spalte begrenzt** (Messung: Spalte 37–61 px, Produktspalte beginnt bei 61 px) – breiter
+  als 24 px kann er nicht mehr werden, also kann er kein Produkt mehr überdecken.
+
+  **Nachtrag 0.16.0.13 (der harte Schnitt):** Das Herumdoktern an Amazons Button-Markup
+  (`.a-button`, `width`, `line-height`, `overflow`) hat den Text abgeschnitten. Die Buttons
+  der schmalen Spalte werden jetzt **komplett eigen** gebaut: `createVerticalButton()`
+  erzeugt ein schlichtes `div` mit der Klasse `ave-vertical-button` (id bleibt
+  `ave-btn-allseen` usw., Handler unverändert), das CSS dreht und formatiert nur dieses div.
+  Die normalen Buttons in der Kategorie-Leiste benutzen weiter `createButton()` mit dem
+  Amazon-Markup. Wächter prüfen zusätzlich, dass das CSS **kein** `.a-button` mehr nennt und
+  dass `addLeftSideButtons()` beide Wege benutzt.
+* **Einstellbare Priorität der Gotify-Nachrichten** (0.16.0.5): die Gotify-Settings
+  stehen unter der eigenen Überschrift `TITLE_GOTIFY`, das neue Feld
+  `GotifyPriority` (Typ `number`, 0–10, Standard **5**) steht unter dem
+  Anwendungstoken. Ein Keyword kann mit `gotifyPriority=<n>` eine eigene Priorität
+  für seine Treffer setzen (`parseGotifyPriorityCondition()`, jede Abkürzung wie bei
+  `price`/`category`; der Operator ist `=` und nichts anderes – die Priorität wird
+  zugewiesen und nicht verglichen, `gotifyPriority==8` ist daher ungültig –,
+  gespeichert wird das ganze Wort über
+  `aveExpandKeywordAbbreviations()`); ohne Angabe gilt die Einstellung
+  (`getGotifyPriority()`, Werte außerhalb 0–10 fallen auf den Standard zurück).
+  `gotifyNotification(message, prod, priority)` schreibt sie in den Payload. Unter der
+  Priorität steht der Button `BUTTON_GOTIFY_TEST` („Testnachricht senden"):
+  `sendGotifyTestMessage()` schickt eine Testnachricht **mit der Priorität der
+  Einstellung** und ohne Produkt (kein Ziel, kein Bild); ohne Adresse oder Token ist er
+  grau (`btnEnabled`) und schickt nichts.
+  Wächter: `scripts/verify/verify_gotify_priority.js` (36 Fälle) und die
+  `gotifyPriority`-Fälle in `verify_keyword_conditions.js`.
 * **Umbau der Steuerung:** eine einzige Schleife mit Prioritäten
   (Turbo → Fast → BG → Cleanup, Verzögerung vorne) – Plan, Risiken und die
   Verifikationsstrategie stehen in **`docs/SCAN-LOOP.md`**. **Schritte 1 und 2
@@ -446,7 +552,7 @@ oft der Pfad lief.
 
 | Datei | Inhalt |
 |---|---|
-| `VineExplorer.user.js` (~4900 Zeilen) | Hauptdatei, alle Funktionen |
+| `VineExplorer.user.js` | Hauptdatei, alle Funktionen |
 | `globals.js` | Konstanten, Settings, Session-Management |
 | `scripts/verify/` | Verifikationsskripte für die Refactorings und die Features |
 | `vine_logo*.png` (Wurzel) | Projekt-Logos. Sie bleiben **im Wurzelverzeichnis**: die veröffentlichten Versionen laden `main/vine_logo.png` und `main/vine_logo_notification_image.png` zur Laufzeit, ein Umzug würde bei noch nicht aktualisierten Clients ein fehlendes Benachrichtigungssymbol erzeugen (Raw-URLs leiten nicht weiter). |
@@ -476,6 +582,35 @@ npm run verify
 
 `npm run verify` startet alle Skripte unter `scripts/verify/`. Ein neues Skript
 gehört in `scripts/verify/` und nutzt `lib/verify_helpers.js`.
+
+### Die 20 Verifikationen
+
+**Baseline-Vergleiche** prüfen, dass ein Refactoring das Verhalten **nicht** ändert
+(alt ↔ neu, gleiche Nebenwirkungen). **Feature-Tests** prüfen das aktuelle Verhalten
+gegen erwartete Werte.
+
+| Skript | Art | Umfang |
+|---|---|---|
+| `verify_scan.js` | Baseline | die local-storage-Zugriffe des Scans in 7 Szenarien |
+| `verify_db_helpers.js` | Baseline | die DB-Zugriffe von `cleanUpDatabase()` und dem Markieren |
+| `verify_settings_ui.js` | Baseline | das erzeugte DOM aller 9 Einstellungstypen |
+| `verify_new_items.js` | Baseline | Benachrichtigungen, Abzeichen und Seitentitel von `processNewItems()` |
+| `verify_init.js` | Baseline | DOM und Aufrufe der Seiten-Initialisierung (31 Schritte) |
+| `verify_details_on_favorite.js` | Baseline | die Requests der Preisdetails beim Favorisieren |
+| `verify_settings_categories.js` | Feature | die Kategorieauswahl des Turbo-Scans inkl. „Alle Produkte" (32 Fälle) |
+| `verify_site_detection.js` | Feature | die Erkennung der Vine-Seiten (16 URLs) |
+| `verify_search.js` | Feature | die Suche in der Suchleiste (21 Fälle) |
+| `verify_keyword_conditions.js` | Feature | das Parsen und Vergleichen der Bedingungen inkl. `gotifyPriority` (173 Fälle) |
+| `verify_gotify_priority.js` | Feature | die Priorität der Gotify-Nachrichten und die Testnachricht (36 Fälle) |
+| `verify_left_side_buttons.js` | Feature | die Buttons der linken Seite in der schmalen Spalte (40 Fälle) |
+| `verify_keyword_order.js` | Feature | die Reihenfolge der Keywords (22 Fälle) |
+| `verify_match_lines.js` | Feature | die Trefferzeilen der Benachrichtigung (10 Fälle) |
+| `verify_category_load.js` | Feature | das Hintergrundladen der Kategorien (26 Fälle) |
+| `verify_category_tree.js` | Feature | das Parsen des Kategoriebaums (24 Fälle) |
+| `verify_tax_prizes.js` | Feature | die Migration der Variantenpreise (14 Fälle) |
+| `verify_turbo_scan.js` | Feature | den Turbo-Scan (34 Fälle) |
+| `verify_fast_scan_interval.js` | Feature | den Takt des Fast-Scans (15 Fälle) |
+| `verify_request_delay.js` | Feature | die Wartezeiten der Detail-Requests (20 Fälle) |
 
 ## Werkzeuge
 
