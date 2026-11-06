@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.11
+// @version      0.16.0.12
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -877,6 +877,9 @@ function getVerticalButtonsCss() {
         padding: 0 !important;
         border: 0 !important;
         background: none !important;
+        /* NOTE: Nothing of the column may leave it, otherwise it would lie over the
+           products (the column is 24 pixels wide, the products start behind it). */
+        overflow: hidden !important;
     }
     /* NOTE: A button of AVE is a span with the class "a-button", its text stands in
        a span with the class "a-button-text" (see createButton()). The writing mode is
@@ -892,6 +895,15 @@ function getVerticalButtonsCss() {
            wide, so it is replaced. */
         line-height: 1.2 !important;
         font-size: 12px;
+    }
+    #ave-left-buttons .a-button,
+    #ave-left-buttons .a-button .a-button-inner {
+        /* NOTE: The button is as wide as the column, whatever Amazon's rules and the
+           writing mode do (the class a-button-inner has a width of 100 percent of its
+           own, which made the button wider than the text). */
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
     }
     #ave-left-buttons .a-button {
         transform: rotate(180deg);

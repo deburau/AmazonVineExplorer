@@ -144,6 +144,9 @@ contains(_css, 'writing-mode: vertical-rl', 'Die Buttons werden um 90 Grad gedre
 contains(_css, 'transform: rotate(180deg)', 'Die Schrift steht aufrecht');
 contains(_css, 'white-space: nowrap', 'Der Text der Buttons bricht nicht um');
 contains(_css, 'line-height: 1.2 !important', 'Die grosse Zeilenhoehe von Amazon wird ersetzt (sie waere die Breite)');
+contains(_css, 'overflow: hidden !important', 'Nichts der Spalte ragt heraus');
+contains(_css, 'width: 100% !important', 'Der Button ist so breit wie die Spalte');
+contains(_css, 'box-sizing: border-box !important', 'Der Rand des Buttons zaehlt zur Breite');
 contains(_css, 'font-size: 12px', 'Die Schrift ist kleiner');
 notContains(_css, '//', 'Das CSS hat keine ungueltigen Kommentare');
 

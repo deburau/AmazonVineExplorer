@@ -83,7 +83,7 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
-##### [2026-11-06] - Version 0.16.0.11
+##### [2026-11-06] - Version 0.16.0.12
 
 * New: the list of the categories of the turbo scan has the virtual category **"Alle Produkte"** (translated) at its end. When it is switched on, the turbo scan loads the normal first page of the products as the **last step of a round** - after all the other selected categories - so that a round ends with the unfiltered list. A round is complete with that step, so the waiting time of the next round starts after it.
 * New: the **priority** of the Gotify messages can be set. The settings of Gotify have their own section **"Gotify"** now, the new field **"Priority of the Gotify messages"** (default **5**, 0 is the lowest and 10 the highest value) stands under the application token.
