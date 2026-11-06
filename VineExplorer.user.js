@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.7
+// @version      0.16.0.8
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -819,9 +819,10 @@ function reloadPageWithSubpageTarget(target) {
  */
 function getLeftSideButtonStyle(bgColor, vertical) {
     if (vertical) {
-        // NOTE: "width: auto" makes the box as narrow as the rotated text, the
-        // padding keeps a distance to the border of the column.
-        return `width: auto; padding: 12px 4px; background-color: ${bgColor};`;
+        // NOTE: "width: auto" makes the box as narrow as the rotated text, the small
+        // padding keeps a distance to the border of the column (the text stands along
+        // the height of the button, so the padding can be small).
+        return `width: auto; padding: 10px 1px; background-color: ${bgColor};`;
     }
     return `width: 240px; background-color: ${bgColor};`;
 }
@@ -837,11 +838,16 @@ function getLeftSideButtonStyle(bgColor, vertical) {
  */
 function getVerticalButtonsCss() {
     return `
-    /* The side bar keeps the buttons of AVE, the categories are hidden. */
+    /* The side bar keeps the buttons of AVE, the categories are hidden. It is as
+       narrow as the rotated buttons need and it has no padding of its own, so that
+       the buttons stand at the left edge of the page. */
     #vvp-browse-nodes-container {
-        width: 46px !important;
-        min-width: 46px !important;
-        max-width: 46px !important;
+        width: 30px !important;
+        min-width: 30px !important;
+        max-width: 30px !important;
+        padding: 0 !important;
+        margin-left: 0 !important;
+        box-sizing: border-box !important;
     }
     #vvp-browse-nodes-container > *:not(#ave-left-buttons) {
         display: none !important;
@@ -851,6 +857,8 @@ function getVerticalButtonsCss() {
         flex-direction: column;
         align-items: center;
         gap: 4px;
+        margin: 0 !important;
+        padding: 0 !important;
     }
     /* NOTE: A button of AVE is a span with the class "a-button", its text stands in
        a span with the class "a-button-text" (see createButton()). The writing mode is

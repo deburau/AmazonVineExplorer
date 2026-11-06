@@ -116,15 +116,18 @@ notContains(_normal, 'rotate', 'Der normale Button ist nicht gedreht (Drehung)')
 // 2. Der Stil eines Buttons in der schmalen Spalte.
 const _vertical = getLeftSideButtonStyle('rgb(0, 255, 0)', true);
 contains(_vertical, 'width: auto', 'Der gedrehte Button ist so breit wie sein Text');
+contains(_vertical, 'padding: 10px 1px', 'Der gedrehte Button hat einen kleinen Abstand');
 notContains(_vertical, 'width: 240px', 'Der gedrehte Button ist nicht mehr breit');
 contains(_vertical, 'background-color: rgb(0, 255, 0)', 'Der gedrehte Button traegt seine Farbe');
 contains(_vertical, 'padding', 'Der gedrehte Button hat einen Abstand zum Rand');
-
 // 3. Das CSS der schmalen Spalte.
 const _css = getVerticalButtonsCss();
 contains(_css, '#vvp-browse-nodes-container', 'Das CSS nennt die Seitenleiste von Amazon');
-contains(_css, 'width: 46px', 'Die Spalte ist schmal');
-contains(_css, 'max-width: 46px', 'Die Spalte wird nicht breiter');
+contains(_css, 'width: 30px', 'Die Spalte ist schmal');
+contains(_css, 'max-width: 30px', 'Die Spalte wird nicht breiter');
+contains(_css, 'padding: 0 !important', 'Die Seitenleiste hat kein eigenes Padding');
+contains(_css, 'margin-left: 0 !important', 'Die Seitenleiste hat keinen Abstand nach links');
+contains(_css, 'box-sizing: border-box', 'Die Breite schliesst den Rand ein');
 contains(_css, '> *:not(#ave-left-buttons)', 'Alles ausser den Buttons wird ausgeblendet');
 contains(_css, 'display: none', 'Die Kategorien werden ausgeblendet');
 contains(_css, '#ave-left-buttons', 'Das CSS nennt den Container der Buttons');
