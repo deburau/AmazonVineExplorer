@@ -123,7 +123,8 @@ const I18N = {
             EnableFullWidth: 'Nutzt die volle Breite des Displays.',
             DarkMode: 'Aktiviert den Dark Mode (Neuladen nötig).',
             DisableAmazonNavbar: 'Blendet die Amazon Navbar aus.',
-            DisableCategories: 'Blendet die Kategorien aus.',
+            DisableCategories:
+                'Blendet die Kategorien aus. Die Buttons „Seite als gesehen markieren“, „Alle als gesehen markieren“ und „Zum Seitenanfang“ bleiben erhalten und werden um 90° gedreht in einer schmalen Spalte angezeigt.',
             DisableFooter: 'Blendet die Fußzeile aus.',
             DisableSuggestions: 'Blendet die Vorschläge aus.',
             DisableBtnPotLuck: 'Blendet den Button PotLuck (FSE) aus.',
@@ -329,7 +330,8 @@ const I18N = {
             EnableFullWidth: 'Uses the full width of the display.',
             DarkMode: 'Enables the dark mode (reload required).',
             DisableAmazonNavbar: 'Hides the Amazon navbar.',
-            DisableCategories: 'Hides the categories.',
+            DisableCategories:
+                'Hides the categories. The buttons "Mark page as seen", "Mark all as seen" and "Back to top" stay and are shown rotated by 90 degrees in a narrow column.',
             DisableFooter: 'Hides the footer.',
             DisableSuggestions: 'Hides the suggestions.',
             DisableBtnPotLuck: 'Hides the PotLuck button (FSE).',

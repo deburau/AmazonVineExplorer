@@ -144,10 +144,11 @@ The baseline is only used for the comparison, it is never part of the build.
 | `verify_details_on_favorite.js` | The requests of the price details when a product is marked as favorite |
 | `verify_site_detection.js` | The detection of the Vine pages against a table of 16 URLs |
 
-The table names the verifications that guard a **refactoring**. Six of the 19 scripts
-compare as described above, the other thirteen are **feature tests** that check the
+The table names the verifications that guard a **refactoring**. Six of the 20 scripts
+compare as described above, the other fourteen are **feature tests** that check the
 current behaviour against expected values: `verify_site_detection.js`,
 `verify_search.js`, `verify_keyword_conditions.js`, `verify_gotify_priority.js`,
+`verify_left_side_buttons.js`,
 `verify_keyword_order.js`,
 `verify_match_lines.js`, `verify_category_load.js`, `verify_category_tree.js`,
 `verify_settings_categories.js`, `verify_tax_prizes.js`, `verify_turbo_scan.js`,

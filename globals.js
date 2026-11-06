@@ -1229,9 +1229,12 @@ async function fastStyleChanges() {
             });
         }
 
+        // NOTE: The categories are switched off, but the buttons of AVE stay: the
+        // side bar becomes a narrow column and the categories in it are hidden by
+        // the CSS of the buttons (see getVerticalButtonsCss()).
         if (SETTINGS.DisableCategories) {
             waitForStyleElement('#vvp-browse-nodes-container', (elem) => {
-                if (elem) elem.style.display = 'none';
+                if (elem) elem.style.display = '';
             });
         }
 

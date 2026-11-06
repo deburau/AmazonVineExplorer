@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.5
+// @version      0.16.0.6
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -38,6 +38,7 @@
 
 /* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
+   addVerticalButtonsStyle, getLeftSideButtonStyle, getVerticalButtonsCss,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
    addProductToKeywordSearch, aveExpandCategoryNames, aveExpandKeywordAbbreviations, aveGetCategoryNames,
    aveIsConditionWord, aveSplitQuotedWords, aveUnquoteKeywordPart, backGroundTileScanner,
@@ -351,15 +352,19 @@ ave_eventhandler.on('ave-database-changed', (event) => {
 window.onscroll = () => {
     // ONSCROLL Event handler
     var _top = 5;
-    stickElementToTopScrollEVhandler('ave-btn-allseen', `${_top}px`);
-    _top = _top + 35;
-
-    if (SETTINGS.EnableBtnMarkAllAsSeen) {
-        stickElementToTopScrollEVhandler('ave-btn-db-allseen', `${_top}px`);
+    // NOTE: In the narrow column the buttons stay in the layout of the page, so they
+    // are not stuck to the top while scrolling (see addLeftSideButtons()).
+    if (!SETTINGS.DisableCategories) {
+        stickElementToTopScrollEVhandler('ave-btn-allseen', `${_top}px`);
         _top = _top + 35;
-    }
 
-    stickElementToTopScrollEVhandler('ave-btn-backtotop', `${_top}px`);
+        if (SETTINGS.EnableBtnMarkAllAsSeen) {
+            stickElementToTopScrollEVhandler('ave-btn-db-allseen', `${_top}px`);
+            _top = _top + 35;
+        }
+
+        stickElementToTopScrollEVhandler('ave-btn-backtotop', `${_top}px`);
+    }
 
     if (currentMainPage == PAGETYPE.ALL) handleInfiniteScroll();
 };
@@ -801,8 +806,87 @@ function reloadPageWithSubpageTarget(target) {
 }
 
 /**
+ * Returns the style of a button on the left side of the page.
+ *
+ * A button of the normal side bar is wide and shows its text in a line. If the
+ * categories are switched off, the products get the space of the side bar, so the
+ * buttons stand in a narrow column and are rotated by 90 degrees (see
+ * getVerticalButtonsCss()).
+ *
+ * @param {string} bgColor The background color of the button
+ * @param {boolean} vertical true, if the button is rotated
+ * @returns {string} The value for the style attribute of the button
+ */
+function getLeftSideButtonStyle(bgColor, vertical) {
+    if (vertical) {
+        // NOTE: "width: auto" makes the box as narrow as the rotated text, the
+        // padding keeps a distance to the border of the column.
+        return `width: auto; padding: 12px 4px; background-color: ${bgColor};`;
+    }
+    return `width: 240px; background-color: ${bgColor};`;
+}
+
+/**
+ * Returns the CSS of the narrow column of the buttons.
+ *
+ * The rules are only used if the categories are switched off (see
+ * addLeftSideButtons()). The side bar of Amazon keeps the buttons of AVE and hides
+ * everything else, so that the products get the space of the categories.
+ *
+ * @returns {string} The CSS of the column
+ */
+function getVerticalButtonsCss() {
+    return `
+    /* The side bar keeps the buttons of AVE, the categories are hidden. */
+    #vvp-browse-nodes-container {
+        width: 46px !important;
+        min-width: 46px !important;
+        max-width: 46px !important;
+    }
+    #vvp-browse-nodes-container > *:not(#ave-left-buttons) {
+        display: none !important;
+    }
+    #ave-left-buttons {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+    /* The buttons are rotated by 90 degrees, so they need almost no width. */
+    #ave-left-buttons button {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        white-space: nowrap;
+    }
+    `;
+}
+
+/**
+ * Adds the CSS of the narrow column of the buttons to the head of the page.
+ *
+ * NOTE: The style element is only added once, because the buttons are rebuilt on
+ * every page of the scan (see addLeftSideButtons()).
+ */
+function addVerticalButtonsStyle() {
+    if (document.getElementById('ave-vertical-buttons-style')) return;
+
+    const _styleElement = document.createElement('style');
+    _styleElement.id = 'ave-vertical-buttons-style';
+    _styleElement.type = 'text/css';
+    _styleElement.textContent = getVerticalButtonsCss();
+
+    // The style element has to be the first element of the head, so that the rules
+    // of Amazon cannot overwrite it.
+    document.head.insertBefore(_styleElement, document.head.firstChild);
+}
+
+/**
  * Adds the buttons on the left side of the page (mark as seen, mark all as
  * seen and back to top).
+ *
+ * NOTE: If the categories are switched off, the buttons stay, but they are rotated
+ * by 90 degrees and stand in a narrow column (see getVerticalButtonsCss()), so that
+ * the products can use the space of the side bar.
  *
  * @param {boolean} forceClean Set to true to remove the existing buttons
  */
@@ -812,15 +896,21 @@ function addLeftSideButtons(forceClean) {
 
     if (forceClean) _nodesContainer.innerHTML = '';
 
+    const _vertical = Boolean(SETTINGS.DisableCategories);
+    if (_vertical) addVerticalButtonsStyle();
+
     const _div = _nodesContainer.appendChild(document.createElement('div'));
     _div.setAttribute('class', 'parent-node');
+    // The id is used by the CSS of the narrow column, it keeps this div and hides
+    // the categories of Amazon (see getVerticalButtonsCss()).
+    _div.id = 'ave-left-buttons';
 
-    _div.appendChild(document.createElement('p')); // A bit of Space above our Buttons
+    if (!_vertical) _div.appendChild(document.createElement('p')); // A bit of Space above our Buttons
 
     const _setAllSeenBtn = createButton(
         translate('buttons', 'markPageAsSeen', 'Seite als gesehen markieren'),
         'ave-btn-allseen',
-        `width: 240px; background-color: ${SETTINGS.BtnColorMarkCurrSiteAsSeen};`,
+        getLeftSideButtonStyle(SETTINGS.BtnColorMarkCurrSiteAsSeen, _vertical),
         () => {
             if (SETTINGS.DebugLevel > 10) console.log('Clicked All Seen Button');
             markAllCurrentSiteProductsAsSeen();
@@ -833,7 +923,7 @@ function addLeftSideButtons(forceClean) {
         const _setAllSeenDBBtn = createButton(
             translate('buttons', 'markAllAsSeen', 'Alle als gesehen markieren'),
             'ave-btn-db-allseen',
-            `left: 0; width: 240px; background-color: ${SETTINGS.BtnColorMarkAllAsSeen};`,
+            getLeftSideButtonStyle(SETTINGS.BtnColorMarkAllAsSeen, _vertical),
             () => {
                 if (SETTINGS.DebugLevel > 10) console.log('Clicked All Seen Button');
                 setTimeout(() => {
@@ -865,7 +955,7 @@ function addLeftSideButtons(forceClean) {
     const _backToTopBtn = createButton(
         translate('buttons', 'backToTop', 'Zum Seitenanfang'),
         'ave-btn-backtotop',
-        `width: 240px; background-color: ${SETTINGS.BtnColorBackToTop};`,
+        getLeftSideButtonStyle(SETTINGS.BtnColorBackToTop, _vertical),
         () => {
             if (SETTINGS.DebugLevel > 10) console.log('Clicked back to Top Button');
             window.scrollTo(0, 0);
