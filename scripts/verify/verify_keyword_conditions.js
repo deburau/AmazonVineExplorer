@@ -174,7 +174,7 @@ const CATEGORY_CONDITION_CASES = [
 const PRIORITY_CONDITION_CASES = [
     { label: 'Eine Prioritaet', input: 'gotifyPriority=8', expected: { priority: 8 } },
     { label: 'Eine Prioritaet mit Leerzeichen', input: 'gotifyPriority = 8', expected: { priority: 8 } },
-    { label: 'Eine Prioritaet mit zwei Zeichen', input: 'gotifyPriority==8', expected: { priority: 8 } },
+    { label: 'Zwei Gleichheitszeichen sind keine Zuweisung', input: 'gotifyPriority==8', expected: null },
     { label: 'Die kleinste Prioritaet', input: 'gotifyPriority=0', expected: { priority: 0 } },
     { label: 'Die groesste Prioritaet', input: 'gotifyPriority=10', expected: { priority: 10 } },
     { label: 'Eine Abkuerzung mit einem Buchstaben', input: 'g=8', expected: { priority: 8 } },
@@ -643,6 +643,28 @@ const KEYWORD_CASES = [
         input: 'toaster gotifyPriority=hoch',
         expected: {
             keyword: 'toaster gotifyPriority=hoch',
+            conditions: [],
+            categories: [],
+            gotifyPriority: null,
+            valid: false
+        }
+    },
+    {
+        label: 'Zwei Gleichheitszeichen machen das Keyword ungueltig',
+        input: 'toaster gotifyPriority==8',
+        expected: {
+            keyword: 'toaster gotifyPriority==8',
+            conditions: [],
+            categories: [],
+            gotifyPriority: null,
+            valid: false
+        }
+    },
+    {
+        label: 'Ein Vergleich macht das Keyword ungueltig',
+        input: 'toaster gotifyPriority!=8',
+        expected: {
+            keyword: 'toaster gotifyPriority!=8',
             conditions: [],
             categories: [],
             gotifyPriority: null,

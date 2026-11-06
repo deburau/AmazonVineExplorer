@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.3
+// @version      0.16.0.4
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -5543,23 +5543,27 @@ function parseCategoryCondition(text) {
  * same. Every shortening of the word is allowed, e.g. "g", "go" or "got" (see
  * aveIsConditionWord()).
  *
- * NOTE: The value is the priority of the message, it is a whole number on the
- * scale of Gotify (0 to 10). Only "=" and "==" are allowed, because a priority is
- * a value and not a range. Without the condition the messages are sent with the
- * priority of the settings (see getGotifyPriority()).
+ * NOTE: The operator is "=" and nothing else: the condition assigns the priority,
+ * it does not compare it, so "gotifyPriority==8" and "gotifyPriority!=8" are not
+ * valid. The value is a whole number on the scale of Gotify (0 to 10). Without the
+ * condition the messages are sent with the priority of the settings (see
+ * getGotifyPriority()).
  *
  * @param {string} text The text of the condition
  * @returns {{priority: number}|null} The condition, or null if it is not valid
  */
 function parseGotifyPriorityCondition(text) {
-    const _match = /^\s*([a-z]+)\s*(==|=)\s*(.+?)\s*$/i.exec(String(text ?? ''));
+    const _match = /^\s*([a-z]+)\s*=\s*(.+?)\s*$/i.exec(String(text ?? ''));
     if (!_match) return null;
     // NOTE: Every shortening of "gotifyPriority" is allowed (see aveIsConditionWord()).
     if (!aveIsConditionWord(_match[1], 'gotifyPriority')) return null;
 
-    // NOTE: Only a plain number is a priority, so "8.5" and "-1" are not valid and
-    // the keyword is reported as broken (see parseKeywordConfig()).
-    const _value = String(_match[3]).trim();
+    // NOTE: Only a plain number is a priority, so "8.5", "-1" and "=8" (from
+    // "gotifyPriority==8") are not valid and the keyword is reported as broken (see
+    // parseKeywordConfig()).
+    // NOTE: The operator is a part of the regular expression and not a group, so the
+    // value is the second group.
+    const _value = String(_match[2]).trim();
     if (!/^\d+$/.test(_value)) return null;
 
     const _priority = Number.parseInt(_value, 10);
