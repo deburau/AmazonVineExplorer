@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.9
+// @version      0.16.0.10
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -851,6 +851,17 @@ function getVerticalButtonsCss() {
     }
     #vvp-browse-nodes-container > *:not(#ave-left-buttons) {
         display: none !important;
+    }
+    /* NOTE: The wrapper of the side bar belongs to Amazon (AVE does not use it) and
+       it is wider than the side bar itself. It is narrowed as well, so that the
+       products get that space too. */
+    #vvp-filter-container {
+        width: 30px !important;
+        min-width: 30px !important;
+        max-width: 30px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
     }
     /* NOTE: The div carries the class "parent-node" of Amazon, which makes it 240
        pixels wide. Without the width the buttons are centered in that wide box and

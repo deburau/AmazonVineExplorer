@@ -135,6 +135,11 @@ contains(_css, 'width: 100% !important', 'Der Container ist so breit wie die Spa
 contains(_css, 'max-width: 100% !important', 'Der Container wird nicht breiter als die Spalte');
 contains(_css, 'display: flex', 'Die Buttons stehen untereinander');
 contains(_css, 'flex-direction: column', 'Die Buttons stehen in einer Spalte');
+// 5. Der Wrapper der Seitenleiste (Amazon) wird ebenfalls schmal.
+const _filterRule = _css.slice(_css.indexOf('#vvp-filter-container'));
+contains(_filterRule, 'width: 30px', 'Der Wrapper der Seitenleiste ist schmal');
+contains(_filterRule, 'max-width: 30px', 'Der Wrapper wird nicht breiter');
+contains(_filterRule, 'padding: 0 !important', 'Der Wrapper hat kein eigenes Padding');
 contains(_css, 'writing-mode: vertical-rl', 'Die Buttons werden um 90 Grad gedreht');
 contains(_css, 'transform: rotate(180deg)', 'Die Schrift steht aufrecht');
 contains(_css, 'white-space: nowrap', 'Der Text der Buttons bricht nicht um');
