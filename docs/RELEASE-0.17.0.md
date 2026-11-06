@@ -94,7 +94,8 @@ git push origin dev-0.18.0
 
 ## Was das Release **nicht** enthält
 
-* **Issue #32 ist damit erledigt, aber noch nicht geschlossen** – der Kommentar und das
-  Schließen brauchen einen GitHub-Token (die API akzeptiert den SSH-Schlüssel nicht).
+* **Issue #32 ist am 2026-11-06 geschlossen** (`state_reason: completed`) – der Kommentar
+  nennt die Änderungen, das Schließen brauchte einen GitHub-Token (die API akzeptiert
+  den SSH-Schlüssel nicht).
 * Die Vorsorge gegen eine Kontosperre und die Reduktion der Schreib-/Loglast bleiben
   entschieden bzw. zurückgestellt (siehe `docs/STAND.md`, „Entschieden / zurückgestellt").

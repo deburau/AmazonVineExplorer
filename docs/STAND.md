@@ -7,11 +7,11 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 
 | Punkt | Stand |
 |---|---|
-| Branch | `dev-0.17.0` (gepusht, aus `main` angelegt) |
+| Branch | `dev-0.18.0` (gepusht, aus `main` angelegt) |
 | Version im User-Script | `0.17.0.1` (in Entwicklung, Release 0.18.0 vorbereitet) |
-| Letztes Release | **0.16.0** (auf `main`, veröffentlicht, Merge-Commit `ff19eaa`) |
+| Letztes Release | **0.17.0** (auf `main`, veröffentlicht, Merge-Commit `e34488d`, Doku-Commit `5f7ea82`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
-| Verifikationen | alle 18 erfolgreich (`npm run verify`) |
+| Verifikationen | alle 20 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
 
 ## Bestätigte Tests (vom Maintainer im Browser)
