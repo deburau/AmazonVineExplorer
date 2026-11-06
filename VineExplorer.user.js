@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.10
+// @version      0.16.0.11
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -822,7 +822,7 @@ function getLeftSideButtonStyle(bgColor, vertical) {
         // NOTE: "width: auto" makes the box as narrow as the rotated text, the small
         // padding keeps a distance to the border of the column (the text stands along
         // the height of the button, so the padding can be small).
-        return `width: auto; padding: 10px 1px; background-color: ${bgColor};`;
+        return `width: auto; padding: 8px 1px; background-color: ${bgColor};`;
     }
     return `width: 240px; background-color: ${bgColor};`;
 }
@@ -842,9 +842,9 @@ function getVerticalButtonsCss() {
        narrow as the rotated buttons need and it has no padding of its own, so that
        the buttons stand at the left edge of the page. */
     #vvp-browse-nodes-container {
-        width: 30px !important;
-        min-width: 30px !important;
-        max-width: 30px !important;
+        width: 24px !important;
+        min-width: 24px !important;
+        max-width: 24px !important;
         padding: 0 !important;
         margin-left: 0 !important;
         box-sizing: border-box !important;
@@ -856,9 +856,9 @@ function getVerticalButtonsCss() {
        it is wider than the side bar itself. It is narrowed as well, so that the
        products get that space too. */
     #vvp-filter-container {
-        width: 30px !important;
-        min-width: 30px !important;
-        max-width: 30px !important;
+        width: 24px !important;
+        min-width: 24px !important;
+        max-width: 24px !important;
         padding: 0 !important;
         margin: 0 !important;
         box-sizing: border-box !important;
@@ -887,6 +887,11 @@ function getVerticalButtonsCss() {
     #ave-left-buttons .a-button-text {
         writing-mode: vertical-rl;
         white-space: nowrap;
+        /* NOTE: In a vertical writing mode the line height is the width of the box.
+           Amazon gives its buttons a large line height, which would make the buttons
+           wide, so it is replaced. */
+        line-height: 1.2 !important;
+        font-size: 12px;
     }
     #ave-left-buttons .a-button {
         transform: rotate(180deg);

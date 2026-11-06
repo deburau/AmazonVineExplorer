@@ -116,15 +116,15 @@ notContains(_normal, 'rotate', 'Der normale Button ist nicht gedreht (Drehung)')
 // 2. Der Stil eines Buttons in der schmalen Spalte.
 const _vertical = getLeftSideButtonStyle('rgb(0, 255, 0)', true);
 contains(_vertical, 'width: auto', 'Der gedrehte Button ist so breit wie sein Text');
-contains(_vertical, 'padding: 10px 1px', 'Der gedrehte Button hat einen kleinen Abstand');
+contains(_vertical, 'padding: 8px 1px', 'Der gedrehte Button hat einen kleinen Abstand');
 notContains(_vertical, 'width: 240px', 'Der gedrehte Button ist nicht mehr breit');
 contains(_vertical, 'background-color: rgb(0, 255, 0)', 'Der gedrehte Button traegt seine Farbe');
 contains(_vertical, 'padding', 'Der gedrehte Button hat einen Abstand zum Rand');
 // 3. Das CSS der schmalen Spalte.
 const _css = getVerticalButtonsCss();
 contains(_css, '#vvp-browse-nodes-container', 'Das CSS nennt die Seitenleiste von Amazon');
-contains(_css, 'width: 30px', 'Die Spalte ist schmal');
-contains(_css, 'max-width: 30px', 'Die Spalte wird nicht breiter');
+contains(_css, 'width: 24px', 'Die Spalte ist schmal');
+contains(_css, 'max-width: 24px', 'Die Spalte wird nicht breiter');
 contains(_css, 'padding: 0 !important', 'Die Seitenleiste hat kein eigenes Padding');
 contains(_css, 'margin-left: 0 !important', 'Die Seitenleiste hat keinen Abstand nach links');
 contains(_css, 'box-sizing: border-box', 'Die Breite schliesst den Rand ein');
@@ -137,12 +137,14 @@ contains(_css, 'display: flex', 'Die Buttons stehen untereinander');
 contains(_css, 'flex-direction: column', 'Die Buttons stehen in einer Spalte');
 // 5. Der Wrapper der Seitenleiste (Amazon) wird ebenfalls schmal.
 const _filterRule = _css.slice(_css.indexOf('#vvp-filter-container'));
-contains(_filterRule, 'width: 30px', 'Der Wrapper der Seitenleiste ist schmal');
-contains(_filterRule, 'max-width: 30px', 'Der Wrapper wird nicht breiter');
+contains(_filterRule, 'width: 24px', 'Der Wrapper der Seitenleiste ist schmal');
+contains(_filterRule, 'max-width: 24px', 'Der Wrapper wird nicht breiter');
 contains(_filterRule, 'padding: 0 !important', 'Der Wrapper hat kein eigenes Padding');
 contains(_css, 'writing-mode: vertical-rl', 'Die Buttons werden um 90 Grad gedreht');
 contains(_css, 'transform: rotate(180deg)', 'Die Schrift steht aufrecht');
 contains(_css, 'white-space: nowrap', 'Der Text der Buttons bricht nicht um');
+contains(_css, 'line-height: 1.2 !important', 'Die grosse Zeilenhoehe von Amazon wird ersetzt (sie waere die Breite)');
+contains(_css, 'font-size: 12px', 'Die Schrift ist kleiner');
 notContains(_css, '//', 'Das CSS hat keine ungueltigen Kommentare');
 
 // 4. Das CSS muss zu den Elementen passen, die createButton() erzeugt.
