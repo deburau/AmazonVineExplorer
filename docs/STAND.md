@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.17.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.16.0.15` (in Entwicklung, Release 0.17.0 vorbereitet) |
+| Version im User-Script | `0.17.0` (Release 0.17.0, veröffentlicht) |
 | Letztes Release | **0.16.0** (auf `main`, veröffentlicht, Merge-Commit `ff19eaa`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 18 erfolgreich (`npm run verify`) |
@@ -35,17 +35,17 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.15.0.56 | Debug-Meldung mit Zählern (`EVENT - database changed …`) | ohne Befund |
 | 0.15.0.57 | Umbenennung `processNewItems()` | ohne Befund |
 | 0.16.0.2 | Virtuelle Kategorie „Alle Produkte“ im Turbo-Scan | bestätigt |
-| 0.16.0.5 | Einstellbare Priorität der Gotify-Nachrichten + Testnachricht-Button | **offen** |
-| 0.16.0.6 | Buttons bleiben bei deaktivierten Kategorien (gedreht, Issue #32) | **offen** |
-| 0.16.0.7 | Korrektur: die Drehung trifft die echten Button-Elemente (`span.a-button`) | **offen** |
-| 0.16.0.8 | Korrektur: schmalere Spalte (30 px) und links am Rand (kein Padding von Amazon) | **offen** |
-| 0.16.0.9 | Korrektur: `#ave-left-buttons` ist 240 px breit (Amazon `.parent-node`) – Breite auf die Spalte begrenzt | **offen** |
-| 0.16.0.10 | Der Wrapper `#vvp-filter-container` (98 px) wird ebenfalls schmal | **offen** |
-| 0.16.0.11 | Korrektur: Spalte 24 px, Zeilenhöhe 1.2 (Amazon-Line-height war die Breite), Schrift 12 px, Padding 8px 1px | **offen** |
+| 0.16.0.5 | Einstellbare Priorität der Gotify-Nachrichten + Testnachricht-Button | bestätigt |
+| 0.16.0.6 | Buttons bleiben bei deaktivierten Kategorien (gedreht, Issue #32) | bestätigt |
+| 0.16.0.7 | Korrektur: die Drehung trifft die echten Button-Elemente (`span.a-button`) | bestätigt |
+| 0.16.0.8 | Korrektur: schmalere Spalte (30 px) und links am Rand (kein Padding von Amazon) | bestätigt |
+| 0.16.0.9 | Korrektur: `#ave-left-buttons` ist 240 px breit (Amazon `.parent-node`) – Breite auf die Spalte begrenzt | bestätigt |
+| 0.16.0.10 | Der Wrapper `#vvp-filter-container` (98 px) wird ebenfalls schmal | bestätigt |
+| 0.16.0.11 | Korrektur: Spalte 24 px, Zeilenhöhe 1.2 (Amazon-Line-height war die Breite), Schrift 12 px, Padding 8px 1px | bestätigt |
 | 0.16.0.12 | Korrektur: Button auf die Breite der Spalte begrenzt (`width: 100%`, `overflow: hidden`) | verworfen (Text wurde abgeschnitten) |
-| 0.16.0.13 | Eigene Buttons für die schmale Spalte (`createVerticalButton()`, Klasse `ave-vertical-button`) | **offen** |
-| 0.16.0.14 | Mehr Abstand neben dem Text (`padding: 8px 4px`), Buttons bleiben beim Scrollen oben | **offen** |
-| 0.16.0.15 | Korrektur: beim Scrollen wird die **ganze Spalte** festgehängt, nicht die einzelnen hohen Buttons (sie überlappten sich) | **offen** |
+| 0.16.0.13 | Eigene Buttons für die schmale Spalte (`createVerticalButton()`, Klasse `ave-vertical-button`) | bestätigt |
+| 0.16.0.14 | Mehr Abstand neben dem Text (`padding: 8px 4px`), Buttons bleiben beim Scrollen oben | bestätigt |
+| 0.16.0.15 | Korrektur: beim Scrollen wird die **ganze Spalte** festgehängt, nicht die einzelnen hohen Buttons (sie überlappten sich) | bestätigt |
 
 **„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
