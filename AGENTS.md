@@ -144,14 +144,14 @@ The baseline is only used for the comparison, it is never part of the build.
 | `verify_details_on_favorite.js` | The requests of the price details when a product is marked as favorite |
 | `verify_site_detection.js` | The detection of the Vine pages against a table of 16 URLs |
 
-The table names the verifications that guard a **refactoring**. Some of them are
-**feature tests** that check the current behaviour against expected values
-(`verify_site_detection.js`, `verify_search.js`, `verify_match_lines.js`,
-`verify_keyword_conditions.js`, `verify_keyword_order.js`, `verify_category_load.js`,
-`verify_tax_prizes.js`, `verify_turbo_scan.js` and the ones for the settings, the fast
-scan interval and the request delay). The **complete list** with the number of the
-test cases and what each script checks is in `docs/STAND.md`; `npm run verify` runs
-all of them (18 scripts at the moment).
+The table names the verifications that guard a **refactoring**. Seven of the 18
+scripts compare as described above, the other eleven are **feature tests** that check
+the current behaviour against expected values: `verify_site_detection.js`,
+`verify_search.js`, `verify_keyword_conditions.js`, `verify_keyword_order.js`,
+`verify_match_lines.js`, `verify_category_load.js`, `verify_category_tree.js`,
+`verify_tax_prizes.js`, `verify_turbo_scan.js`, `verify_fast_scan_interval.js` and
+`verify_request_delay.js`. The **complete list** with the number of the test cases and
+what each script checks is in `docs/STAND.md`; `npm run verify` runs all of them.
 
 **NOTE:** `verify_site_detection.js` is the only script that does not compare an
 old with a new implementation. It checks the current behaviour against expected
@@ -355,12 +355,12 @@ try {
 ## File Structure and Responsibilities
 
 ### Core Files
-- **`VineExplorer.user.js`** (~4,000 lines) - Main entry point, orchestrates all functionality
-- **`globals.js`** (~1,150 lines) - Global constants, settings definitions, utility functions
-- **`class_db_handler.js`** (~520 lines) - IndexedDB database management class
-- **`class_product.js`** (~37 lines) - Product data model
-- **`vine_fetch.js`** (~245 lines) - Enhanced fetch wrapper for API calls
-- **`i18n.js`** (~350 lines) - Translations
+- **`VineExplorer.user.js`** - Main entry point, orchestrates all functionality
+- **`globals.js`** - Global constants, settings definitions, utility functions
+- **`class_db_handler.js`** - IndexedDB database management class
+- **`class_product.js`** - Product data model
+- **`vine_fetch.js`** - Enhanced fetch wrapper for API calls
+- **`i18n.js`** - Translations
 
 ### Tooling Files
 - **`.prettierrc`** - Project style (print width 140, 4 spaces, single quotes)
@@ -390,7 +390,7 @@ responsibility:
 | `initSearchBar()` | Adds the search bar for the products |
 | `initPagination()` | Replaces the "next page" button of the pagination |
 
-The helper script `.unotes/verify_init.js` compares the created DOM, the
+The helper script `scripts/verify/verify_init.js` compares the created DOM, the
 database accesses and the calls of the old and the new implementation in four
 scenarios (normal page, empty page, running auto scan and subpage request).
 
@@ -422,7 +422,7 @@ state that has to survive the single iterations of the scan loop is kept in a
 
 **NOTE:** The scan must be verified with a comparison, because a change of the
 order of the local storage accesses changes the behaviour of the scan. The
-helper script `.unotes/verify_scan.js` runs the old and the new implementation
+helper script `scripts/verify/verify_scan.js` runs the old and the new implementation
 in a sandbox with mocked browser APIs and compares the resulting local storage
 accesses step by step. It covers seven scenarios, among them the start of a fast
 scan and the three reasons why a fast scan is stopped.

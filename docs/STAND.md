@@ -450,7 +450,7 @@ oft der Pfad lief.
 
 | Datei | Inhalt |
 |---|---|
-| `VineExplorer.user.js` (~4900 Zeilen) | Hauptdatei, alle Funktionen |
+| `VineExplorer.user.js` | Hauptdatei, alle Funktionen |
 | `globals.js` | Konstanten, Settings, Session-Management |
 | `scripts/verify/` | Verifikationsskripte für die Refactorings und die Features |
 | `vine_logo*.png` (Wurzel) | Projekt-Logos. Sie bleiben **im Wurzelverzeichnis**: die veröffentlichten Versionen laden `main/vine_logo.png` und `main/vine_logo_notification_image.png` zur Laufzeit, ein Umzug würde bei noch nicht aktualisierten Clients ein fehlendes Benachrichtigungssymbol erzeugen (Raw-URLs leiten nicht weiter). |
@@ -480,6 +480,33 @@ npm run verify
 
 `npm run verify` startet alle Skripte unter `scripts/verify/`. Ein neues Skript
 gehört in `scripts/verify/` und nutzt `lib/verify_helpers.js`.
+
+### Die 18 Verifikationen
+
+**Baseline-Vergleiche** prüfen, dass ein Refactoring das Verhalten **nicht** ändert
+(alt ↔ neu, gleiche Nebenwirkungen). **Feature-Tests** prüfen das aktuelle Verhalten
+gegen erwartete Werte.
+
+| Skript | Art | Umfang |
+|---|---|---|
+| `verify_scan.js` | Baseline | die local-storage-Zugriffe des Scans in 7 Szenarien |
+| `verify_db_helpers.js` | Baseline | die DB-Zugriffe von `cleanUpDatabase()` und dem Markieren |
+| `verify_settings_ui.js` | Baseline | das erzeugte DOM aller 9 Einstellungstypen |
+| `verify_new_items.js` | Baseline | Benachrichtigungen, Abzeichen und Seitentitel von `processNewItems()` |
+| `verify_init.js` | Baseline | DOM und Aufrufe der Seiten-Initialisierung (31 Schritte) |
+| `verify_details_on_favorite.js` | Baseline | die Requests der Preisdetails beim Favorisieren |
+| `verify_settings_categories.js` | Baseline | das DOM der Kategorieauswahl des Turbo-Scans |
+| `verify_site_detection.js` | Feature | die Erkennung der Vine-Seiten (16 URLs) |
+| `verify_search.js` | Feature | die Suche in der Suchleiste (21 Fälle) |
+| `verify_keyword_conditions.js` | Feature | das Parsen und Vergleichen der Bedingungen (127 Fälle) |
+| `verify_keyword_order.js` | Feature | die Reihenfolge der Keywords (22 Fälle) |
+| `verify_match_lines.js` | Feature | die Trefferzeilen der Benachrichtigung (10 Fälle) |
+| `verify_category_load.js` | Feature | das Hintergrundladen der Kategorien (26 Fälle) |
+| `verify_category_tree.js` | Feature | das Parsen des Kategoriebaums (24 Fälle) |
+| `verify_tax_prizes.js` | Feature | die Migration der Variantenpreise (14 Fälle) |
+| `verify_turbo_scan.js` | Feature | den Turbo-Scan (27 Fälle) |
+| `verify_fast_scan_interval.js` | Feature | den Takt des Fast-Scans (15 Fälle) |
+| `verify_request_delay.js` | Feature | die Wartezeiten der Detail-Requests (20 Fälle) |
 
 ## Werkzeuge
 
