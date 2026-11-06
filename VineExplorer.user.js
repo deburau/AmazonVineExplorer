@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.8
+// @version      0.16.0.9
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -852,13 +852,20 @@ function getVerticalButtonsCss() {
     #vvp-browse-nodes-container > *:not(#ave-left-buttons) {
         display: none !important;
     }
+    /* NOTE: The div carries the class "parent-node" of Amazon, which makes it 240
+       pixels wide. Without the width the buttons are centered in that wide box and
+       stand far right, so the width is set to the width of the column. */
     #ave-left-buttons {
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 4px;
+        width: 100% !important;
+        max-width: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
+        border: 0 !important;
+        background: none !important;
     }
     /* NOTE: A button of AVE is a span with the class "a-button", its text stands in
        a span with the class "a-button-text" (see createButton()). The writing mode is

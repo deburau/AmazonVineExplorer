@@ -131,6 +131,8 @@ contains(_css, 'box-sizing: border-box', 'Die Breite schliesst den Rand ein');
 contains(_css, '> *:not(#ave-left-buttons)', 'Alles ausser den Buttons wird ausgeblendet');
 contains(_css, 'display: none', 'Die Kategorien werden ausgeblendet');
 contains(_css, '#ave-left-buttons', 'Das CSS nennt den Container der Buttons');
+contains(_css, 'width: 100% !important', 'Der Container ist so breit wie die Spalte (parent-node von Amazon ist 240px breit)');
+contains(_css, 'max-width: 100% !important', 'Der Container wird nicht breiter als die Spalte');
 contains(_css, 'display: flex', 'Die Buttons stehen untereinander');
 contains(_css, 'flex-direction: column', 'Die Buttons stehen in einer Spalte');
 contains(_css, 'writing-mode: vertical-rl', 'Die Buttons werden um 90 Grad gedreht');
