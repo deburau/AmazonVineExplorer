@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.13
+// @version      0.16.0.14
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -352,19 +352,18 @@ ave_eventhandler.on('ave-database-changed', (event) => {
 window.onscroll = () => {
     // ONSCROLL Event handler
     var _top = 5;
-    // NOTE: In the narrow column the buttons stay in the layout of the page, so they
-    // are not stuck to the top while scrolling (see addLeftSideButtons()).
-    if (!SETTINGS.DisableCategories) {
-        stickElementToTopScrollEVhandler('ave-btn-allseen', `${_top}px`);
+    // NOTE: The buttons are stuck to the top in both modes, so that they stay visible
+    // while scrolling - also in the narrow column of the rotated buttons (see
+    // addLeftSideButtons()).
+    stickElementToTopScrollEVhandler('ave-btn-allseen', `${_top}px`);
+    _top = _top + 35;
+
+    if (SETTINGS.EnableBtnMarkAllAsSeen) {
+        stickElementToTopScrollEVhandler('ave-btn-db-allseen', `${_top}px`);
         _top = _top + 35;
-
-        if (SETTINGS.EnableBtnMarkAllAsSeen) {
-            stickElementToTopScrollEVhandler('ave-btn-db-allseen', `${_top}px`);
-            _top = _top + 35;
-        }
-
-        stickElementToTopScrollEVhandler('ave-btn-backtotop', `${_top}px`);
     }
+
+    stickElementToTopScrollEVhandler('ave-btn-backtotop', `${_top}px`);
 
     if (currentMainPage == PAGETYPE.ALL) handleInfiniteScroll();
 };
@@ -822,7 +821,7 @@ function getLeftSideButtonStyle(bgColor, vertical) {
         // NOTE: "width: auto" makes the box as narrow as the rotated text, the small
         // padding keeps a distance to the border of the column (the text stands along
         // the height of the button, so the padding can be small).
-        return `width: auto; padding: 8px 1px; background-color: ${bgColor};`;
+        return `width: auto; padding: 8px 4px; background-color: ${bgColor};`;
     }
     return `width: 240px; background-color: ${bgColor};`;
 }

@@ -58,6 +58,8 @@ const CODE = [
 // das CSS zu den Elementen passt, die sie wirklich erzeugen.
 const BUTTON_SOURCE = extractBody(mainSrc, 'createButton');
 const SIDE_BUTTONS_SOURCE = extractBody(mainSrc, 'addLeftSideButtons');
+// Der Scroll-Handler der Seite (er steht nicht in einer Funktion).
+const SCROLL_SOURCE = mainSrc.slice(mainSrc.indexOf('window.onscroll'), mainSrc.indexOf('window.onscroll') + 1200);
 
 const sandbox = {
     console: { log: () => {}, warn: () => {}, error: () => {} },
@@ -122,7 +124,7 @@ notContains(_normal, 'rotate', 'Der normale Button ist nicht gedreht (Drehung)')
 // 2. Der Stil eines Buttons in der schmalen Spalte.
 const _vertical = getLeftSideButtonStyle('rgb(0, 255, 0)', true);
 contains(_vertical, 'width: auto', 'Der gedrehte Button ist so breit wie sein Text');
-contains(_vertical, 'padding: 8px 1px', 'Der gedrehte Button hat einen kleinen Abstand');
+contains(_vertical, 'padding: 8px 4px', 'Der gedrehte Button hat einen Abstand neben dem Text');
 notContains(_vertical, 'width: 240px', 'Der gedrehte Button ist nicht mehr breit');
 contains(_vertical, 'background-color: rgb(0, 255, 0)', 'Der gedrehte Button traegt seine Farbe');
 contains(_vertical, 'padding', 'Der gedrehte Button hat einen Abstand zum Rand');
@@ -163,6 +165,8 @@ notContains(_css, '.a-button', 'Das CSS kaempft nicht mehr mit den Regeln von Am
 notContains(_css, '#ave-left-buttons button', 'Das CSS sucht keinen <button>');
 contains(SIDE_BUTTONS_SOURCE, 'createVerticalButton', 'Die schmalen Buttons werden ohne das Markup von Amazon gebaut');
 contains(SIDE_BUTTONS_SOURCE, 'getLeftSideButtonStyle(bgColor, false)', 'Die normalen Buttons behalten ihr Markup');
+contains(SCROLL_SOURCE, "stickElementToTopScrollEVhandler('ave-btn-allseen'", 'Der Scroll-Handler haengt den Button oben fest');
+notContains(SCROLL_SOURCE, 'if (!SETTINGS.DisableCategories)', 'Der Button bleibt auch in der schmalen Spalte sichtbar');
 
 if (_errors === 0) {
     console.log(`  alle ${_checks} Faelle sind ok`);
