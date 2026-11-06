@@ -40,6 +40,16 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
 Einzelne Features wurden dafür nicht abgehakt getestet.
 
+## Entschieden / zurückgestellt
+
+Diese Punkte wurden besprochen und bewusst **nicht** umgesetzt – sie sollen nicht
+wieder vorgeschlagen werden:
+
+| Punkt | Entscheidung |
+|---|---|
+| Schreib- und Loglast reduzieren (`ts_lastSeen` nur einmal pro Minute schreiben, Aufruf-Spuren erst ab `DebugLevel > 5`) | **entfällt** (Entscheidung des Maintainers, 2026-11-06) |
+| Vorsorge gegen Kontosperre (Notbremse/Queue-Limit für die Detail-Requests aus `docs/ANALYSE-DETAILS-REQUESTS.md`) | **auf unbestimmte Zeit zurückgestellt** (2026-11-06) |
+
 ## Was in dieser Session gemacht wurde
 
 ### Release 0.13.0 (auf `main` veröffentlicht)
