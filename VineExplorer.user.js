@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.12
+// @version      0.16.0.13
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -38,7 +38,7 @@
 
 /* exported PAGETYPE, addAVESettingsMenu, addAveSettingsTab, addDBCleaningSymbol, addDBLoadingSymbol,
    addLeftSideButtons, addLoadingSymbol, addStyleToTile, addTileEventhandlers,
-   addVerticalButtonsStyle, getLeftSideButtonStyle, getVerticalButtonsCss,
+   addVerticalButtonsStyle, createVerticalButton, getLeftSideButtonStyle, getVerticalButtonsCss,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
    addProductToKeywordSearch, aveExpandCategoryNames, aveExpandKeywordAbbreviations, aveGetCategoryNames,
    aveIsConditionWord, aveSplitQuotedWords, aveUnquoteKeywordPart, backGroundTileScanner,
@@ -877,36 +877,22 @@ function getVerticalButtonsCss() {
         padding: 0 !important;
         border: 0 !important;
         background: none !important;
-        /* NOTE: Nothing of the column may leave it, otherwise it would lie over the
-           products (the column is 24 pixels wide, the products start behind it). */
-        overflow: hidden !important;
     }
-    /* NOTE: A button of AVE is a span with the class "a-button", its text stands in
-       a span with the class "a-button-text" (see createButton()). The writing mode is
-       inherited by the inner spans, the whole button is turned by 180 degrees, so
-       that the text stands upright and is read from the bottom. */
-    #ave-left-buttons .a-button,
-    #ave-left-buttons .a-button-inner,
-    #ave-left-buttons .a-button-text {
+    /* NOTE: The buttons of the narrow column are divs with a class of their own (see
+       createVerticalButton()). The markup of Amazon (the class "a-button") is not used,
+       because its rules (a large line height and a width of its own) made the rotated
+       buttons wider than the column. The writing mode is vertical, so the text runs
+       along the height of the button and the line height is its width. */
+    #ave-left-buttons .ave-vertical-button {
         writing-mode: vertical-rl;
-        white-space: nowrap;
-        /* NOTE: In a vertical writing mode the line height is the width of the box.
-           Amazon gives its buttons a large line height, which would make the buttons
-           wide, so it is replaced. */
-        line-height: 1.2 !important;
-        font-size: 12px;
-    }
-    #ave-left-buttons .a-button,
-    #ave-left-buttons .a-button .a-button-inner {
-        /* NOTE: The button is as wide as the column, whatever Amazon's rules and the
-           writing mode do (the class a-button-inner has a width of 100 percent of its
-           own, which made the button wider than the text). */
-        width: 100% !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-    }
-    #ave-left-buttons .a-button {
         transform: rotate(180deg);
+        white-space: nowrap;
+        line-height: 1.1;
+        font-size: 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        user-select: none;
+        color: #111;
     }
     `;
 }
@@ -931,6 +917,37 @@ function addVerticalButtonsStyle() {
 }
 
 /**
+ * Creates a button of the narrow column.
+ *
+ * NOTE: The buttons of the normal side bar are built with the markup of Amazon (the
+ * class "a-button", see createButton()). Its rules (a large line height and its own
+ * width) made the rotated buttons wider than the column, so the buttons of the narrow
+ * column are simple divs with a class of their own (see getVerticalButtonsCss()).
+ *
+ * @param {string} text The text of the button
+ * @param {string} id The id of the button
+ * @param {string} bgColor The background color of the button
+ * @param {function} clickHandler The function that is called on a click
+ * @returns {Element} The created button
+ */
+function createVerticalButton(text, id, bgColor, clickHandler) {
+    const _button = document.createElement('div');
+    _button.setAttribute('id', id);
+    _button.setAttribute('class', 'ave-vertical-button');
+    _button.setAttribute('style', getLeftSideButtonStyle(bgColor, true));
+    _button.textContent = text;
+
+    _button.addEventListener('click', (event) => {
+        if (clickHandler) {
+            clickHandler(event);
+        } else {
+            alert(translate('notifications', 'nothingToSee', 'Hier gibt es nix zu sehen.\nZumindest noch nicht :P'));
+        }
+    });
+    return _button;
+}
+
+/**
  * Adds the buttons on the left side of the page (mark as seen, mark all as
  * seen and back to top).
  *
@@ -949,6 +966,13 @@ function addLeftSideButtons(forceClean) {
     const _vertical = Boolean(SETTINGS.DisableCategories);
     if (_vertical) addVerticalButtonsStyle();
 
+    // NOTE: In the narrow column the buttons are built without the markup of Amazon
+    // (see createVerticalButton()), in the normal side bar as before.
+    const _makeButton = (text, id, bgColor, clickHandler) =>
+        _vertical
+            ? createVerticalButton(text, id, bgColor, clickHandler)
+            : createButton(text, id, getLeftSideButtonStyle(bgColor, false), clickHandler);
+
     const _div = _nodesContainer.appendChild(document.createElement('div'));
     _div.setAttribute('class', 'parent-node');
     // The id is used by the CSS of the narrow column, it keeps this div and hides
@@ -957,10 +981,10 @@ function addLeftSideButtons(forceClean) {
 
     if (!_vertical) _div.appendChild(document.createElement('p')); // A bit of Space above our Buttons
 
-    const _setAllSeenBtn = createButton(
+    const _setAllSeenBtn = _makeButton(
         translate('buttons', 'markPageAsSeen', 'Seite als gesehen markieren'),
         'ave-btn-allseen',
-        getLeftSideButtonStyle(SETTINGS.BtnColorMarkCurrSiteAsSeen, _vertical),
+        SETTINGS.BtnColorMarkCurrSiteAsSeen,
         () => {
             if (SETTINGS.DebugLevel > 10) console.log('Clicked All Seen Button');
             markAllCurrentSiteProductsAsSeen();
@@ -970,10 +994,10 @@ function addLeftSideButtons(forceClean) {
     _div.appendChild(_setAllSeenBtn);
 
     if (SETTINGS.EnableBtnMarkAllAsSeen) {
-        const _setAllSeenDBBtn = createButton(
+        const _setAllSeenDBBtn = _makeButton(
             translate('buttons', 'markAllAsSeen', 'Alle als gesehen markieren'),
             'ave-btn-db-allseen',
-            getLeftSideButtonStyle(SETTINGS.BtnColorMarkAllAsSeen, _vertical),
+            SETTINGS.BtnColorMarkAllAsSeen,
             () => {
                 if (SETTINGS.DebugLevel > 10) console.log('Clicked All Seen Button');
                 setTimeout(() => {
@@ -1002,10 +1026,10 @@ function addLeftSideButtons(forceClean) {
         _div.appendChild(_setAllSeenDBBtn);
     }
 
-    const _backToTopBtn = createButton(
+    const _backToTopBtn = _makeButton(
         translate('buttons', 'backToTop', 'Zum Seitenanfang'),
         'ave-btn-backtotop',
-        getLeftSideButtonStyle(SETTINGS.BtnColorBackToTop, _vertical),
+        SETTINGS.BtnColorBackToTop,
         () => {
             if (SETTINGS.DebugLevel > 10) console.log('Clicked back to Top Button');
             window.scrollTo(0, 0);

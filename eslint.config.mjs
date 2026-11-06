@@ -138,6 +138,7 @@ const mainFile = [
     'getPageinationData',
     'getVerticalButtonsCss',
     'addVerticalButtonsStyle',
+    'createVerticalButton',
     'sendGotifyTestMessage',
     'getProductDetailsRequestDelay',
     'getSelectedCategoryPn',

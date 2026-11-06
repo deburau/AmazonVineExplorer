@@ -16,8 +16,9 @@
  *   - das CSS der schmalen Spalte (getVerticalButtonsCss()): die Kategorien werden
  *     ausgeblendet, der Container der Buttons bleibt, die Spalte ist schmal und die
  *     Buttons stehen senkrecht
- *   - dass das CSS die Elemente trifft, die createButton() wirklich erzeugt (einen
- *     span mit der Klasse "a-button", keinen <button>)
+ *   - dass die Buttons der schmalen Spalte ohne das Markup von Amazon gebaut werden
+ *     (createVerticalButton() erzeugt ein div mit eigener Klasse, nicht die Klasse
+ *     "a-button", deren Regeln die Buttons breit machten)
  *
  * Das Skript prueft das aktuelle Verhalten gegen erwartete Werte. Es vergleicht
  * nicht eine alte mit einer neuen Implementierung, weil die schmale Spalte ein
@@ -47,11 +48,16 @@ const mainSrc = readSource('VineExplorer.user.js');
 
 // Der Quelltext, der in der Sandbox ausgefuehrt wird. Die Funktionen werden aus
 // der echten Datei geschnitten, damit der Test die echte Implementierung prueft.
-const CODE = [extractBody(mainSrc, 'getLeftSideButtonStyle'), extractBody(mainSrc, 'getVerticalButtonsCss')].join('\n\n');
+const CODE = [
+    extractBody(mainSrc, 'getLeftSideButtonStyle'),
+    extractBody(mainSrc, 'getVerticalButtonsCss'),
+    extractBody(mainSrc, 'createVerticalButton')
+].join('\n\n');
 
-// Der Quelltext von createButton(), um zu pruefen, dass das CSS zu den Elementen
-// passt, die der Button wirklich erzeugt.
+// Die Quelltexte der beiden Funktionen, die die Buttons bauen, um zu pruefen, dass
+// das CSS zu den Elementen passt, die sie wirklich erzeugen.
 const BUTTON_SOURCE = extractBody(mainSrc, 'createButton');
+const SIDE_BUTTONS_SOURCE = extractBody(mainSrc, 'addLeftSideButtons');
 
 const sandbox = {
     console: { log: () => {}, warn: () => {}, error: () => {} },
@@ -143,22 +149,20 @@ contains(_filterRule, 'padding: 0 !important', 'Der Wrapper hat kein eigenes Pad
 contains(_css, 'writing-mode: vertical-rl', 'Die Buttons werden um 90 Grad gedreht');
 contains(_css, 'transform: rotate(180deg)', 'Die Schrift steht aufrecht');
 contains(_css, 'white-space: nowrap', 'Der Text der Buttons bricht nicht um');
-contains(_css, 'line-height: 1.2 !important', 'Die grosse Zeilenhoehe von Amazon wird ersetzt (sie waere die Breite)');
-contains(_css, 'overflow: hidden !important', 'Nichts der Spalte ragt heraus');
-contains(_css, 'width: 100% !important', 'Der Button ist so breit wie die Spalte');
-contains(_css, 'box-sizing: border-box !important', 'Der Rand des Buttons zaehlt zur Breite');
+contains(_css, 'line-height: 1.1', 'Die Zeilenhoehe bestimmt die Breite des Buttons');
 contains(_css, 'font-size: 12px', 'Die Schrift ist kleiner');
 notContains(_css, '//', 'Das CSS hat keine ungueltigen Kommentare');
 
-// 4. Das CSS muss zu den Elementen passen, die createButton() erzeugt.
-//    NOTE: Ein Button ist ein span mit der Klasse "a-button" und inneren spans -
-//    ein Selektor "#ave-left-buttons button" traefe gar nichts (dieser Fehler ist
-//    schon einmal passiert).
+// 4. Das CSS muss zu den Elementen passen, die die Buttons wirklich erzeugt.
+//    NOTE: Die schmalen Buttons sind divs mit eigener Klasse. Das Markup von Amazon
+//    ("a-button") wird dort bewusst nicht benutzt, weil seine Regeln die Buttons
+//    breiter als die Spalte machten.
 contains(BUTTON_SOURCE, 'a-button a-button-normal a-button-toggle', 'createButton() setzt die Klasse a-button');
-contains(BUTTON_SOURCE, 'a-button-text', 'createButton() setzt die Klasse a-button-text');
-contains(_css, '.a-button', 'Das CSS nennt die Klasse a-button');
-contains(_css, '.a-button-text', 'Das CSS nennt die Klasse a-button-text');
+contains(_css, '.ave-vertical-button', 'Das CSS nennt die Klasse der schmalen Buttons');
+notContains(_css, '.a-button', 'Das CSS kaempft nicht mehr mit den Regeln von Amazon');
 notContains(_css, '#ave-left-buttons button', 'Das CSS sucht keinen <button>');
+contains(SIDE_BUTTONS_SOURCE, 'createVerticalButton', 'Die schmalen Buttons werden ohne das Markup von Amazon gebaut');
+contains(SIDE_BUTTONS_SOURCE, 'getLeftSideButtonStyle(bgColor, false)', 'Die normalen Buttons behalten ihr Markup');
 
 if (_errors === 0) {
     console.log(`  alle ${_checks} Faelle sind ok`);

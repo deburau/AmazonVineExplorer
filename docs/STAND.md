@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.17.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.16.0.12` (in Entwicklung, Release 0.17.0 vorbereitet) |
+| Version im User-Script | `0.16.0.13` (in Entwicklung, Release 0.17.0 vorbereitet) |
 | Letztes Release | **0.16.0** (auf `main`, veröffentlicht, Merge-Commit `ff19eaa`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 18 erfolgreich (`npm run verify`) |
@@ -42,7 +42,8 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.16.0.9 | Korrektur: `#ave-left-buttons` ist 240 px breit (Amazon `.parent-node`) – Breite auf die Spalte begrenzt | **offen** |
 | 0.16.0.10 | Der Wrapper `#vvp-filter-container` (98 px) wird ebenfalls schmal | **offen** |
 | 0.16.0.11 | Korrektur: Spalte 24 px, Zeilenhöhe 1.2 (Amazon-Line-height war die Breite), Schrift 12 px, Padding 8px 1px | **offen** |
-| 0.16.0.12 | Korrektur: Button auf die Breite der Spalte begrenzt (`width: 100%`, `overflow: hidden`) | **offen** |
+| 0.16.0.12 | Korrektur: Button auf die Breite der Spalte begrenzt (`width: 100%`, `overflow: hidden`) | verworfen (Text wurde abgeschnitten) |
+| 0.16.0.13 | Eigene Buttons für die schmale Spalte (`createVerticalButton()`, Klasse `ave-vertical-button`) | **offen** |
 
 **„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
@@ -446,7 +447,7 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   `getLeftSideButtonStyle()`); `addVerticalButtonsStyle()` hängt das CSS einmal in den Kopf
   der Seite. Solange die Spalte schmal ist, hängt `window.onscroll` die Buttons nicht mehr
   oben fest, damit sie kein Produkt überdecken.
-  Wächter: `scripts/verify/verify_left_side_buttons.js` (39 Fälle).
+  Wächter: `scripts/verify/verify_left_side_buttons.js` (37 Fälle).
 
   **Nachtrag 0.16.0.7:** `createButton()` erzeugt **keinen `<button>`**, sondern
   `<span class="a-button">` mit inneren Spans – der Selektor `#ave-left-buttons button`
@@ -479,6 +480,15 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   `#ave-left-buttons` bekommt `overflow: hidden`. Damit ist der Button **auf die Breite der
   Spalte begrenzt** (Messung: Spalte 37–61 px, Produktspalte beginnt bei 61 px) – breiter
   als 24 px kann er nicht mehr werden, also kann er kein Produkt mehr überdecken.
+
+  **Nachtrag 0.16.0.13 (der harte Schnitt):** Das Herumdoktern an Amazons Button-Markup
+  (`.a-button`, `width`, `line-height`, `overflow`) hat den Text abgeschnitten. Die Buttons
+  der schmalen Spalte werden jetzt **komplett eigen** gebaut: `createVerticalButton()`
+  erzeugt ein schlichtes `div` mit der Klasse `ave-vertical-button` (id bleibt
+  `ave-btn-allseen` usw., Handler unverändert), das CSS dreht und formatiert nur dieses div.
+  Die normalen Buttons in der Kategorie-Leiste benutzen weiter `createButton()` mit dem
+  Amazon-Markup. Wächter prüfen zusätzlich, dass das CSS **kein** `.a-button` mehr nennt und
+  dass `addLeftSideButtons()` beide Wege benutzt.
 * **Einstellbare Priorität der Gotify-Nachrichten** (0.16.0.5): die Gotify-Settings
   stehen unter der eigenen Überschrift `TITLE_GOTIFY`, das neue Feld
   `GotifyPriority` (Typ `number`, 0–10, Standard **5**) steht unter dem
@@ -586,7 +596,7 @@ gegen erwartete Werte.
 | `verify_search.js` | Feature | die Suche in der Suchleiste (21 Fälle) |
 | `verify_keyword_conditions.js` | Feature | das Parsen und Vergleichen der Bedingungen inkl. `gotifyPriority` (173 Fälle) |
 | `verify_gotify_priority.js` | Feature | die Priorität der Gotify-Nachrichten und die Testnachricht (36 Fälle) |
-| `verify_left_side_buttons.js` | Feature | die Buttons der linken Seite in der schmalen Spalte (39 Fälle) |
+| `verify_left_side_buttons.js` | Feature | die Buttons der linken Seite in der schmalen Spalte (37 Fälle) |
 | `verify_keyword_order.js` | Feature | die Reihenfolge der Keywords (22 Fälle) |
 | `verify_match_lines.js` | Feature | die Trefferzeilen der Benachrichtigung (10 Fälle) |
 | `verify_category_load.js` | Feature | das Hintergrundladen der Kategorien (26 Fälle) |
