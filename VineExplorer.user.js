@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.16.0.4
+// @version      0.16.0.5
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -56,6 +56,7 @@
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, formatMatchLines, formatTaxPrize, getContrastColor, getFastScanState,
    getFastScanIntervalSeconds, getGotifyPriority, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
+   sendGotifyTestMessage,
    getScanDelay, getTaxPrices,
    getTilesFromURL, getTurboScanCategories, getTurboScanIndex, getTurboScanIntervalSeconds,
    getUrlParameter, getVariationRequestDelay, gotifyNotification, isTurboScanDue,
@@ -6207,6 +6208,28 @@ function gotifyNotification(message, prod = null, priority = null) {
             console.error('Error:', err);
         }
     });
+}
+
+/**
+ * Sends a test message to the Gotify server.
+ *
+ * The message is sent with the priority of the settings (GotifyPriority), so that
+ * the button shows which priority the messages of the notifications have (see
+ * getGotifyPriority()). The test message belongs to no product, so it has no target
+ * and no image.
+ *
+ * @returns {boolean} true if the message was sent
+ */
+function sendGotifyTestMessage() {
+    if (!SETTINGS.GotifyUrl || !SETTINGS.GotifyToken) {
+        console.warn('sendGotifyTestMessage(): the address or the token of the Gotify server is missing.');
+        return false;
+    }
+
+    const _message = translate('notifications', 'gotifyTestMessage', `Test message of Amazon Vine Explorer ${AVE_VERSION}`, AVE_VERSION);
+    console.log(`sendGotifyTestMessage(): sending "${_message}" with the priority ${getGotifyPriority()}`);
+    gotifyNotification(_message);
+    return true;
 }
 
 /**

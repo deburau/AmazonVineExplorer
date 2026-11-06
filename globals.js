@@ -514,6 +514,16 @@ SETTINGS_USERCONFIG_DEFINES.push({
     description:
         'The priority of the Gotify messages. 0 is the lowest and 10 the highest value. A keyword can name another priority for its matches (gotifyPriority).'
 });
+SETTINGS_USERCONFIG_DEFINES.push({
+    type: 'button',
+    key: 'BUTTON_GOTIFY_TEST',
+    name: 'Send a test message',
+    bgColor: 'rgb(0, 160, 255)',
+    description: 'Sends a test message to the Gotify server, with the priority of the setting above.',
+    // The button needs the address and the token of the server.
+    btnEnabled: () => Boolean(SETTINGS.GotifyUrl && SETTINGS.GotifyToken),
+    btnClick: () => sendGotifyTestMessage()
+});
 SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Background scan', description: '', key: 'TITLE_BACKGROUND_SCAN' });
 SETTINGS_USERCONFIG_DEFINES.push({
     key: 'EnableBackgroundScan',

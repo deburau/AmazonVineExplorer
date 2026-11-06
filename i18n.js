@@ -25,7 +25,8 @@ const I18N = {
             keywordMatch: (keyword) => `Keyword-Treffer: ${keyword}`,
             priceMatch: (price) => `Preis-Treffer: ${price}`,
             categoryMatch: (category) => `Kategorie-Treffer: ${category}`,
-            loadingCategories: (done, total) => `Kategorien werden geladen: ${done} / ${total}`
+            loadingCategories: (done, total) => `Kategorien werden geladen: ${done} / ${total}`,
+            gotifyTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version}`
         },
         share: {
             myFSE: 'Mein FSE',
@@ -70,6 +71,7 @@ const I18N = {
             GotifyUrl: 'URL des Gotify-Servers',
             GotifyToken: 'Gotify Anwendungstoken',
             GotifyPriority: 'Priorität der Gotify-Nachrichten',
+            BUTTON_GOTIFY_TEST: 'Testnachricht senden',
             BackGroundScanDelayPerPage: 'Background Scan Min. Delay pro Seite (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness pro Seite (ms)',
             TITLE_FAST_SCAN: 'Fast-Scan',
@@ -147,6 +149,8 @@ const I18N = {
             GotifyToken: 'Authentifizierungs-Token der Gotify-Anwendung.',
             GotifyPriority:
                 'Priorität, mit der die Gotify-Nachrichten verschickt werden. 0 ist der kleinste und 10 der größte Wert. Ein Keyword kann für seine Treffer eine andere Priorität angeben (gotifyPriority=8, die Priorität wird zugewiesen und nicht verglichen).',
+            BUTTON_GOTIFY_TEST:
+                'Verschickt eine Testnachricht an den Gotify-Server – mit der Priorität aus der Einstellung darüber. Der Button ist grau, solange Adresse oder Token fehlen.',
             BackGroundScanDelayPerPage: 'Min. Wartezeit pro Seite in Millisekunden.',
             BackGroundScannerRandomness: 'Max. zufällige Wartezeit pro Seite in Millisekunden.',
             FastScanIntervalSeconds:
@@ -228,7 +232,8 @@ const I18N = {
             keywordMatch: (keyword) => `Keyword match: ${keyword}`,
             priceMatch: (price) => `Price match: ${price}`,
             categoryMatch: (category) => `Category match: ${category}`,
-            loadingCategories: (done, total) => `Loading the categories: ${done} / ${total}`
+            loadingCategories: (done, total) => `Loading the categories: ${done} / ${total}`,
+            gotifyTestMessage: (version) => `Test message of Amazon Vine Explorer ${version}`
         },
         share: {
             myFSE: 'My FSE',
@@ -272,6 +277,7 @@ const I18N = {
             GotifyUrl: 'URL of the Gotify Server',
             GotifyToken: 'Gotify application token',
             GotifyPriority: 'Priority of the Gotify messages',
+            BUTTON_GOTIFY_TEST: 'Send a test message',
             BackGroundScanDelayPerPage: 'Background Scan Per Page Min Delay (ms)',
             BackGroundScannerRandomness: 'Background Scan Randomness per Page (ms)',
             TITLE_FAST_SCAN: 'Fast scan',
@@ -349,6 +355,8 @@ const I18N = {
             GotifyToken: 'Authentication token of the Gotify application.',
             GotifyPriority:
                 'Priority of the Gotify messages. 0 is the lowest and 10 the highest value. A keyword can name another priority for its matches (gotifyPriority=8, the priority is assigned and not compared).',
+            BUTTON_GOTIFY_TEST:
+                'Sends a test message to the Gotify server, with the priority of the setting above. The button is grey as long as the address or the token is missing.',
             BackGroundScanDelayPerPage: 'Minimum wait time per page in milliseconds.',
             BackGroundScannerRandomness: 'Maximum random wait time per page in milliseconds.',
             FastScanIntervalSeconds:

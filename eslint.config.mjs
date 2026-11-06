@@ -135,6 +135,7 @@ const mainFile = [
     'getFastScanState',
     'getGotifyPriority',
     'getPageinationData',
+    'sendGotifyTestMessage',
     'getProductDetailsRequestDelay',
     'getSelectedCategoryPn',
     'getRandomizedDelay',

@@ -83,11 +83,12 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
-##### [2026-11-06] - Version 0.16.0.4
+##### [2026-11-06] - Version 0.16.0.5
 
 * New: the list of the categories of the turbo scan has the virtual category **"Alle Produkte"** (translated) at its end. When it is switched on, the turbo scan loads the normal first page of the products as the **last step of a round** - after all the other selected categories - so that a round ends with the unfiltered list. A round is complete with that step, so the waiting time of the next round starts after it.
 * New: the **priority** of the Gotify messages can be set. The settings of Gotify have their own section **"Gotify"** now, the new field **"Priority of the Gotify messages"** (default **5**, 0 is the lowest and 10 the highest value) stands under the application token.
 * New: a keyword can name the priority of its own messages with `gotifyPriority=8` (the value is 0 to 10 and is written with `=` only - the priority is assigned and not compared) instead of the setting. The word can be shortened like `price` and `category`, e.g. `g=8` or `gotifyp=8`, and is stored as the full word. Example: `toaster gotifyPriority=8` sends the matches of that keyword with the priority 8, all other messages keep the value of the setting.
+* New: a button **"Send a test message"** under the priority sends a test message to the Gotify server, so that the address, the token and the priority can be checked without waiting for a notification. It uses the priority of the setting and is grey as long as the address or the token is missing.
 
 ##### [2026-11-05] - Version 0.16.0.1
 

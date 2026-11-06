@@ -7,7 +7,8 @@
  * Ohne Angabe in einem Keyword wird jede Nachricht mit der Prioritaet der
  * Einstellung verschickt (GotifyPriority, Standard 5). Ein Keyword kann mit
  * "gotifyPriority=<n>" eine andere Prioritaet fuer seine Treffer angeben, diese
- * schlaegt die Einstellung.
+ * schlaegt die Einstellung. Der Button unter der Einstellung schickt eine
+ * Testnachricht mit der Prioritaet der Einstellung.
  *
  * Geprueft werden:
  *   - die Anfrage an den Server: Adresse, Methode, Typ und Inhalt
@@ -15,6 +16,8 @@
  *     Einstellung, ein Wert ausserhalb der Skala (0 bis 10) ergibt den Standard
  *   - die Zusatzangaben: die Nachricht wird als Markdown gezeigt, ein Produkt
  *     haengt Ziel und Bild an
+ *   - die Testnachricht (sendGotifyTestMessage()): sie wird mit der Prioritaet der
+ *     Einstellung geschickt und ohne Adresse oder Token gar nicht
  *
  * Das Skript prueft das aktuelle Verhalten gegen erwartete Werte. Es vergleicht
  * nicht eine alte mit einer neuen Implementierung, weil die Prioritaet ein
@@ -30,6 +33,9 @@ const vm = require('vm');
 const { extractBody, extractConstants } = require('./lib/verify_helpers');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
+const AVE_VERSION = '1.0';
+const GOTIFY_URL = 'https://gotify.example.com/';
+const GOTIFY_TOKEN = 'tok';
 
 /**
  * Liest eine Datei aus dem Repository.
@@ -47,7 +53,8 @@ const mainSrc = readSource('VineExplorer.user.js');
 const CODE = [
     extractConstants(mainSrc, ['GOTIFY_PRIORITY_MIN', 'GOTIFY_PRIORITY_MAX', 'GOTIFY_PRIORITY_DEFAULT']),
     extractBody(mainSrc, 'getGotifyPriority'),
-    extractBody(mainSrc, 'gotifyNotification')
+    extractBody(mainSrc, 'gotifyNotification'),
+    extractBody(mainSrc, 'sendGotifyTestMessage')
 ].join('\n\n');
 
 let _errors = 0;
@@ -68,27 +75,30 @@ function check(expected, actual, label) {
 }
 
 /**
- * Fuehrt die Implementierung mit den angegebenen Werten aus und liefert die
- * abgeschickte Anfrage.
+ * Baut die Sandbox mit den angegebenen Werten.
  *
- * @param {string} message Der Text der Nachricht
- * @param {object|null} [prod] Das Produkt der Nachricht
- * @param {number|null} [priority] Die Prioritaet, die das Keyword genannt hat
- * @param {number|string|null} [setting] Der Wert der Einstellung GotifyPriority
- * @returns {{count: number, url: string, method: string, headers: object, body: object}} Die Anfrage
+ * @param {object} options Die Werte der Einstellungen
+ * @returns {{ctx: object, requests: object[]}} Der Kontext und die Anfragen
  */
-function run(message, prod = null, priority = null, setting = 5) {
+function createSandbox(options) {
     const _requests = [];
 
     const sandbox = {
         console: { log: () => {}, warn: () => {}, error: () => {} },
-        SETTINGS: { GotifyUrl: 'https://gotify.example.com/', GotifyToken: 'tok', GotifyPriority: setting, DebugLevel: 0 },
-        GM: {
-            xmlHttpRequest: (options) => _requests.push(options)
+        SETTINGS: {
+            GotifyUrl: options.url,
+            GotifyToken: options.token,
+            GotifyPriority: options.setting,
+            DebugLevel: 0
         },
-        AVE_VERSION: '1.0',
+        GM: {
+            xmlHttpRequest: (request) => _requests.push(request)
+        },
+        AVE_VERSION,
         window: { location: { origin: 'https://www.amazon.de' } },
         fixProductImageUrl: (url) => url,
+        // Der Test benutzt den uebergebenen Text, wenn keine Uebersetzung da ist.
+        translate: (category, key, fallback) => fallback,
         JSON,
         Number,
         String,
@@ -98,18 +108,53 @@ function run(message, prod = null, priority = null, setting = 5) {
 
     const ctx = vm.createContext(sandbox);
     vm.runInContext(CODE, ctx, { filename: 'gotify.js' });
+    return { ctx, requests: _requests };
+}
 
-    const gotifyNotification = vm.runInContext('gotifyNotification', ctx);
-    gotifyNotification(message, prod, priority);
-
-    const _request = _requests[0] || {};
+/**
+ * Liest die abgeschickte Anfrage aus.
+ *
+ * @param {object[]} requests Die Anfragen der Sandbox
+ * @returns {{count: number, url: string, method: string, headers: object, body: object}} Die Anfrage
+ */
+function readRequest(requests) {
+    const _request = requests[0] || {};
     return {
-        count: _requests.length,
+        count: requests.length,
         url: _request.url,
         method: _request.method,
         headers: _request.headers || {},
         body: _request.data ? JSON.parse(_request.data) : {}
     };
+}
+
+/**
+ * Fuehrt gotifyNotification() mit den angegebenen Werten aus.
+ *
+ * @param {string} message Der Text der Nachricht
+ * @param {object|null} [prod] Das Produkt der Nachricht
+ * @param {number|null} [priority] Die Prioritaet, die das Keyword genannt hat
+ * @param {number|string|null} [setting] Der Wert der Einstellung GotifyPriority
+ * @returns {object} Die abgeschickte Anfrage
+ */
+function run(message, prod = null, priority = null, setting = 5) {
+    const { ctx, requests } = createSandbox({ setting, url: GOTIFY_URL, token: GOTIFY_TOKEN });
+    vm.runInContext('gotifyNotification', ctx)(message, prod, priority);
+    return readRequest(requests);
+}
+
+/**
+ * Fuehrt sendGotifyTestMessage() mit den angegebenen Werten aus.
+ *
+ * @param {number|string|null} [setting] Der Wert der Einstellung GotifyPriority
+ * @param {string} [url] Die Adresse des Servers
+ * @param {string} [token] Der Token der Anwendung
+ * @returns {{count: number, url: string, method: string, headers: object, body: object, sent: boolean}} Die Anfrage und das Ergebnis
+ */
+function runTest(setting = 5, url = GOTIFY_URL, token = GOTIFY_TOKEN) {
+    const { ctx, requests } = createSandbox({ setting, url, token });
+    const _sent = vm.runInContext('sendGotifyTestMessage', ctx)();
+    return Object.assign({ sent: _sent }, readRequest(requests));
 }
 
 console.log('Prioritaet der Gotify-Nachrichten pruefen');
@@ -118,10 +163,10 @@ console.log('='.repeat(70));
 // 1. Die Anfrage an den Server (ohne Produkt).
 const _plain = run('Eine Nachricht', null, null, 4);
 check(1, _plain.count, 'Es wird genau eine Anfrage geschickt');
-check('https://gotify.example.com/message?token=tok', _plain.url, 'Die Adresse enthaelt den Token');
+check(`${GOTIFY_URL}message?token=${GOTIFY_TOKEN}`, _plain.url, 'Die Adresse enthaelt den Token');
 check('POST', _plain.method, 'Die Anfrage wird mit POST geschickt');
 check('application/json', _plain.headers['Content-Type'], 'Der Typ der Anfrage ist JSON');
-check('Amazon Vine Explorer - 1.0', _plain.body.title, 'Der Titel nennt den Namen und die Version');
+check(`Amazon Vine Explorer - ${AVE_VERSION}`, _plain.body.title, 'Der Titel nennt den Namen und die Version');
 check('Eine Nachricht', _plain.body.message, 'Der Text steht in der Nachricht');
 check('text/markdown', _plain.body.extras['client::display'].contentType, 'Die Nachricht wird als Markdown gezeigt');
 check(undefined, _plain.body.extras['client::notification'], 'Ohne Produkt gibt es kein Ziel und kein Bild');
@@ -147,6 +192,30 @@ check(5, run('Eine Nachricht', null, null, 11).body.priority, 'Eine Einstellung 
 check(5, run('Eine Nachricht', null, null, -1).body.priority, 'Eine Einstellung unter der Skala ergibt den Standard');
 check(5, run('Eine Nachricht', null, null, 'hoch').body.priority, 'Ein Text als Einstellung ergibt den Standard');
 check(5, run('Eine Nachricht', null, null, null).body.priority, 'Eine leere Einstellung ergibt den Standard');
+
+// 5. Die Testnachricht des Buttons.
+const _test = runTest(7);
+check(true, _test.sent, 'Mit Adresse und Token wird die Testnachricht geschickt');
+check(1, _test.count, 'Die Testnachricht ist genau eine Anfrage');
+check(
+    `Test message of Amazon Vine Explorer ${AVE_VERSION}`,
+    _test.body.message,
+    'Der Text der Testnachricht nennt das Script und die Version'
+);
+check(7, _test.body.priority, 'Die Testnachricht benutzt die Prioritaet der Einstellung');
+check(10, runTest(10).body.priority, 'Die Testnachricht benutzt auch die Prioritaet 10');
+check(0, runTest(0).body.priority, 'Die Testnachricht benutzt auch die Prioritaet 0');
+check(5, runTest(99).body.priority, 'Eine Einstellung ausserhalb der Skala ergibt den Standard');
+check(undefined, _test.body.extras['client::notification'], 'Die Testnachricht hat kein Ziel und kein Bild');
+check('text/markdown', _test.body.extras['client::display'].contentType, 'Die Testnachricht wird als Markdown gezeigt');
+
+const _withoutUrl = runTest(5, '', GOTIFY_TOKEN);
+check(false, _withoutUrl.sent, 'Ohne Adresse wird nichts geschickt');
+check(0, _withoutUrl.count, 'Ohne Adresse gibt es keine Anfrage');
+
+const _withoutToken = runTest(5, GOTIFY_URL, '');
+check(false, _withoutToken.sent, 'Ohne Token wird nichts geschickt');
+check(0, _withoutToken.count, 'Ohne Token gibt es keine Anfrage');
 
 if (_errors === 0) {
     console.log(`  alle ${_checks} Faelle sind ok`);
