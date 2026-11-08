@@ -47,6 +47,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.16.0.14 | Mehr Abstand neben dem Text (`padding: 8px 4px`), Buttons bleiben beim Scrollen oben | bestätigt |
 | 0.16.0.15 | Korrektur: beim Scrollen wird die **ganze Spalte** festgehängt, nicht die einzelnen hohen Buttons (sie überlappten sich) | bestätigt |
 | 0.17.0.2 / 0.17.0.4 | Detailansicht öffnet sich beim Klick auf eine Desktop-Benachrichtigung (Brave) | bestätigt (2026-11-08) |
+| 0.17.0.3 | Gruppe „Desktop-Benachrichtigung“ (Schalter + Keywords, Überschrift ausgeblendet) | bestätigt (2026-11-08) |
 
 **„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
@@ -623,11 +624,13 @@ i18n-Schlüssel `TITLE_DESKTOP_NOTIFICATIONS` stehen in allen vier Blöcken
 (`settingsLabels`/`settingsDescriptions` × `de`/`en`).
 
 **Nebenbefund, hier mitkorrigiert:** der Abschnitt „Einstellungen“ weiter unten
-nannte **71** Einträge, tatsächlich waren es schon **74** (jetzt **75**), und die
-Menüliste dort stammte aus der Zeit vor der Gotify-Gruppe (0.16.0).
+nannte **71** Einträge, tatsächlich waren es schon **74** (inzwischen **76**, der
+Test-Button ist dazugekommen), und die Menüliste dort stammte aus der Zeit vor
+der Gotify-Gruppe (0.16.0).
 
-**Noch nicht im Browser getestet.** `npm run check` (75 Einstellungen) und
-`npm run verify` (20/20) sind grün.
+**Bestätigt (2026-11-08):** „1. funktioniert“ – die Gruppe, der Schalter und die
+ausgeblendete Überschrift der Keywords. `npm run check` und `npm run verify`
+(20/20) sind grün.
 
 ## Wichtige Dateien
 
@@ -710,11 +713,11 @@ gegen erwartete Werte.
 * Commits: `type(scope): Beschreibung`, z. B. `fix(scan): ...`
 * Version im User-Script + Changelog in `README.md` bei jeder Änderung
 
-## Einstellungen (75)
+## Einstellungen (76)
 
 **Hinweis:** Gezählt sind alle Einträge von `SETTINGS_USERCONFIG_DEFINES`,
 inklusive der zehn Titel-Defines. Die Zahl steht hier, weil
-`scripts/check_settings_keys.js` sie ausgibt (`Einstellungen: 75`).
+`scripts/check_settings_keys.js` sie ausgibt (`Einstellungen: 76`).
 
 Aufbau des Menüs (Reihenfolge in `globals.js` = Reihenfolge im Menü):
 
@@ -723,7 +726,8 @@ Aufbau des Menüs (Reihenfolge in `globals.js` = Reihenfolge im Menü):
    `DarkMode`, `DisableCategories`, `EnableBtnAll`, `EnablePaginationTop`,
    `EnableInfiniteScrollLiveQuerry`, `EnableInfiniteSpinnerFix`)
 2. **Desktop-Benachrichtigung** (`TITLE_DESKTOP_NOTIFICATIONS`, seit 0.17.0.3):
-   `EnableDesktopNotifikation`, `DesktopNotifikationKeywords`
+   `EnableDesktopNotifikation`, Button „Testnachricht senden",
+   `DesktopNotifikationKeywords`
 3. **Gotify** (`TITLE_GOTIFY`): `GotifyUrl`, `GotifyToken`, `GotifyPriority`,
    Button „Testnachricht senden"
 4. **Background-Scan** (`TITLE_BACKGROUND_SCAN`): `EnableBackgroundScan`,
