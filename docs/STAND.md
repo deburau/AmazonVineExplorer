@@ -575,8 +575,9 @@ Top-Level-IIFE, nicht in einer extrahierten Funktion).
 Desktop-Benachrichtigung, jetzt funktioniert es“. Damit ist der abgeschnittene
 `class`-Wert die belegte Ursache des Symptoms.
 
-Die Zahlen sind im Code nicht begründet: es gibt keinen `// NOTE:` zum
-`setTimeout`. Bis er dort steht, ist die 1000 ein magischer Wert.
+Der Grund für die Sekunde steht als `// NOTE:` im Code: das Fenster mit den
+Details öffnete sich in Brave meistens nicht, wenn der Klick auf den Button zu
+früh kam.
 
 ### Einstellungs-Gruppe „Desktop-Benachrichtigung“ (0.17.0.3)
 

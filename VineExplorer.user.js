@@ -230,6 +230,9 @@ let database;
                 </span>
                 `;
                     document.body.appendChild(aveShareElementTmp);
+                    // NOTE: The window with the details did not open most of the time in
+                    // Brave when the click on the button came too early, so the button
+                    // is pressed after a second.
                     setTimeout(() => {
                         aveShareElementTmp.querySelector('input').click();
                         setTimeout(() => {
