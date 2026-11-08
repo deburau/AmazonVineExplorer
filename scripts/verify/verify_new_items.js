@@ -59,7 +59,9 @@ const NEW_NAMES = [
     // Die Funktionen, die die Verzoegerungen zwischen den Requests berechnen.
     'getRandomizedDelay',
     'getVariationRequestDelay',
-    'getProductDetailsRequestDelay'
+    'getProductDetailsRequestDelay',
+    // Die Funktion, die die Adresse des Klicks auf eine Benachrichtigung baut.
+    'getProductTargetUrl'
 ];
 
 const CONSTANT_NAMES = ['PRODUCT_DETAILS_REQUEST_DELAY', 'productDetailsQueue', 'GOTIFY_PRIORITY_MIN', 'GOTIFY_PRIORITY_MAX'];

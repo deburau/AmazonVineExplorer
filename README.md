@@ -83,6 +83,10 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
+##### [2026-11-08] - Version 0.17.0.8
+
+* The messages of the Gotify settings open the same window as the desktop notifications now: the target of a click and the link of the image in the message are the address with the data of the product (`vine-data`), not the page of the product (`/dp/<ASIN>`). A click in the Gotify app opens the window with the details of the product, like a click on a desktop notification.
+
 ##### [2026-11-08] - Version 0.17.0.7
 
 * The test message of the Gotify settings uses the product that the last scan has seen last as well: it starts with the image of the product, then follows the line that it is a test (it stands where the reasons of a real match stand in a normal message) and then the description of the product. The message has the target and the image of that product, so a click and the big image can be tested as well. Without a product in the database the message is the plain test line.

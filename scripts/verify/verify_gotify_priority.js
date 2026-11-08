@@ -37,6 +37,23 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const AVE_VERSION = '1.0';
 const GOTIFY_URL = 'https://gotify.example.com/';
 const GOTIFY_TOKEN = 'tok';
+const ORIGIN = 'https://www.amazon.de';
+
+/**
+ * Die Adresse, die ein Klick oeffnet (dieselbe wie bei den Desktop-Nachrichten).
+ * @param {object} prod Das Produkt
+ * @returns {string} Die Adresse mit den Daten des Produkts
+ */
+function targetUrl(prod) {
+    return `${ORIGIN}/vine/vine-items?vine-data=${encodeURIComponent(
+        JSON.stringify({
+            asin: prod.data_asin,
+            isParentAsin: prod.data_asin_is_parent,
+            recommendationId: prod.data_recommendation_id,
+            tax: prod.data_estimated_tax
+        })
+    )}`;
+}
 
 /**
  * Liest eine Datei aus dem Repository.
@@ -54,6 +71,7 @@ const mainSrc = readSource('VineExplorer.user.js');
 const CODE = [
     extractConstants(mainSrc, ['GOTIFY_PRIORITY_MIN', 'GOTIFY_PRIORITY_MAX', 'GOTIFY_PRIORITY_DEFAULT']),
     extractBody(mainSrc, 'getGotifyPriority'),
+    extractBody(mainSrc, 'getProductTargetUrl'),
     extractBody(mainSrc, 'gotifyNotification'),
     extractBody(mainSrc, 'getNewestProductOfDatabase'),
     extractBody(mainSrc, 'sendGotifyTestMessage')
@@ -97,7 +115,7 @@ function createSandbox(options) {
             xmlHttpRequest: (request) => _requests.push(request)
         },
         AVE_VERSION,
-        window: { location: { origin: 'https://www.amazon.de' } },
+        window: { location: { origin: ORIGIN } },
         // Die Datenbank liefert die Produkte, die das Szenario vorgibt.
         database: {
             getAll: () => Promise.resolve((options.products || []).map((_prod) => Object.assign({}, _prod)))
@@ -190,6 +208,9 @@ async function checkTestMessage() {
     // 6. Die Testnachricht mit dem neuesten Produkt der Datenbank.
     const _older = {
         data_asin: 'B01ALT',
+        data_asin_is_parent: false,
+        data_recommendation_id: 'rec-alt',
+        data_estimated_tax: 3,
         link: '/dp/B01ALT',
         data_img_url: 'https://example.com/alt.jpg',
         description_full: 'Altes Produkt',
@@ -197,6 +218,9 @@ async function checkTestMessage() {
     };
     const _newer = {
         data_asin: 'B02NEU',
+        data_asin_is_parent: true,
+        data_recommendation_id: 'rec-neu',
+        data_estimated_tax: 7.5,
         link: '/dp/B02NEU',
         data_img_url: 'https://example.com/neu.jpg',
         description_full: 'Neues Produkt',
@@ -205,14 +229,14 @@ async function checkTestMessage() {
     const _withProduct = await runTest(5, GOTIFY_URL, GOTIFY_TOKEN, [_older, _newer]);
     check(true, _withProduct.sent, 'Mit einem Produkt wird die Testnachricht geschickt');
     check(
-        `[![](${_newer.data_img_url})](https://www.amazon.de${_newer.link})  \n${_testLine}  \n${_newer.description_full}`,
+        `[![](${_newer.data_img_url})](${targetUrl(_newer)})  \n${_testLine}  \n${_newer.description_full}`,
         _withProduct.body.message,
-        'Der Text nennt das Bild, den Test und die Beschreibung des neuesten Produkts'
+        'Der Text nennt das Bild als Link auf die Adresse mit den Daten, den Test und die Beschreibung'
     );
     check(
-        'https://www.amazon.de/dp/B02NEU',
+        targetUrl(_newer),
         _withProduct.body.extras['client::notification'].click.url,
-        'Das Ziel der Testnachricht ist das neueste Produkt'
+        'Das Ziel der Testnachricht ist die Adresse der Desktop-Nachricht (vine-data)'
     );
     check(
         _newer.data_img_url,
@@ -222,15 +246,15 @@ async function checkTestMessage() {
     check(5, _withProduct.body.priority, 'Ein Produkt aendert die Prioritaet der Testnachricht nicht');
     check(`Amazon Vine Explorer - ${AVE_VERSION}`, _withProduct.body.title, 'Der Titel der Testnachricht bleibt der Titel des Scripts');
 
-    const _withoutLink = await runTest(5, GOTIFY_URL, GOTIFY_TOKEN, [
-        { data_asin: 'B03OHNE', description_full: 'Ohne Link', ts_lastSeen: 1800000000 }
+    const _withoutImage = await runTest(5, GOTIFY_URL, GOTIFY_TOKEN, [
+        { data_asin: 'B03OHNE', description_full: 'Ohne Bild', ts_lastSeen: 1800000000 }
     ]);
     check(
-        `${_testLine}  \nOhne Link`,
-        _withoutLink.body.message,
-        'Ohne Link und Bild des Produkts steht die Beschreibung ohne Bild in der Nachricht'
+        `${_testLine}  \nOhne Bild`,
+        _withoutImage.body.message,
+        'Ohne Bild des Produkts steht die Beschreibung ohne Bild in der Nachricht'
     );
-    check(undefined, _withoutLink.body.extras['client::notification'], 'Ohne Link des Produkts hat die Testnachricht kein Ziel');
+    check(undefined, _withoutImage.body.extras['client::notification'], 'Ohne Bild des Produkts hat die Testnachricht kein Ziel');
 
     const _withoutUrl = await runTest(5, '', GOTIFY_TOKEN);
     check(false, _withoutUrl.sent, 'Ohne Adresse wird nichts geschickt');
@@ -258,8 +282,20 @@ async function main() {
     check(4, _plain.body.priority, 'Ohne Prioritaet im Keyword gilt die Einstellung');
 
     // 2. Ein Produkt haengt das Ziel und das Bild an.
-    const _prod = run('Eine Nachricht', { link: '/dp/B01', data_img_url: 'https://example.com/B01.jpg' }, null, 5);
-    check('https://www.amazon.de/dp/B01', _prod.body.extras['client::notification'].click.url, 'Das Ziel ist der Link des Produkts');
+    const _withTarget = {
+        data_asin: 'B01TOASTER',
+        data_asin_is_parent: false,
+        data_recommendation_id: 'rec-toaster',
+        data_estimated_tax: 3,
+        link: '/dp/B01',
+        data_img_url: 'https://example.com/B01.jpg'
+    };
+    const _prod = run('Eine Nachricht', _withTarget, null, 5);
+    check(
+        targetUrl(_withTarget),
+        _prod.body.extras['client::notification'].click.url,
+        'Das Ziel ist die Adresse der Desktop-Nachricht (vine-data)'
+    );
     check('https://example.com/B01.jpg', _prod.body.extras['client::notification'].bigImageUrl, 'Das Bild ist das Produktbild');
     check(5, _prod.body.priority, 'Mit einem Produkt gilt die Einstellung');
 

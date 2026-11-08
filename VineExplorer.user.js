@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.17.0.7
+// @version      0.17.0.8
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -6043,21 +6043,17 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
         }
         if (SETTINGS.GotifyUrl) {
             // NOTE: The reasons for the match stand before the description of the
-            // product, like in the desktop notification. The priority of the
-            // message is the one that the keyword named, if it named one.
-            if (_prod.link) {
-                gotifyNotification(
-                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`,
-                    _prod,
-                    _entry.gotifyPriority
-                );
-            } else {
-                gotifyNotification(
-                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`,
-                    null,
-                    _entry.gotifyPriority
-                );
-            }
+            // product, like in the desktop notification. The priority of the message
+            // is the one that the keyword named, if it named one. The image of the
+            // message is a link to the same address that a click on the desktop
+            // notification opens (see getProductTargetUrl()), so that a click in the
+            // Gotify app opens the window with the details of the product and not the
+            // page of the product.
+            gotifyNotification(
+                `[![](${fixProductImageUrl(_prod.data_img_url)})](${getProductTargetUrl(_prod)})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`,
+                _prod,
+                _entry.gotifyPriority
+            );
         }
         return true;
     }
@@ -6372,7 +6368,10 @@ function gotifyNotification(message, prod = null, priority = null) {
                       contentType: 'text/markdown'
                   },
                   'client::notification': {
-                      click: { url: window.location.origin + prod.link },
+                      // NOTE: The target is the address of the desktop notifications,
+                      // so that a click in the Gotify app opens the same window with the
+                      // details of the product (see getProductTargetUrl()).
+                      click: { url: getProductTargetUrl(prod) },
                       bigImageUrl: fixProductImageUrl(prod.data_img_url)
                   }
               }
@@ -6434,11 +6433,10 @@ async function sendGotifyTestMessage() {
     const _prod = await getNewestProductOfDatabase();
     const _image = _prod && _prod.data_img_url ? fixProductImageUrl(_prod.data_img_url) : null;
     // NOTE: gotifyNotification() takes the target and the big image of the message
-    //   from the product, so it only gets one that has a link and an image.
-    const _prodForTarget = _prod && _prod.link && _prod.data_img_url ? _prod : null;
-    const _imageMarkdown = _image
-        ? `${_prod.link ? `[![](${_image})](${window.location.origin + _prod.link})` : `![](${_image})`}  \n`
-        : '';
+    //   from the product, so it only gets one with an image (the target is built from
+    //   the data of the product, see getProductTargetUrl()).
+    const _prodForTarget = _prod && _prod.data_img_url ? _prod : null;
+    const _imageMarkdown = _image ? `[![](${_image})](${getProductTargetUrl(_prod)})  \n` : '';
     const _message = _prod ? `${_imageMarkdown}${_testLine}  \n${_prod.description_full}` : _testLine;
 
     console.log(

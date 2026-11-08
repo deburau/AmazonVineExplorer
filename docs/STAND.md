@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.18.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.17.0.7` (in Entwicklung, Release 0.18.0 vorbereitet) |
+| Version im User-Script | `0.17.0.8` (in Entwicklung, Release 0.18.0 vorbereitet) |
 | Letztes Release | **0.17.0** (auf `main`, veröffentlicht, Merge-Commit `e34488d`, Doku-Commit `5f7ea82`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 21 erfolgreich (`npm run verify`) |
@@ -625,6 +625,33 @@ Fälle) prüft das Ziel, das neueste Produkt, den Text, das Bild, das
 (erlaubt/gefragt/abgelehnt) sowie den Fall ohne `Notification`-Objekt. Damit sind
 es **21 Verifikationen**.
 
+### Gotify-Ziel = Adresse der Desktop-Nachrichten (0.17.0.8)
+
+`gotifyNotification()` baute das Ziel (`client::notification.click.url`) und den
+Bildlink im Text aus `window.location.origin + prod.link` – das war die
+Produktseite (`/dp/<ASIN>`). Beides baut jetzt `getProductTargetUrl(prod)`, also
+**dieselbe Adresse wie die Desktop-Benachrichtigung**
+(`${origin}/vine/vine-items?vine-data=<JSON>`), damit ein Klick in der Gotify-App
+dasselbe Fenster mit den Details öffnet.
+
+* `gotifyNotification()`: `click: { url: getProductTargetUrl(prod) }`.
+* Der Text der echten Nachricht ist jetzt
+  `[![](<Bild>)](<getProductTargetUrl>)  \n<Trefferzeilen>  \n<Beschreibung>`.
+  Die Fallunterscheidung `if (_prod.link)` entfällt, weil das Ziel nicht mehr am
+  `link` hängt – für das große Bild wird weiterhin `data_img_url` gebraucht (und
+  die Testnachricht gibt das Produkt nur mit Bild weiter, weil
+  `fixProductImageUrl()` nicht null-sicher ist).
+* Die Testnachricht hängt den Bildlink genauso an ihr Ziel.
+
+**Kein Baseline-Vergleich bricht:** `verify_new_items.js` vergleicht die
+Benachrichtigungen absichtlich nicht Zeichen für Zeichen (nur Badge, Titel, „gab
+es eine Benachrichtigung", Text-Erwartungen) – der Log darf abweichen. Nötig war
+dort nur `getProductTargetUrl` in der `NEW_NAMES`-Liste, sonst hätte die Sandbox
+einen `ReferenceError` geworfen. `verify_gotify_priority.js` prüft die Adresse
+jetzt explizit über `targetUrl()` im Skript (weiter **44** Fälle).
+
+**Noch nicht im Browser getestet.**
+
 ### Gotify-Testnachricht mit dem neuesten Produkt (0.17.0.7)
 
 Der Button „Testnachricht senden" im Gotify-Abschnitt schickt die Testnachricht
@@ -633,7 +660,7 @@ höchstes `ts_lastSeen`) – dieselbe Funktion, die auch die Desktop-Testnachric
 nutzt. Der Aufbau ist der einer echten Nachricht:
 
 ```
-[![](<Bild>)](<origin><link>)  ␣␣
+[![](<Bild>)](<getProductTargetUrl>)  ␣␣
 Testnachricht von Amazon Vine Explorer <Version> – dies ist kein echter Treffer  ␣␣
 <description_full>
 ```
