@@ -7,9 +7,9 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 
 | Punkt | Stand |
 |---|---|
-| Branch | `dev-0.18.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.18.0` (Release, auf `dev-0.18.0` vorbereitet) |
-| Letztes Release | **0.17.0** (auf `main`, veröffentlicht, Merge-Commit `e34488d`, Doku-Commit `5f7ea82`) |
+| Branch | `main` (Release 0.18.0 veröffentlicht); Entwicklung ab `dev-0.19.0` |
+| Version im User-Script | `0.18.0` (Release 0.18.0, veröffentlicht) |
+| Letztes Release | **0.18.0** (auf `main`, veröffentlicht, Merge-Commit `e0a9439`, Release-Commit `4ae6a8b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 21 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
