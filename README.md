@@ -83,34 +83,13 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
-##### [2026-11-08] - Version 0.17.0.8
+##### [2026-11-08] - Version 0.18.0
 
-* The messages of the Gotify settings open the same window as the desktop notifications now: the target of a click and the link of the image in the message are the address with the data of the product (`vine-data`), not the page of the product (`/dp/<ASIN>`). A click in the Gotify app opens the window with the details of the product, like a click on a desktop notification.
-
-##### [2026-11-08] - Version 0.17.0.7
-
-* The test message of the Gotify settings uses the product that the last scan has seen last as well: it starts with the image of the product, then follows the line that it is a test (it stands where the reasons of a real match stand in a normal message) and then the description of the product. The message has the target and the image of that product, so a click and the big image can be tested as well. Without a product in the database the message is the plain test line.
-
-##### [2026-11-08] - Version 0.17.0.6
-
-* The test message of the desktop notifications shows the product that the last scan has seen last: the message starts with the line that it is a test - it stands where the reasons of a real match stand - then follow the description and the image of the product, and a click opens the details of that product, like a click on the notification of a real product. Without a product in the database the message is the plain test line.
-
-##### [2026-11-08] - Version 0.17.0.5
-
-* New: the section "Desktop-Benachrichtigung" has the button **"Testnachricht senden"** under the switch. It shows a test notification on the desktop, so that the switch, the permission of the browser and the display of the notifications can be checked without waiting for a new product. The click on the button is the action that Chrome and Brave need to ask for the permission at all - without a click they ignore the request, so no notification shows up.
-
-##### [2026-11-08] - Version 0.17.0.4
-
-* Fix: the details of a product open when a desktop notification is clicked. In Brave the window with the details mostly did not come up at all. The script presses a hidden "More details" button for a notification and for a share link, and the markup of that button was incomplete: a part of its `class` attribute was missing, so the browser had to repair the tag by itself and the button did not match the button of a product tile. The button is complete again and the script waits a second until it presses it (instead of half a second).
-
-##### [2026-11-08] - Version 0.17.0.3
-
-* New: the switch "Desktop-Benachrichtigungen aktivieren" and the keywords of the desktop notifications have their own section **"Desktop-Benachrichtigung"**. They stood between the other switches of "Amazon Vine" before, the section stands directly above the section of Gotify now.
-* The heading above the keywords is hidden and the space above it is gone, so the keywords stand directly under the switch of their section.
-
-##### [2026-11-06] - Version 0.17.0.1
-
-* The development continues on the branch `dev-0.18.0`, the version was raised to prepare the next release.
+* Fix: the details of a product open when a desktop notification is clicked. In Brave the window with the details mostly did not come up at all: the markup of the hidden "More details" button, which the script presses for a notification and for a share link, was incomplete (a part of its `class` attribute was missing), so the browser had to repair the tag by itself. The button is complete again and the script waits a second until it presses it.
+* New: the switch of the desktop notifications and their keywords have their own section **"Desktop-Benachrichtigung"** in the settings (directly above the section of Gotify) and the heading above the keywords is gone, so the keywords stand directly under the switch of the section.
+* New: the button **"Testnachricht senden"** in that section shows a test notification on the desktop, so that the permission of the browser and the display of the notifications can be checked without waiting for a new product. The click on the button is the action that Chrome and Brave need to ask for the permission at all - without a click they ignore the request (that was the reason why no notification came up). The test shows the product that the last scan has seen last: the line that it is a test stands where the reasons of a real match stand, then follow the description and the image of the product, and a click opens the details of that product.
+* New: the button "Testnachricht senden" of the Gotify settings sends a test message in the same way - with the image of the newest product as a Markdown link, the line that it is a test and the description of the product.
+* The messages of the Gotify settings open the same window as the desktop notifications now: the target of a click and the link of the image in the message are the address with the data of the product (`vine-data`), not the page of the product (`/dp/<ASIN>`).
 
 ##### [2026-11-06] - Version 0.17.0
 
