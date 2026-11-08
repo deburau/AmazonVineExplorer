@@ -7,8 +7,8 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 
 | Punkt | Stand |
 |---|---|
-| Branch | `main` (Release 0.18.0 veröffentlicht); Entwicklung ab `dev-0.19.0` |
-| Version im User-Script | `0.18.0` (Release 0.18.0, veröffentlicht) |
+| Branch | `dev-0.19.0` (gepusht, aus `main` angelegt) |
+| Version im User-Script | `0.18.0.1` (in Entwicklung, Release 0.19.0 vorbereitet) |
 | Letztes Release | **0.18.0** (auf `main`, veröffentlicht, Merge-Commit `e0a9439`, Release-Commit `4ae6a8b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 21 erfolgreich (`npm run verify`) |

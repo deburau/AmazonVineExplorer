@@ -83,6 +83,10 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
+##### [2026-11-08] - Version 0.18.0.1
+
+* The development continues on the branch `dev-0.19.0`, the version was raised to prepare the next release.
+
 ##### [2026-11-08] - Version 0.18.0
 
 * Fix: the details of a product open when a desktop notification is clicked. In Brave the window with the details mostly did not come up at all: the markup of the hidden "More details" button, which the script presses for a notification and for a share link, was incomplete (a part of its `class` attribute was missing), so the browser had to repair the tag by itself. The button is complete again and the script waits a second until it presses it.
