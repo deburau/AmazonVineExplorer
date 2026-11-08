@@ -26,7 +26,7 @@ const I18N = {
             priceMatch: (price) => `Preis-Treffer: ${price}`,
             categoryMatch: (category) => `Kategorie-Treffer: ${category}`,
             loadingCategories: (done, total) => `Kategorien werden geladen: ${done} / ${total}`,
-            gotifyTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version}`,
+            gotifyTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version} – dies ist kein echter Treffer`,
             desktopTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version} – dies ist kein echter Treffer`
         },
         share: {
@@ -240,7 +240,7 @@ const I18N = {
             priceMatch: (price) => `Price match: ${price}`,
             categoryMatch: (category) => `Category match: ${category}`,
             loadingCategories: (done, total) => `Loading the categories: ${done} / ${total}`,
-            gotifyTestMessage: (version) => `Test message of Amazon Vine Explorer ${version}`,
+            gotifyTestMessage: (version) => `Test message of Amazon Vine Explorer ${version} - this is not a real match`,
             desktopTestMessage: (version) => `Test message of Amazon Vine Explorer ${version} - this is not a real match`
         },
         share: {

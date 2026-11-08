@@ -83,6 +83,10 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
+##### [2026-11-08] - Version 0.17.0.7
+
+* The test message of the Gotify settings uses the product that the last scan has seen last as well: it starts with the image of the product, then follows the line that it is a test (it stands where the reasons of a real match stand in a normal message) and then the description of the product. The message has the target and the image of that product, so a click and the big image can be tested as well. Without a product in the database the message is the plain test line.
+
 ##### [2026-11-08] - Version 0.17.0.6
 
 * The test message of the desktop notifications shows the product that the last scan has seen last: the message starts with the line that it is a test - it stands where the reasons of a real match stand - then follow the description and the image of the product, and a click opens the details of that product, like a click on the notification of a real product. Without a product in the database the message is the plain test line.

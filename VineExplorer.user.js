@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.17.0.6
+// @version      0.17.0.7
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -6277,13 +6277,6 @@ function getProductTargetUrl(prod) {
     return `${window.location.origin}/vine/vine-items?vine-data=${encodeURIComponent(JSON.stringify(_data))}`;
 }
 
-/**
- * Send a Desktop Notifikation
- * @param {string} title
- * @param {string} message
- * @param {string} icon
- *
- */
 // NOTE: 'desktopNotifikation' and all related settings use the misspelling
 //   'Notifikation' instead of 'Notification'. The spelling is consistent across
 //   globals.js and VineExplorer.user.js and is part of the public settings API,
@@ -6416,29 +6409,53 @@ function gotifyNotification(message, prod = null, priority = null) {
  *
  * The message is sent with the priority of the settings (GotifyPriority), so that
  * the button shows which priority the messages of the notifications have (see
- * getGotifyPriority()). The test message belongs to no product, so it has no target
- * and no image.
+ * getGotifyPriority()).
  *
- * @returns {boolean} true if the message was sent
+ * The test uses the product of the database that was seen last, so that the text,
+ * the image and the target of a click are the same as in the message about a real
+ * product. The first line of the message says that the message is a test - it stands
+ * where the lines of the matches stand in a real message. Without a product in the
+ * database the message is the plain test line.
+ *
+ * @returns {Promise<boolean>} true if the message was sent
  */
-function sendGotifyTestMessage() {
+async function sendGotifyTestMessage() {
     if (!SETTINGS.GotifyUrl || !SETTINGS.GotifyToken) {
         console.warn('sendGotifyTestMessage(): the address or the token of the Gotify server is missing.');
         return false;
     }
 
-    const _message = translate('notifications', 'gotifyTestMessage', `Test message of Amazon Vine Explorer ${AVE_VERSION}`, AVE_VERSION);
-    console.log(`sendGotifyTestMessage(): sending "${_message}" with the priority ${getGotifyPriority()}`);
-    gotifyNotification(_message);
+    const _testLine = translate(
+        'notifications',
+        'gotifyTestMessage',
+        `Test message of Amazon Vine Explorer ${AVE_VERSION} - this is not a real match`,
+        AVE_VERSION
+    );
+    const _prod = await getNewestProductOfDatabase();
+    const _image = _prod && _prod.data_img_url ? fixProductImageUrl(_prod.data_img_url) : null;
+    // NOTE: gotifyNotification() takes the target and the big image of the message
+    //   from the product, so it only gets one that has a link and an image.
+    const _prodForTarget = _prod && _prod.link && _prod.data_img_url ? _prod : null;
+    const _imageMarkdown = _image
+        ? `${_prod.link ? `[![](${_image})](${window.location.origin + _prod.link})` : `![](${_image})`}  \n`
+        : '';
+    const _message = _prod ? `${_imageMarkdown}${_testLine}  \n${_prod.description_full}` : _testLine;
+
+    console.log(
+        `sendGotifyTestMessage(): sending "${_testLine}" with the priority ${getGotifyPriority()}${
+            _prod ? ` and the product ${_prod.data_asin}` : ' without a product'
+        }`
+    );
+    gotifyNotification(_message, _prodForTarget, getGotifyPriority());
     return true;
 }
 
 /**
  * Reads the product of the database that was seen last.
  *
- * The product with the highest "ts_lastSeen" is the product of the last scan. The
- * test message of the desktop notifications uses it, because its description, its
- * image and its click target are available.
+ * The product with the highest "ts_lastSeen" is the product of the last scan. The test
+ * messages of the desktop notifications and of Gotify use it, because its
+ * description, its image and its click target are available.
  *
  * @returns {Promise<object|null>} The product or null, if the database is empty or
  *   the products can not be read

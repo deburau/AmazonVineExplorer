@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.18.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.17.0.6` (in Entwicklung, Release 0.18.0 vorbereitet) |
+| Version im User-Script | `0.17.0.7` (in Entwicklung, Release 0.18.0 vorbereitet) |
 | Letztes Release | **0.17.0** (auf `main`, veröffentlicht, Merge-Commit `e34488d`, Doku-Commit `5f7ea82`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 21 erfolgreich (`npm run verify`) |
@@ -511,9 +511,10 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   `gotifyNotification(message, prod, priority)` schreibt sie in den Payload. Unter der
   Priorität steht der Button `BUTTON_GOTIFY_TEST` („Testnachricht senden"):
   `sendGotifyTestMessage()` schickt eine Testnachricht **mit der Priorität der
-  Einstellung** und ohne Produkt (kein Ziel, kein Bild); ohne Adresse oder Token ist er
-  grau (`btnEnabled`) und schickt nichts.
-  Wächter: `scripts/verify/verify_gotify_priority.js` (36 Fälle) und die
+  Einstellung**; ohne Adresse oder Token ist er grau (`btnEnabled`) und schickt
+  nichts. Seit **0.17.0.7** hängt sie das neueste Produkt der Datenbank an (Bild,
+  Link/Ziel und Beschreibung, siehe den Abschnitt weiter oben).
+  Wächter: `scripts/verify/verify_gotify_priority.js` (44 Fälle) und die
   `gotifyPriority`-Fälle in `verify_keyword_conditions.js`.
 * **Umbau der Steuerung:** eine einzige Schleife mit Prioritäten
   (Turbo → Fast → BG → Cleanup, Verzögerung vorne) – Plan, Risiken und die
@@ -624,6 +625,35 @@ Fälle) prüft das Ziel, das neueste Produkt, den Text, das Bild, das
 (erlaubt/gefragt/abgelehnt) sowie den Fall ohne `Notification`-Objekt. Damit sind
 es **21 Verifikationen**.
 
+### Gotify-Testnachricht mit dem neuesten Produkt (0.17.0.7)
+
+Der Button „Testnachricht senden" im Gotify-Abschnitt schickt die Testnachricht
+jetzt mit dem **neuesten Produkt der Datenbank** (`getNewestProductOfDatabase()`,
+höchstes `ts_lastSeen`) – dieselbe Funktion, die auch die Desktop-Testnachricht
+nutzt. Der Aufbau ist der einer echten Nachricht:
+
+```
+[![](<Bild>)](<origin><link>)  ␣␣
+Testnachricht von Amazon Vine Explorer <Version> – dies ist kein echter Treffer  ␣␣
+<description_full>
+```
+
+Die Testzeile steht also dort, wo sonst die Trefferzeilen stehen, das Bild und der
+Link stehen wie bei einem echten Treffer. `gotifyNotification()` bekommt das
+Produkt **nur**, wenn es einen `link` **und** ein `data_img_url` hat – sonst fehlten
+Ziel und Bild und `fixProductImageUrl(undefined)` würde werfen. Ohne Produkt in der
+Datenbank ist die Nachricht die reine Testzeile (kein Ziel, kein Bild), genauso wie
+vorher. Die i18n-Schlüssel `notifications.gotifyTestMessage` (de/en) sagen jetzt
+ebenfalls „dies ist kein echter Treffer".
+
+`sendGotifyTestMessage()` ist dafür **`async`** geworden (`btnClick` wartet nicht,
+das ist in Ordnung). Die Verifikation `scripts/verify/verify_gotify_priority.js`
+läuft deshalb in einer `async main()` und hat jetzt **44** Fälle – neu sind das
+neueste Produkt, die Beschreibung, das Markdown-Bild mit Link, das Ziel, das große
+Bild und das Produkt ohne Link.
+
+**Noch nicht im Browser getestet** (der Button braucht Adresse und Token).
+
 ### Einstellungs-Gruppe „Desktop-Benachrichtigung“ (0.17.0.3)
 
 Der Schalter „Desktop-Benachrichtigungen aktivieren“ stand zwischen den anderen
@@ -705,7 +735,7 @@ gegen erwartete Werte.
 | `verify_site_detection.js` | Feature | die Erkennung der Vine-Seiten (16 URLs) |
 | `verify_search.js` | Feature | die Suche in der Suchleiste (21 Fälle) |
 | `verify_keyword_conditions.js` | Feature | das Parsen und Vergleichen der Bedingungen inkl. `gotifyPriority` (173 Fälle) |
-| `verify_gotify_priority.js` | Feature | die Priorität der Gotify-Nachrichten und die Testnachricht (36 Fälle) |
+| `verify_gotify_priority.js` | Feature | die Priorität der Gotify-Nachrichten und die Testnachricht (44 Fälle) |
 | `verify_desktop_notification.js` | Feature | die Desktop-Benachrichtigungen und ihre Testnachricht (47 Fälle) |
 | `verify_left_side_buttons.js` | Feature | die Buttons der linken Seite in der schmalen Spalte (40 Fälle) |
 | `verify_keyword_order.js` | Feature | die Reihenfolge der Keywords (22 Fälle) |
