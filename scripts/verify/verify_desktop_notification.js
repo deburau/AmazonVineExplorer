@@ -194,11 +194,10 @@ function clickNotification(notification) {
     return _prevented;
 }
 
-async function main() {
-    console.log('Desktop-Benachrichtigungen und die Testnachricht');
-    console.log('-'.repeat(70));
-
-    // ---------------------------------------------------------------- das Ziel
+/**
+ * Prueft die Adresse, die ein Klick auf eine Benachrichtigung oeffnet.
+ */
+function checkTarget() {
     const _target = createSandbox();
     check(TARGET_KAFFEE, _target.sandbox.getProductTargetUrl(PROD_KAFFEE), 'Das Ziel nennt das Produkt im Parameter vine-data');
     checkIncludes(
@@ -216,8 +215,13 @@ async function main() {
         encodeURIComponent('"isParentAsin":false'),
         'Das Ziel nennt auch ein Produkt ohne Varianten'
     );
+}
 
-    // ------------------------------------------------- das neueste Produkt
+/**
+ * Prueft das neueste Produkt der Datenbank: das Produkt mit dem hoechsten
+ * ts_lastSeen, die Reihenfolge, eine leere Datenbank und ein Fehler.
+ */
+async function checkNewestProduct() {
     const _newest = createSandbox({ products: [PROD_TOASTER, PROD_KAFFEE] });
     const _two = await _newest.sandbox.getNewestProductOfDatabase();
     check(PROD_KAFFEE.data_asin, _two?.data_asin, 'Das Produkt mit dem hoechsten ts_lastSeen gewinnt');
@@ -237,8 +241,13 @@ async function main() {
     const _withoutTs = createSandbox({ products: [PROD_TOASTER, { data_asin: 'B03OHNETS', description_full: 'ohne Zeitstempel' }] });
     const _first = await _withoutTs.sandbox.getNewestProductOfDatabase();
     check(PROD_TOASTER.data_asin, _first?.data_asin, 'Ohne ts_lastSeen gewinnt das Produkt mit einem Zeitstempel');
+}
 
-    // ------------------------------------------- die Testnachricht, erlaubt
+/**
+ * Prueft die Testnachricht mit dem neuesten Produkt: Text, Bild, Klick und die
+ * Berechtigung, die schon erteilt ist.
+ */
+async function checkTestMessageWithProduct() {
     const _granted = createSandbox({ products: [PROD_TOASTER, PROD_KAFFEE] });
     const _sentGranted = await _granted.sandbox.sendDesktopTestMessage();
     check(true, _sentGranted, 'Mit der Berechtigung wird die Testnachricht geschickt');
@@ -266,8 +275,13 @@ async function main() {
     check(1, _granted.opened.length, 'Der Klick oeffnet ein Fenster');
     check(TARGET_KAFFEE, _granted.opened[0].url, 'Der Klick oeffnet das Fenster mit den Details');
     check('_blank', _granted.opened[0].target, 'Das Fenster wird in einem neuen Tab geoeffnet');
+}
 
-    // ------------------------------------------ die Berechtigung wird gefragt
+/**
+ * Prueft die Berechtigung: die Frage beim Klick, die Ablehnung und die schon
+ * vorhandene Ablehnung.
+ */
+async function checkPermission() {
     const _asked = createSandbox({ permission: 'default', permissionAfterRequest: 'granted', products: [PROD_KAFFEE] });
     const _sentAsked = await _asked.sandbox.sendDesktopTestMessage();
     check(1, _asked.log.filter((_l) => _l === 'Notification.requestPermission').length, 'Ohne Berechtigung wird gefragt');
@@ -290,8 +304,13 @@ async function main() {
     check(false, _sentDenied, 'Mit einer Ablehnung wird nichts geschickt');
     check(1, _denied.log.filter((_l) => _l === 'Notification.requestPermission').length, 'Auch mit einer Ablehnung wird gefragt');
     check(0, _denied.notifications.length, 'Mit einer Ablehnung gibt es keine Nachricht');
+}
 
-    // ---------------------------------------------------- ohne Produkt
+/**
+ * Prueft die Testnachricht ohne Produkt, mit einem Fehler der Datenbank, mit
+ * einem Produkt ohne Bild und ohne Notification-Objekt.
+ */
+async function checkWithoutProduct() {
     const _noProduct = createSandbox({ products: [] });
     const _sentNoProduct = await _noProduct.sandbox.sendDesktopTestMessage();
     check(true, _sentNoProduct, 'Ohne Produkt wird die Testnachricht trotzdem geschickt');
@@ -337,6 +356,18 @@ async function main() {
         'Ohne Notification-Objekt wird nicht gefragt'
     );
     checkIncludes(_withoutNotification.warnings.join(' '), 'does not support notifications', 'Der fehlende Support wird gemeldet');
+}
+
+/** Fuehrt alle Pruefungen aus und fasst das Ergebnis zusammen. */
+async function main() {
+    console.log('Desktop-Benachrichtigungen und die Testnachricht');
+    console.log('-'.repeat(70));
+
+    checkTarget();
+    await checkNewestProduct();
+    await checkTestMessageWithProduct();
+    await checkPermission();
+    await checkWithoutProduct();
 
     if (_errors === 0) {
         console.log(`  alle ${_checks} Faelle sind ok`);
