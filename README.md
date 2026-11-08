@@ -83,6 +83,10 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
+##### [2026-11-08] - Version 0.17.0.6
+
+* The test message of the desktop notifications shows the product that the last scan has seen last: the message starts with the line that it is a test - it stands where the reasons of a real match stand - then follow the description and the image of the product, and a click opens the details of that product, like a click on the notification of a real product. Without a product in the database the message is the plain test line.
+
 ##### [2026-11-08] - Version 0.17.0.5
 
 * New: the section "Desktop-Benachrichtigung" has the button **"Testnachricht senden"** under the switch. It shows a test notification on the desktop, so that the switch, the permission of the browser and the display of the notifications can be checked without waiting for a new product. The click on the button is the action that Chrome and Brave need to ask for the permission at all - without a click they ignore the request, so no notification shows up.

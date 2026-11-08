@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.17.0.5
+// @version      0.17.0.6
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -56,7 +56,8 @@
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, formatMatchLines, formatTaxPrize, getContrastColor, getFastScanState,
-   getFastScanIntervalSeconds, getGotifyPriority, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
+   getFastScanIntervalSeconds, getGotifyPriority, getNewestProductOfDatabase, getPageinationData, getProductDetailsRequestDelay,
+   getProductTargetUrl, getRandomizedDelay,
    sendGotifyTestMessage, sendDesktopTestMessage,
    getScanDelay, getTaxPrices,
    getTilesFromURL, getTurboScanCategories, getTurboScanIndex, getTurboScanIntervalSeconds,
@@ -6036,15 +6037,7 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
                 true,
                 function (event) {
                     event.preventDefault();
-                    const newUrl = `${window.location.origin}/vine/vine-items?vine-data=${encodeURIComponent(
-                        JSON.stringify({
-                            asin: _prod.data_asin,
-                            isParentAsin: _prod.data_asin_is_parent,
-                            recommendationId: _prod.data_recommendation_id,
-                            tax: _prod.data_estimated_tax
-                        })
-                    )}`;
-                    window.open(newUrl, '_blank');
+                    window.open(getProductTargetUrl(_prod), '_blank');
                 }
             );
         }
@@ -6264,6 +6257,27 @@ function processNewItems() {
 }
 
 /**
+ * Builds the address that opens the details of a product.
+ *
+ * The page of the products opens the window with the details when the parameter
+ * "vine-data" names a product. This is the click target of the desktop
+ * notifications - the notification about a real product and the test message of
+ * the settings use the same address.
+ *
+ * @param {object} prod The product
+ * @returns {string} The address with the encoded data of the product
+ */
+function getProductTargetUrl(prod) {
+    const _data = {
+        asin: prod.data_asin,
+        isParentAsin: prod.data_asin_is_parent,
+        recommendationId: prod.data_recommendation_id,
+        tax: prod.data_estimated_tax
+    };
+    return `${window.location.origin}/vine/vine-items?vine-data=${encodeURIComponent(JSON.stringify(_data))}`;
+}
+
+/**
  * Send a Desktop Notifikation
  * @param {string} title
  * @param {string} message
@@ -6420,29 +6434,91 @@ function sendGotifyTestMessage() {
 }
 
 /**
+ * Reads the product of the database that was seen last.
+ *
+ * The product with the highest "ts_lastSeen" is the product of the last scan. The
+ * test message of the desktop notifications uses it, because its description, its
+ * image and its click target are available.
+ *
+ * @returns {Promise<object|null>} The product or null, if the database is empty or
+ *   the products can not be read
+ */
+async function getNewestProductOfDatabase() {
+    try {
+        const _products = await database.getAll();
+        if (!Array.isArray(_products) || _products.length === 0) return null;
+
+        let _newest = null;
+        let _newestTs = -1;
+        for (const _prod of _products) {
+            const _ts = Number(_prod?.ts_lastSeen) || 0;
+            if (_ts > _newestTs) {
+                _newest = _prod;
+                _newestTs = _ts;
+            }
+        }
+        return _newest;
+    } catch (error) {
+        console.error(`getNewestProductOfDatabase(): could not read the products: ${error}`);
+        return null;
+    }
+}
+
+/**
  * Sends a test notification to the desktop.
  *
  * The click on the button of the setting is the user action that the browsers need
  * for the permission: Chrome and Brave ignore the request of a page that was not
- * clicked, so a test without the click shows nothing. The permission is asked by
- * desktopNotifikation().
+ * clicked, so a test without the click shows nothing.
  *
- * The test message belongs to no product, so it has no click target. The image and
- * the target can only be tested with a product of the database.
+ * The test uses the product of the database that was seen last, so that the text,
+ * the image and the click target are the same as in the notification about a real
+ * product. The first line of the message says that the notification is a test - it
+ * stands where the lines of the matches stand in a real notification. Without a
+ * product in the database the message has no description, no image of a product and
+ * no click target.
  *
- * @returns {boolean} true if the test was sent
+ * @returns {Promise<boolean>} true if the test was sent
  */
-function sendDesktopTestMessage() {
+async function sendDesktopTestMessage() {
     if (typeof Notification === 'undefined') {
         console.warn('sendDesktopTestMessage(): the browser does not support notifications.');
         return false;
     }
 
-    const _message = translate('notifications', 'desktopTestMessage', `Test message of Amazon Vine Explorer ${AVE_VERSION}`, AVE_VERSION);
-    console.log(`sendDesktopTestMessage(): sending "${_message}" (the permission is "${Notification.permission}")`);
+    // NOTE: The request of the permission has to start in the click itself: Chrome
+    //   and Brave ignore it when an await stands between the click and the request,
+    //   so the promise is created here, before the product is loaded.
+    const _permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (_permission !== 'granted') {
+        console.warn(`sendDesktopTestMessage(): the permission is "${_permission}". Allow the notifications for this page and try again.`);
+        return false;
+    }
+
+    const _testLine = translate(
+        'notifications',
+        'desktopTestMessage',
+        `Test message of Amazon Vine Explorer ${AVE_VERSION} - this is not a real match`,
+        AVE_VERSION
+    );
+    const _prod = await getNewestProductOfDatabase();
+    const _message = _prod ? `${_testLine}\n${_prod.description_full}` : _testLine;
+    const _image = _prod && _prod.data_img_url ? fixProductImageUrl(_prod.data_img_url) : null;
+    const _onClick = _prod
+        ? (event) => {
+              event.preventDefault();
+              window.open(getProductTargetUrl(_prod), '_blank');
+          }
+        : () => {};
+
+    console.log(
+        `sendDesktopTestMessage(): sending "${_testLine}" (the permission is "${Notification.permission}")${
+            _prod ? ` with the product ${_prod.data_asin}` : ' without a product'
+        }`
+    );
     // NOTE: requireInteraction keeps the test on the screen until the user closes
     //   it, so that it can not be missed.
-    desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, _message, null, true);
+    desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, _message, _image, true, _onClick);
     return true;
 }
 

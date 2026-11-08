@@ -27,7 +27,7 @@ const I18N = {
             categoryMatch: (category) => `Kategorie-Treffer: ${category}`,
             loadingCategories: (done, total) => `Kategorien werden geladen: ${done} / ${total}`,
             gotifyTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version}`,
-            desktopTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version}`
+            desktopTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version} – dies ist kein echter Treffer`
         },
         share: {
             myFSE: 'Mein FSE',
@@ -241,7 +241,7 @@ const I18N = {
             categoryMatch: (category) => `Category match: ${category}`,
             loadingCategories: (done, total) => `Loading the categories: ${done} / ${total}`,
             gotifyTestMessage: (version) => `Test message of Amazon Vine Explorer ${version}`,
-            desktopTestMessage: (version) => `Test message of Amazon Vine Explorer ${version}`
+            desktopTestMessage: (version) => `Test message of Amazon Vine Explorer ${version} - this is not a real match`
         },
         share: {
             myFSE: 'My FSE',

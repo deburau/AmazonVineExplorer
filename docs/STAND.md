@@ -8,10 +8,10 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.18.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.17.0.5` (in Entwicklung, Release 0.18.0 vorbereitet) |
+| Version im User-Script | `0.17.0.6` (in Entwicklung, Release 0.18.0 vorbereitet) |
 | Letztes Release | **0.17.0** (auf `main`, veröffentlicht, Merge-Commit `e34488d`, Doku-Commit `5f7ea82`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
-| Verifikationen | alle 20 erfolgreich (`npm run verify`) |
+| Verifikationen | alle 21 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
 
 ## Bestätigte Tests (vom Maintainer im Browser)
@@ -48,6 +48,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.16.0.15 | Korrektur: beim Scrollen wird die **ganze Spalte** festgehängt, nicht die einzelnen hohen Buttons (sie überlappten sich) | bestätigt |
 | 0.17.0.2 / 0.17.0.4 | Detailansicht öffnet sich beim Klick auf eine Desktop-Benachrichtigung (Brave) | bestätigt (2026-11-08) |
 | 0.17.0.3 | Gruppe „Desktop-Benachrichtigung“ (Schalter + Keywords, Überschrift ausgeblendet) | bestätigt (2026-11-08) |
+| 0.17.0.5 | Test-Button „Testnachricht senden“ in der Gruppe | bestätigt (2026-11-08, „test positiv“) |
 
 **„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
@@ -580,29 +581,48 @@ Der Grund für die Sekunde steht als `// NOTE:` im Code: das Fenster mit den
 Details öffnete sich in Brave meistens nicht, wenn der Klick auf den Button zu
 früh kam.
 
-### Test-Button der Desktop-Benachrichtigungen (0.17.0.5)
+### Test-Button der Desktop-Benachrichtigungen (0.17.0.5 und 0.17.0.6)
 
-Unter dem Schalter steht jetzt `BUTTON_DESKTOP_TEST` („Testnachricht senden",
-englisch „Send a test message", Hintergrund `rgb(0, 160, 255)` wie beim
-Gotify-Button) mit `btnClick: () => sendDesktopTestMessage()`. Der Button hat
-**kein** `btnEnabled`, ist also immer aktiv – der Test soll auch bei
-ausgeschaltetem Schalter möglich sein.
+Unter dem Schalter steht `BUTTON_DESKTOP_TEST` („Testnachricht senden", englisch
+„Send a test message", Hintergrund `rgb(0, 160, 255)` wie beim Gotify-Button) mit
+`btnClick: () => sendDesktopTestMessage()`. Der Button hat **kein** `btnEnabled`,
+ist also immer aktiv – der Test soll auch bei ausgeschaltetem Schalter möglich
+sein. **Bestätigt (2026-11-08):** „test positiv".
 
-`sendDesktopTestMessage()` prüft `typeof Notification === 'undefined'`, ruft
-`translate('notifications', 'desktopTestMessage', …)` und dann
-`desktopNotifikation(<Titel>, <Text>, null, true)` auf. Das **`true`** ist
-`requireInteraction`: die Testnachricht bleibt stehen, bis der Nutzer sie
-schließt (die echten Nachrichten der Keywords nutzen das genauso). Bild und
-Klickziel hat der Test nicht, weil kein Produkt dahinter steht.
+**Die Testnachricht nutzt das neueste Produkt der Datenbank** (0.17.0.6):
+`getNewestProductOfDatabase()` liest sie über `database.getAll()` und nimmt das
+Produkt mit dem **höchsten `ts_lastSeen`** (also das Produkt, das der letzte Scan
+zuletzt gesehen hat). Damit sind Text, Bild und Klickziel so wie bei einer echten
+Nachricht:
 
-**Wichtig:** der Klick auf den Button ist die Nutzeraktion, die Chrome und Brave
-für `Notification.requestPermission()` verlangen – eine Anfrage ohne Klick wird
-still ignoriert (das war der Grund, warum die Desktop-Nachrichten nicht ankamen).
-Der Aufruf läuft synchron im Klick-Handler von `createSettingsButtonElement()`.
+* **Text:** die Testzeile, danach `description_full` – die Testzeile steht also
+dort, wo sonst die Trefferzeilen (Keyword/Preis/Kategorie) stehen. Sie lautet
+„Testnachricht von Amazon Vine Explorer <Version> – dies ist kein echter Treffer"
+(i18n `notifications.desktopTestMessage`), damit niemand sie für einen Treffer
+hält.
 
-**Noch nicht im Browser getestet** (braucht einen Klick und eine Antwort auf die
-Berechtigungsfrage). `npm run check` (76 Einstellungen) und `npm run verify`
-(20/20) müssten grün sein.
+* **Bild:** `fixProductImageUrl(data_img_url)`, ohne Produkt oder ohne Bild das
+Standardbild `vine_logo_notification_image.png`.
+* **Klick:** `getProductTargetUrl(prod)` – **dieselbe Funktion**, die auch die
+echte Desktop-Nachricht benutzt (vorher stand die Adresse dort zweimal im Code).
+Sie baut `${origin}/vine/vine-items?vine-data=<JSON>` mit `asin`,
+`isParentAsin`, `recommendationId` und `tax`. Ohne Produkt hat der Klick kein
+Ziel.
+* **`requireInteraction: true`:** die Nachricht bleibt stehen, bis der Nutzer sie
+schließt (wie die echten Nachrichten der Keywords).
+
+**Wichtig (die Nutzeraktion):** der Klick auf den Button ist die Aktion, die
+Chrome und Brave für `Notification.requestPermission()` verlangen. Die Anfrage
+startet deshalb **vor dem ersten `await`**: `sendDesktopTestMessage()` ist `async`
+(es lädt das Produkt), die Berechtigung wird aber zu Beginn synchron angefragt –
+sonst wäre die Geste weg und die Anfrage würde still ignoriert. Bei „denied"
+bricht die Funktion mit einer Warnung in der Konsole ab.
+
+**Wächter:** `scripts/verify/verify_desktop_notification.js` (Feature-Test, 47
+Fälle) prüft das Ziel, das neueste Produkt, den Text, das Bild, das
+`requireInteraction`, den Klick und die drei Fälle der Berechtigung
+(erlaubt/gefragt/abgelehnt) sowie den Fall ohne `Notification`-Objekt. Damit sind
+es **21 Verifikationen**.
 
 ### Einstellungs-Gruppe „Desktop-Benachrichtigung“ (0.17.0.3)
 
@@ -667,7 +687,7 @@ npm run verify
 `npm run verify` startet alle Skripte unter `scripts/verify/`. Ein neues Skript
 gehört in `scripts/verify/` und nutzt `lib/verify_helpers.js`.
 
-### Die 20 Verifikationen
+### Die 21 Verifikationen
 
 **Baseline-Vergleiche** prüfen, dass ein Refactoring das Verhalten **nicht** ändert
 (alt ↔ neu, gleiche Nebenwirkungen). **Feature-Tests** prüfen das aktuelle Verhalten
@@ -686,6 +706,7 @@ gegen erwartete Werte.
 | `verify_search.js` | Feature | die Suche in der Suchleiste (21 Fälle) |
 | `verify_keyword_conditions.js` | Feature | das Parsen und Vergleichen der Bedingungen inkl. `gotifyPriority` (173 Fälle) |
 | `verify_gotify_priority.js` | Feature | die Priorität der Gotify-Nachrichten und die Testnachricht (36 Fälle) |
+| `verify_desktop_notification.js` | Feature | die Desktop-Benachrichtigungen und ihre Testnachricht (47 Fälle) |
 | `verify_left_side_buttons.js` | Feature | die Buttons der linken Seite in der schmalen Spalte (40 Fälle) |
 | `verify_keyword_order.js` | Feature | die Reihenfolge der Keywords (22 Fälle) |
 | `verify_match_lines.js` | Feature | die Trefferzeilen der Benachrichtigung (10 Fälle) |

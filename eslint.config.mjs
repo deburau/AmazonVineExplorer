@@ -134,6 +134,8 @@ const mainFile = [
     'getFastScanIntervalSeconds',
     'getFastScanState',
     'getGotifyPriority',
+    'getNewestProductOfDatabase',
+    'getProductTargetUrl',
     'getLeftSideButtonStyle',
     'getPageinationData',
     'getVerticalButtonsCss',
