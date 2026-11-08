@@ -83,6 +83,10 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
+##### [2026-11-08] - Version 0.17.0.4
+
+* The script waits half a second longer until it opens the details of a product over the hidden "More details" button (1000 ms instead of 500 ms). This is the way how a notification and a share link open the details of a product.
+
 ##### [2026-11-08] - Version 0.17.0.3
 
 * New: the switch "Desktop-Benachrichtigungen aktivieren" and the keywords of the desktop notifications have their own section **"Desktop-Benachrichtigung"**. They stood between the other switches of "Amazon Vine" before, the section stands directly above the section of Gotify now.

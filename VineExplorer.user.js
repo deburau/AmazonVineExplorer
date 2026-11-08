@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.17.0.3
+// @version      0.17.0.4
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -235,7 +235,7 @@ let database;
                         setTimeout(() => {
                             localStorage.removeItem('ave-share-details');
                         }, 200);
-                    }, 500);
+                    }, 1000);
                 });
             }
             addAveSettingsTab();

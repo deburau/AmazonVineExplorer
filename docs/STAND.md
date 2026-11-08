@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.18.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.17.0.3` (in Entwicklung, Release 0.18.0 vorbereitet) |
+| Version im User-Script | `0.17.0.4` (in Entwicklung, Release 0.18.0 vorbereitet) |
 | Letztes Release | **0.17.0** (auf `main`, veröffentlicht, Merge-Commit `e34488d`, Doku-Commit `5f7ea82`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 20 erfolgreich (`npm run verify`) |
@@ -591,6 +591,21 @@ Menüliste dort stammte aus der Zeit vor der Gotify-Gruppe (0.16.0).
 
 **Noch nicht im Browser getestet.** `npm run check` (75 Einstellungen) und
 `npm run verify` (20/20) sind grün.
+
+### Wartezeit vor dem Klick auf den versteckten Button (0.17.0.4)
+
+Der Klick auf den versteckten „Weitere Details“-Button wartet jetzt **1000 ms**
+statt 500 ms, nachdem der Body da ist (`VineExplorer.user.js`, der äußere
+`setTimeout` über `aveShareElementTmp.querySelector('input').click()`). Das ist
+die Taktung, mit der die Detailansicht aus einer Benachrichtigung oder einem
+Teilen-Link geöffnet wird. **Kein** Verifikationsskript läuft über diesen
+Abschnitt (er liegt im Top-Level-IIFE, nicht in einer extrahierten Funktion).
+
+Der Wert ist vom Maintainer gesetzt, der Grund ist hier **nicht** notiert – bis
+er im Code als `// NOTE:` steht, ist die Zahl ein magischer Wert.
+
+**Noch nicht im Browser getestet.** `npm run check` und `npm run verify` (20/20)
+sind grün.
 
 ## Wichtige Dateien
 
