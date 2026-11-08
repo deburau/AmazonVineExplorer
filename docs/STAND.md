@@ -49,6 +49,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.17.0.2 / 0.17.0.4 | Detailansicht öffnet sich beim Klick auf eine Desktop-Benachrichtigung (Brave) | bestätigt (2026-11-08) |
 | 0.17.0.3 | Gruppe „Desktop-Benachrichtigung“ (Schalter + Keywords, Überschrift ausgeblendet) | bestätigt (2026-11-08) |
 | 0.17.0.5 | Test-Button „Testnachricht senden“ in der Gruppe | bestätigt (2026-11-08, „test positiv“) |
+| 0.17.0.7 / 0.17.0.8 | Gotify-Testnachricht mit dem neuesten Produkt und der Adresse der Desktop-Nachrichten (`vine-data`) | bestätigt (2026-11-08, „test ok“) |
 
 **„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
@@ -650,7 +651,8 @@ dort nur `getProductTargetUrl` in der `NEW_NAMES`-Liste, sonst hätte die Sandbo
 einen `ReferenceError` geworfen. `verify_gotify_priority.js` prüft die Adresse
 jetzt explizit über `targetUrl()` im Skript (weiter **44** Fälle).
 
-**Noch nicht im Browser getestet.**
+**Bestätigt (2026-11-08):** „test ok“ – ein Klick in der Gotify-App öffnet die
+Vine-Detailansicht, nicht mehr `/dp/<ASIN>`.
 
 ### Gotify-Testnachricht mit dem neuesten Produkt (0.17.0.7)
 
@@ -679,7 +681,8 @@ läuft deshalb in einer `async main()` und hat jetzt **44** Fälle – neu sind 
 neueste Produkt, die Beschreibung, das Markdown-Bild mit Link, das Ziel, das große
 Bild und das Produkt ohne Link.
 
-**Noch nicht im Browser getestet** (der Button braucht Adresse und Token).
+**Bestätigt (2026-11-08):** „test ok“ – die Testnachricht kommt mit Produktbild,
+Testzeile und Beschreibung an.
 
 ### Einstellungs-Gruppe „Desktop-Benachrichtigung“ (0.17.0.3)
 
