@@ -85,16 +85,12 @@ only the products that were just added to the database are checked by the keywor
 
 ##### [2026-11-08] - Version 0.17.0.4
 
-* The script waits half a second longer until it opens the details of a product over the hidden "More details" button (1000 ms instead of 500 ms). This is the way how a notification and a share link open the details of a product.
+* Fix: the details of a product open when a desktop notification is clicked. In Brave the window with the details mostly did not come up at all. The script presses a hidden "More details" button for a notification and for a share link, and the markup of that button was incomplete: a part of its `class` attribute was missing, so the browser had to repair the tag by itself and the button did not match the button of a product tile. The button is complete again and the script waits a second until it presses it (instead of half a second).
 
 ##### [2026-11-08] - Version 0.17.0.3
 
 * New: the switch "Desktop-Benachrichtigungen aktivieren" and the keywords of the desktop notifications have their own section **"Desktop-Benachrichtigung"**. They stood between the other switches of "Amazon Vine" before, the section stands directly above the section of Gotify now.
 * The heading above the keywords is hidden and the space above it is gone, so the keywords stand directly under the switch of their section.
-
-##### [2026-11-08] - Version 0.17.0.2
-
-* Fix: the hidden "More details" button, which AVE uses to open the details of a product, has its complete markup again. A part of its `class` attribute was missing, so the browser had to repair the tag by itself. The button now matches the button of a product tile.
 
 ##### [2026-11-06] - Version 0.17.0.1
 

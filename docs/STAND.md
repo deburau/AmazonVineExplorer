@@ -46,6 +46,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.16.0.13 | Eigene Buttons für die schmale Spalte (`createVerticalButton()`, Klasse `ave-vertical-button`) | bestätigt |
 | 0.16.0.14 | Mehr Abstand neben dem Text (`padding: 8px 4px`), Buttons bleiben beim Scrollen oben | bestätigt |
 | 0.16.0.15 | Korrektur: beim Scrollen wird die **ganze Spalte** festgehängt, nicht die einzelnen hohen Buttons (sie überlappten sich) | bestätigt |
+| 0.17.0.2 / 0.17.0.4 | Detailansicht öffnet sich beim Klick auf eine Desktop-Benachrichtigung (Brave) | bestätigt (2026-11-08) |
 
 **„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
@@ -548,7 +549,7 @@ oft der Pfad lief.
 * Analyse, die restlichen Vorschläge (Notbremse, Queue-Limit, leises Log, Suche
   drosseln) und Meßhinweise stehen in **`docs/ANALYSE-DETAILS-REQUESTS.md`**.
 
-### Fix: Markup des versteckten „Weitere Details“-Buttons (0.17.0.2)
+### Fix: Detailansicht aus einer Benachrichtigung (0.17.0.2 und 0.17.0.4)
 
 Die Zeile im Template des versteckten Buttons war abgeschnitten. Statt
 `class="a-button-input" type="submit" aria-labelledby="a-autoid-0-announce">`
@@ -563,8 +564,19 @@ Der Button ist jetzt wieder vollständig und entspricht dem Button eines Tiles:
 `aria-labelledby` zeigt auf `a-autoid-0-announce` (die ID der span daneben),
 nicht auf das nicht vorhandene `a-autoid-2-announce`.
 
-**Noch nicht im Browser getestet.** Die Prüfungen sind grün (`npm run check`,
-`npm run verify` = 20/20), es gibt keine eigene Verifikation für das Markup.
+**Der Klick wartet außerdem 1000 ms** statt 500 ms, nachdem der Body da ist
+(`VineExplorer.user.js`, der äußere `setTimeout` über
+`aveShareElementTmp.querySelector('input').click()`). Das ist die Taktung, mit
+der die Detailansicht aus einer Benachrichtigung oder einem Teilen-Link geöffnet
+wird. **Kein** Verifikationsskript läuft über diesen Abschnitt (er liegt im
+Top-Level-IIFE, nicht in einer extrahierten Funktion).
+
+**Bestätigt (2026-11-08):** „in Brave kam meistens das Popup nicht bei click auf
+Desktop-Benachrichtigung, jetzt funktioniert es“. Damit ist der abgeschnittene
+`class`-Wert die belegte Ursache des Symptoms.
+
+Die Zahlen sind im Code nicht begründet: es gibt keinen `// NOTE:` zum
+`setTimeout`. Bis er dort steht, ist die 1000 ein magischer Wert.
 
 ### Einstellungs-Gruppe „Desktop-Benachrichtigung“ (0.17.0.3)
 
@@ -591,21 +603,6 @@ Menüliste dort stammte aus der Zeit vor der Gotify-Gruppe (0.16.0).
 
 **Noch nicht im Browser getestet.** `npm run check` (75 Einstellungen) und
 `npm run verify` (20/20) sind grün.
-
-### Wartezeit vor dem Klick auf den versteckten Button (0.17.0.4)
-
-Der Klick auf den versteckten „Weitere Details“-Button wartet jetzt **1000 ms**
-statt 500 ms, nachdem der Body da ist (`VineExplorer.user.js`, der äußere
-`setTimeout` über `aveShareElementTmp.querySelector('input').click()`). Das ist
-die Taktung, mit der die Detailansicht aus einer Benachrichtigung oder einem
-Teilen-Link geöffnet wird. **Kein** Verifikationsskript läuft über diesen
-Abschnitt (er liegt im Top-Level-IIFE, nicht in einer extrahierten Funktion).
-
-Der Wert ist vom Maintainer gesetzt, der Grund ist hier **nicht** notiert – bis
-er im Code als `// NOTE:` steht, ist die Zahl ein magischer Wert.
-
-**Noch nicht im Browser getestet.** `npm run check` und `npm run verify` (20/20)
-sind grün.
 
 ## Wichtige Dateien
 
