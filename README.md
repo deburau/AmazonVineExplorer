@@ -83,6 +83,10 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
+##### [2026-11-08] - Version 0.17.0.2
+
+* Fix: the hidden "More details" button, which AVE uses to open the details of a product, has its complete markup again. A part of its `class` attribute was missing, so the browser had to repair the tag by itself. The button now matches the button of a product tile.
+
 ##### [2026-11-06] - Version 0.17.0.1
 
 * The development continues on the branch `dev-0.18.0`, the version was raised to prepare the next release.

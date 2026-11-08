@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.18.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.17.0.1` (in Entwicklung, Release 0.18.0 vorbereitet) |
+| Version im User-Script | `0.17.0.2` (in Entwicklung, Release 0.18.0 vorbereitet) |
 | Letztes Release | **0.17.0** (auf `main`, veröffentlicht, Merge-Commit `e34488d`, Doku-Commit `5f7ea82`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 20 erfolgreich (`npm run verify`) |
@@ -547,6 +547,29 @@ oft der Pfad lief.
   wieder entfernt).
 * Analyse, die restlichen Vorschläge (Notbremse, Queue-Limit, leises Log, Suche
   drosseln) und Meßhinweise stehen in **`docs/ANALYSE-DETAILS-REQUESTS.md`**.
+
+### Fix: Markup des versteckten „Weitere Details“-Buttons (0.17.0.2)
+
+Die Zeile im Template des versteckten Buttons war abgeschnitten. Statt
+`class="a-button-input" type="submit" aria-labelledby="a-autoid-0-announce">`
+endete sie mit `class="a-butt[...]`, das `<input>` war also **nie geschlossen**.
+Den Rest hat der Browser selbst repariert: der folgende
+`<span class="a-button-text">` wurde in den Input-Tag hineingezogen und war
+kein eigenes Element mehr. Der Fehler steckte seit dem Commit `3641acf`
+(2025-06-09) auch in **`main`** (Release 0.17.0) und war der **einzige**
+`[...]`-Treffer im gesamten Repository.
+
+Der Button ist jetzt wieder vollständig und entspricht dem Button eines Tiles:
+`aria-labelledby` zeigt auf `a-autoid-0-announce` (die ID der span daneben),
+nicht auf das nicht vorhandene `a-autoid-2-announce`.
+
+**Noch nicht im Browser getestet.** Die Prüfungen sind grün (`npm run check`,
+`npm run verify` = 20/20), es gibt keine eigene Verifikation für das Markup.
+
+**Bekannter Doku-Fehler (offen):** der Abschnitt „Einstellungen (71)“ weiter
+unten ist veraltet – es sind **74** Einträge (`scripts/check_settings_keys.js`
+und eine unabhängige Zählung der `key`-Werte sagen beide 74), und die
+Menüliste dort stammt noch aus der Zeit vor dem Gotify-Abschnitt (0.16.0).
 
 ## Wichtige Dateien
 

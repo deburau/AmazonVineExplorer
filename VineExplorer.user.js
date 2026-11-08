@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.17.0.1
+// @version      0.17.0.2
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -217,11 +217,16 @@ let database;
                     aveShareElementTmp.style.display = 'none';
                     aveShareElementTmp.innerHTML = `
                 <span class="a-button a-button-primary vvp-details-btn" id="a-autoid-0">
-                <span class="a-button-inner">
-                <input data-asin="${_data.asin}" data-is-parent-asin="${_data.isParentAsin}" data-is-pre-release="${_data.data_is_pre_release ?? false}" data-recommendation-id="${_data.recommendationId}" data-recommendation-type="VENDOR_TARGETED" class="a-butt[...]
-<span class="a-button-text" aria-hidden="true" id="a-autoid-0-announce">${translate('buttons', 'moreDetails', 'Weitere Details')}
-                </span>
-                </span>
+                    <span class="a-button-inner">
+                        <input
+                            data-asin="${_data.asin}"
+                            data-is-parent-asin="${_data.isParentAsin}"
+                            data-is-pre-release="${_data.data_is_pre_release ?? false}"
+                            data-recommendation-id="${_data.recommendationId}"
+                            data-recommendation-type="VENDOR_TARGETED"
+                            class="a-button-input" type="submit" aria-labelledby="a-autoid-0-announce">
+                        <span class="a-button-text" aria-hidden="true" id="a-autoid-0-announce">${translate('buttons', 'moreDetails', 'Weitere Details')}</span>
+                    </span>
                 </span>
                 `;
                     document.body.appendChild(aveShareElementTmp);
@@ -3832,7 +3837,7 @@ function initBackgroundScan() {
     // NOTE: The loop of the scan runs the turbo scan as well, so it is started
     // when one of the two scans is switched on.
     if (!SETTINGS.EnableBackgroundScan && SETTINGS.EnableTurboScan !== true) {
-        console.warn('initBackgroundScan(): the background scan and the turbo scan are disabled => Exit');
+        console.warn('initBackgroundScan(): the background scans are disabled => Exit');
         return;
     }
     if (!AVE_IS_THIS_SESSION_MASTER) {
