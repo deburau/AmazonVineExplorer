@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.18.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.17.0.4` (in Entwicklung, Release 0.18.0 vorbereitet) |
+| Version im User-Script | `0.17.0.5` (in Entwicklung, Release 0.18.0 vorbereitet) |
 | Letztes Release | **0.17.0** (auf `main`, veröffentlicht, Merge-Commit `e34488d`, Doku-Commit `5f7ea82`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 20 erfolgreich (`npm run verify`) |
@@ -578,6 +578,30 @@ Desktop-Benachrichtigung, jetzt funktioniert es“. Damit ist der abgeschnittene
 Der Grund für die Sekunde steht als `// NOTE:` im Code: das Fenster mit den
 Details öffnete sich in Brave meistens nicht, wenn der Klick auf den Button zu
 früh kam.
+
+### Test-Button der Desktop-Benachrichtigungen (0.17.0.5)
+
+Unter dem Schalter steht jetzt `BUTTON_DESKTOP_TEST` („Testnachricht senden",
+englisch „Send a test message", Hintergrund `rgb(0, 160, 255)` wie beim
+Gotify-Button) mit `btnClick: () => sendDesktopTestMessage()`. Der Button hat
+**kein** `btnEnabled`, ist also immer aktiv – der Test soll auch bei
+ausgeschaltetem Schalter möglich sein.
+
+`sendDesktopTestMessage()` prüft `typeof Notification === 'undefined'`, ruft
+`translate('notifications', 'desktopTestMessage', …)` und dann
+`desktopNotifikation(<Titel>, <Text>, null, true)` auf. Das **`true`** ist
+`requireInteraction`: die Testnachricht bleibt stehen, bis der Nutzer sie
+schließt (die echten Nachrichten der Keywords nutzen das genauso). Bild und
+Klickziel hat der Test nicht, weil kein Produkt dahinter steht.
+
+**Wichtig:** der Klick auf den Button ist die Nutzeraktion, die Chrome und Brave
+für `Notification.requestPermission()` verlangen – eine Anfrage ohne Klick wird
+still ignoriert (das war der Grund, warum die Desktop-Nachrichten nicht ankamen).
+Der Aufruf läuft synchron im Klick-Handler von `createSettingsButtonElement()`.
+
+**Noch nicht im Browser getestet** (braucht einen Klick und eine Antwort auf die
+Berechtigungsfrage). `npm run check` (76 Einstellungen) und `npm run verify`
+(20/20) müssten grün sein.
 
 ### Einstellungs-Gruppe „Desktop-Benachrichtigung“ (0.17.0.3)
 

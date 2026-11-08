@@ -140,6 +140,7 @@ const mainFile = [
     'addVerticalButtonsStyle',
     'createVerticalButton',
     'sendGotifyTestMessage',
+    'sendDesktopTestMessage',
     'getProductDetailsRequestDelay',
     'getSelectedCategoryPn',
     'getRandomizedDelay',

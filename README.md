@@ -83,6 +83,10 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
+##### [2026-11-08] - Version 0.17.0.5
+
+* New: the section "Desktop-Benachrichtigung" has the button **"Testnachricht senden"** under the switch. It shows a test notification on the desktop, so that the switch, the permission of the browser and the display of the notifications can be checked without waiting for a new product. The click on the button is the action that Chrome and Brave need to ask for the permission at all - without a click they ignore the request, so no notification shows up.
+
 ##### [2026-11-08] - Version 0.17.0.4
 
 * Fix: the details of a product open when a desktop notification is clicked. In Brave the window with the details mostly did not come up at all. The script presses a hidden "More details" button for a notification and for a share link, and the markup of that button was incomplete: a part of its `class` attribute was missing, so the browser had to repair the tag by itself and the button did not match the button of a product tile. The button is complete again and the script waits a second until it presses it (instead of half a second).

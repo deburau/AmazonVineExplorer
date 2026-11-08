@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.17.0.4
+// @version      0.17.0.5
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -57,7 +57,7 @@
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, formatMatchLines, formatTaxPrize, getContrastColor, getFastScanState,
    getFastScanIntervalSeconds, getGotifyPriority, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
-   sendGotifyTestMessage,
+   sendGotifyTestMessage, sendDesktopTestMessage,
    getScanDelay, getTaxPrices,
    getTilesFromURL, getTurboScanCategories, getTurboScanIndex, getTurboScanIntervalSeconds,
    getUrlParameter, getVariationRequestDelay, gotifyNotification, isTurboScanDue,
@@ -6416,6 +6416,33 @@ function sendGotifyTestMessage() {
     const _message = translate('notifications', 'gotifyTestMessage', `Test message of Amazon Vine Explorer ${AVE_VERSION}`, AVE_VERSION);
     console.log(`sendGotifyTestMessage(): sending "${_message}" with the priority ${getGotifyPriority()}`);
     gotifyNotification(_message);
+    return true;
+}
+
+/**
+ * Sends a test notification to the desktop.
+ *
+ * The click on the button of the setting is the user action that the browsers need
+ * for the permission: Chrome and Brave ignore the request of a page that was not
+ * clicked, so a test without the click shows nothing. The permission is asked by
+ * desktopNotifikation().
+ *
+ * The test message belongs to no product, so it has no click target. The image and
+ * the target can only be tested with a product of the database.
+ *
+ * @returns {boolean} true if the test was sent
+ */
+function sendDesktopTestMessage() {
+    if (typeof Notification === 'undefined') {
+        console.warn('sendDesktopTestMessage(): the browser does not support notifications.');
+        return false;
+    }
+
+    const _message = translate('notifications', 'desktopTestMessage', `Test message of Amazon Vine Explorer ${AVE_VERSION}`, AVE_VERSION);
+    console.log(`sendDesktopTestMessage(): sending "${_message}" (the permission is "${Notification.permission}")`);
+    // NOTE: requireInteraction keeps the test on the screen until the user closes
+    //   it, so that it can not be missed.
+    desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, _message, null, true);
     return true;
 }
 

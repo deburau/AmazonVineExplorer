@@ -488,6 +488,14 @@ SETTINGS_USERCONFIG_DEFINES.push({
     description: 'Enable Desktop Notifications if new Products are detected'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
+    type: 'button',
+    key: 'BUTTON_DESKTOP_TEST',
+    name: 'Send a test message',
+    bgColor: 'rgb(0, 160, 255)',
+    description: 'Sends a test notification to the desktop. The click is the user action that the browser needs for the permission.',
+    btnClick: () => sendDesktopTestMessage()
+});
+SETTINGS_USERCONFIG_DEFINES.push({
     key: 'DesktopNotifikationKeywords',
     type: 'keywords',
     name: 'Desktop Notification Highlight Keywords',

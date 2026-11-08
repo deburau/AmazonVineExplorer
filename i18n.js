@@ -26,7 +26,8 @@ const I18N = {
             priceMatch: (price) => `Preis-Treffer: ${price}`,
             categoryMatch: (category) => `Kategorie-Treffer: ${category}`,
             loadingCategories: (done, total) => `Kategorien werden geladen: ${done} / ${total}`,
-            gotifyTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version}`
+            gotifyTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version}`,
+            desktopTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version}`
         },
         share: {
             myFSE: 'Mein FSE',
@@ -61,6 +62,7 @@ const I18N = {
             EnableInfiniteScrollLiveQuerry: 'Infinite Scroll Live-Query aktivieren',
             EnableInfiniteSpinnerFix: 'Endloses Laden bei Varianten beheben',
             EnableDesktopNotifikation: 'Desktop-Benachrichtigungen aktivieren',
+            BUTTON_DESKTOP_TEST: 'Testnachricht senden',
             EnableAutoMarkFavorite: 'Auto-Favorit markieren aktivieren',
             EnableDetailsOnFavorite: 'Preisdetails beim Favorisieren laden',
             EnableCleanupFavorites: 'Favoriten bei Cleanup löschen',
@@ -139,6 +141,8 @@ const I18N = {
             EnableInfiniteScrollLiveQuerry: 'Lädt die Produkte direkt von Amazon statt aus der Datenbank.',
             EnableInfiniteSpinnerFix: 'Behebt fehlerhafte Variantendaten.',
             EnableDesktopNotifikation: 'Benachrichtigt bei neuen Produkten.',
+            BUTTON_DESKTOP_TEST:
+                'Verschickt eine Testnachricht an den Desktop. Der Klick ist die Nutzeraktion, die der Browser für die Erlaubnis braucht – ohne sie zeigt Chrome oder Brave keine Nachricht.',
             EnableAutoMarkFavorite: 'Markiert neue Produkte bei Keyword-Treff als Favorit.',
             EnableDetailsOnFavorite: 'Lädt den Preis beim Favorisieren. Beim Scan nicht, sonst sperrt Amazon den Account.',
             EnableCleanupFavorites: 'Entfernt beim Cleanup auch die Favoriten.',
@@ -236,7 +240,8 @@ const I18N = {
             priceMatch: (price) => `Price match: ${price}`,
             categoryMatch: (category) => `Category match: ${category}`,
             loadingCategories: (done, total) => `Loading the categories: ${done} / ${total}`,
-            gotifyTestMessage: (version) => `Test message of Amazon Vine Explorer ${version}`
+            gotifyTestMessage: (version) => `Test message of Amazon Vine Explorer ${version}`,
+            desktopTestMessage: (version) => `Test message of Amazon Vine Explorer ${version}`
         },
         share: {
             myFSE: 'My FSE',
@@ -270,6 +275,7 @@ const I18N = {
             EnableInfiniteScrollLiveQuerry: 'Enable Infinite Scroll Live Query',
             EnableInfiniteSpinnerFix: 'Enable Infinite Spinner Fix',
             EnableDesktopNotifikation: 'Enable Desktop Notifications',
+            BUTTON_DESKTOP_TEST: 'Send a test message',
             EnableAutoMarkFavorite: 'Enable auto marking product as favorite',
             EnableDetailsOnFavorite: 'Load the price details when a product is marked as favorite',
             EnableCleanupFavorites: 'Also remove favorites when cleaning up products',
@@ -348,6 +354,8 @@ const I18N = {
             EnableInfiniteScrollLiveQuerry: 'Loads the products directly from Amazon instead of the database.',
             EnableInfiniteSpinnerFix: 'Repairs faulty variant data.',
             EnableDesktopNotifikation: 'Notifies about new products.',
+            BUTTON_DESKTOP_TEST:
+                'Sends a test notification to the desktop. The click is the user action that the browser needs for the permission - without it Chrome and Brave do not show a notification.',
             EnableAutoMarkFavorite: 'Marks new products as favorite on a keyword match.',
             EnableDetailsOnFavorite: 'Loads the price when favoriting. Not during the scan, Amazon blocks the account.',
             EnableCleanupFavorites: 'Removes the favorites during the cleanup as well.',
