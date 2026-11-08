@@ -26,7 +26,8 @@ const I18N = {
             priceMatch: (price) => `Preis-Treffer: ${price}`,
             categoryMatch: (category) => `Kategorie-Treffer: ${category}`,
             loadingCategories: (done, total) => `Kategorien werden geladen: ${done} / ${total}`,
-            gotifyTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version}`
+            gotifyTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version} – dies ist kein echter Treffer`,
+            desktopTestMessage: (version) => `Testnachricht von Amazon Vine Explorer ${version} – dies ist kein echter Treffer`
         },
         share: {
             myFSE: 'Mein FSE',
@@ -61,12 +62,14 @@ const I18N = {
             EnableInfiniteScrollLiveQuerry: 'Infinite Scroll Live-Query aktivieren',
             EnableInfiniteSpinnerFix: 'Endloses Laden bei Varianten beheben',
             EnableDesktopNotifikation: 'Desktop-Benachrichtigungen aktivieren',
+            BUTTON_DESKTOP_TEST: 'Testnachricht senden',
             EnableAutoMarkFavorite: 'Auto-Favorit markieren aktivieren',
             EnableDetailsOnFavorite: 'Preisdetails beim Favorisieren laden',
             EnableCleanupFavorites: 'Favoriten bei Cleanup löschen',
             EnableBtnMarkAllAsSeen: 'Button Alles als gesehen markieren',
             ShowFirstSeen: 'Erst gesehen statt zuletzt gesehen',
             DesktopNotifikationKeywords: 'Desktop-Benachrichtigung Keywords',
+            TITLE_DESKTOP_NOTIFICATIONS: 'Desktop-Benachrichtigung',
             TITLE_GOTIFY: 'Gotify',
             GotifyUrl: 'URL des Gotify-Servers',
             GotifyToken: 'Gotify Anwendungstoken',
@@ -138,6 +141,8 @@ const I18N = {
             EnableInfiniteScrollLiveQuerry: 'Lädt die Produkte direkt von Amazon statt aus der Datenbank.',
             EnableInfiniteSpinnerFix: 'Behebt fehlerhafte Variantendaten.',
             EnableDesktopNotifikation: 'Benachrichtigt bei neuen Produkten.',
+            BUTTON_DESKTOP_TEST:
+                'Verschickt eine Testnachricht an den Desktop. Der Klick ist die Nutzeraktion, die der Browser für die Erlaubnis braucht – ohne sie zeigt Chrome oder Brave keine Nachricht.',
             EnableAutoMarkFavorite: 'Markiert neue Produkte bei Keyword-Treff als Favorit.',
             EnableDetailsOnFavorite: 'Lädt den Preis beim Favorisieren. Beim Scan nicht, sonst sperrt Amazon den Account.',
             EnableCleanupFavorites: 'Entfernt beim Cleanup auch die Favoriten.',
@@ -145,6 +150,7 @@ const I18N = {
             ShowFirstSeen: 'Zeigt das Datum des ersten statt des letzten Auftretens.',
             DesktopNotifikationKeywords:
                 'Keywords für Benachrichtigung und Auto-Favorit. Mehrere Wörter müssen alle vorkommen, die Reihenfolge ist egal. Preisbedingungen wie price>=10 laden den Preis jedes Treffers – ein unspezifisches Keyword wie "schwarz price>50" kann zu einer Sperre durch Amazon führen, darum lieber mehrere Wörter angeben. Kategoriebedingungen prüfen den Namen der Kategorie mit denselben Operatoren wie beim Preis: = und == (der Name ist es genau), != und <> (er ist es nicht), < und <= (alphabetisch davor), > und >= (danach), z. B. category="kaffee tee" oder category!=garten. Ein Produkt hat genau eine Kategorie; ist die Kategorie der Seite ein Pfad (Haupt > Unter), zählt der letzte Name. Die Bedingungen stehen ohne Klammern und sind immer ein eigenes Wort. Die Wörter dürfen abgekürzt werden – jedes Stück zählt: p, pr, pri … für price und c, ca, cat … für category. Gespeichert wird immer das ganze Wort. Ein Teil in doppelten Anführungszeichen wird genau so gesucht, mit Leerzeichen: "kaffee bohnen" passt nur, wenn das so im Text steht – ohne Anführungszeichen müssen nur alle Wörter irgendwo vorkommen. Für Kategorienamen gilt das genauso: category="kaffee tee". Ein Kategoriename wird beim Speichern vervollständigt (bei = und !=), sofern er in der Kategorieliste steht: aus category=lebens wird category="Lebensmittel & Getränke". Mit gotifyPriority=<n> setzt ein Keyword die Priorität seiner Gotify-Nachricht (nur mit =, die Priorität wird zugewiesen und nicht verglichen; Wert 0 bis 10, ohne Angabe gilt die Einstellung), z. B. toaster gotifyPriority=8. Das Wort darf wie die anderen abgekürzt werden: g, go, got, goti …',
+            TITLE_DESKTOP_NOTIFICATIONS: 'Desktop-Benachrichtigung',
             TITLE_GOTIFY: 'Gotify',
             GotifyUrl: 'Adresse des Gotify-Servers, z. B. https://gotify.example.com',
             GotifyToken: 'Authentifizierungs-Token der Gotify-Anwendung.',
@@ -234,7 +240,8 @@ const I18N = {
             priceMatch: (price) => `Price match: ${price}`,
             categoryMatch: (category) => `Category match: ${category}`,
             loadingCategories: (done, total) => `Loading the categories: ${done} / ${total}`,
-            gotifyTestMessage: (version) => `Test message of Amazon Vine Explorer ${version}`
+            gotifyTestMessage: (version) => `Test message of Amazon Vine Explorer ${version} - this is not a real match`,
+            desktopTestMessage: (version) => `Test message of Amazon Vine Explorer ${version} - this is not a real match`
         },
         share: {
             myFSE: 'My FSE',
@@ -268,12 +275,14 @@ const I18N = {
             EnableInfiniteScrollLiveQuerry: 'Enable Infinite Scroll Live Query',
             EnableInfiniteSpinnerFix: 'Enable Infinite Spinner Fix',
             EnableDesktopNotifikation: 'Enable Desktop Notifications',
+            BUTTON_DESKTOP_TEST: 'Send a test message',
             EnableAutoMarkFavorite: 'Enable auto marking product as favorite',
             EnableDetailsOnFavorite: 'Load the price details when a product is marked as favorite',
             EnableCleanupFavorites: 'Also remove favorites when cleaning up products',
             EnableBtnMarkAllAsSeen: 'Enable Button Mark all as seen',
             ShowFirstSeen: 'Show first seen instead of last seen',
             DesktopNotifikationKeywords: 'Desktop Notification Highlight Keywords',
+            TITLE_DESKTOP_NOTIFICATIONS: 'Desktop notifications',
             TITLE_GOTIFY: 'Gotify',
             GotifyUrl: 'URL of the Gotify Server',
             GotifyToken: 'Gotify application token',
@@ -345,6 +354,8 @@ const I18N = {
             EnableInfiniteScrollLiveQuerry: 'Loads the products directly from Amazon instead of the database.',
             EnableInfiniteSpinnerFix: 'Repairs faulty variant data.',
             EnableDesktopNotifikation: 'Notifies about new products.',
+            BUTTON_DESKTOP_TEST:
+                'Sends a test notification to the desktop. The click is the user action that the browser needs for the permission - without it Chrome and Brave do not show a notification.',
             EnableAutoMarkFavorite: 'Marks new products as favorite on a keyword match.',
             EnableDetailsOnFavorite: 'Loads the price when favoriting. Not during the scan, Amazon blocks the account.',
             EnableCleanupFavorites: 'Removes the favorites during the cleanup as well.',
@@ -352,6 +363,7 @@ const I18N = {
             ShowFirstSeen: 'Shows the date of the first appearance instead of the last one.',
             DesktopNotifikationKeywords:
                 'Keywords for the notification and the auto favorite. All words of a keyword have to occur, the order does not matter. Price conditions like price>=10 load the price of every match – an unspecific keyword like "black price>50" can get the account blocked by Amazon, so use several words. Category conditions check the name of the category with the same operators as a price: = and == (the name is exactly the text), != and <> (it is not), < and <= (before the text in the alphabet), > and >= (behind it), e.g. category="kaffee tee" or category!=garden. A product has exactly one category; when the category of the page is a path (main > sub), the last name counts. The conditions are written without brackets and they are always a word of their own. The words can be shortened - every beginning works: p, pr, pri ... for price and c, ca, cat ... for category. The whole word is stored in every case. A part in double quotes is searched as it is, spaces included: "kaffee bohnen" matches only if that text stands in the description - without the quotes all words have to occur somewhere. The same works for the name of a category: category="kaffee tee". While a keyword is stored, a category name is completed (= and != only) if it is in the list of the categories: category=lebens becomes category="Lebensmittel & Getränke". A keyword sets the priority of its Gotify message with gotifyPriority=<n> (= only, the priority is assigned and not compared; value 0 to 10, without it the setting is used), e.g. toaster gotifyPriority=8. The word can be shortened like the others: g, go, got, goti ...',
+            TITLE_DESKTOP_NOTIFICATIONS: 'Desktop notifications',
             TITLE_GOTIFY: 'Gotify',
             GotifyUrl: 'Address of the Gotify server, e.g. https://gotify.example.com',
             GotifyToken: 'Authentication token of the Gotify application.',

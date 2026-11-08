@@ -7,11 +7,11 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 
 | Punkt | Stand |
 |---|---|
-| Branch | `dev-0.17.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.17.0` (Release 0.17.0, veröffentlicht) |
-| Letztes Release | **0.16.0** (auf `main`, veröffentlicht, Merge-Commit `ff19eaa`) |
+| Branch | `dev-0.18.0` (gepusht, aus `main` angelegt) |
+| Version im User-Script | `0.18.0` (Release, auf `dev-0.18.0` vorbereitet) |
+| Letztes Release | **0.17.0** (auf `main`, veröffentlicht, Merge-Commit `e34488d`, Doku-Commit `5f7ea82`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
-| Verifikationen | alle 18 erfolgreich (`npm run verify`) |
+| Verifikationen | alle 21 erfolgreich (`npm run verify`) |
 | RAM-Verbrauch | **ok** – der Fix ist bestätigt, keine Messung mehr nötig |
 
 ## Bestätigte Tests (vom Maintainer im Browser)
@@ -46,6 +46,12 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.16.0.13 | Eigene Buttons für die schmale Spalte (`createVerticalButton()`, Klasse `ave-vertical-button`) | bestätigt |
 | 0.16.0.14 | Mehr Abstand neben dem Text (`padding: 8px 4px`), Buttons bleiben beim Scrollen oben | bestätigt |
 | 0.16.0.15 | Korrektur: beim Scrollen wird die **ganze Spalte** festgehängt, nicht die einzelnen hohen Buttons (sie überlappten sich) | bestätigt |
+| 0.17.0.2 / 0.17.0.4 | Detailansicht öffnet sich beim Klick auf eine Desktop-Benachrichtigung (Brave) | bestätigt (2026-11-08) |
+| 0.17.0.3 | Gruppe „Desktop-Benachrichtigung“ (Schalter + Keywords, Überschrift ausgeblendet) | bestätigt (2026-11-08) |
+| 0.17.0.5 | Test-Button „Testnachricht senden“ in der Gruppe | bestätigt (2026-11-08, „test positiv“) |
+| 0.17.0.6 | Desktop-Testnachricht mit dem neuesten Produkt (Text, Bild, Klickziel) | bestätigt (2026-11-08, „beides ok“) |
+| 0.17.0.5 / 0.17.0.6 | Desktop-Nachrichten kommen in Brave/Windows an (Test und echt) | bestätigt (2026-11-08, „beides ok“) |
+| 0.17.0.7 / 0.17.0.8 | Gotify-Testnachricht mit dem neuesten Produkt und der Adresse der Desktop-Nachrichten (`vine-data`) | bestätigt (2026-11-08, „test ok“) |
 
 **„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
@@ -508,9 +514,10 @@ Benutzer gewählten Menge von Kategorien **innerhalb von Sekunden** finden
   `gotifyNotification(message, prod, priority)` schreibt sie in den Payload. Unter der
   Priorität steht der Button `BUTTON_GOTIFY_TEST` („Testnachricht senden"):
   `sendGotifyTestMessage()` schickt eine Testnachricht **mit der Priorität der
-  Einstellung** und ohne Produkt (kein Ziel, kein Bild); ohne Adresse oder Token ist er
-  grau (`btnEnabled`) und schickt nichts.
-  Wächter: `scripts/verify/verify_gotify_priority.js` (36 Fälle) und die
+  Einstellung**; ohne Adresse oder Token ist er grau (`btnEnabled`) und schickt
+  nichts. Seit **0.17.0.7** hängt sie das neueste Produkt der Datenbank an (Bild,
+  Link/Ziel und Beschreibung, siehe den Abschnitt weiter oben).
+  Wächter: `scripts/verify/verify_gotify_priority.js` (44 Fälle) und die
   `gotifyPriority`-Fälle in `verify_keyword_conditions.js`.
 * **Umbau der Steuerung:** eine einzige Schleife mit Prioritäten
   (Turbo → Fast → BG → Cleanup, Verzögerung vorne) – Plan, Risiken und die
@@ -548,6 +555,174 @@ oft der Pfad lief.
 * Analyse, die restlichen Vorschläge (Notbremse, Queue-Limit, leises Log, Suche
   drosseln) und Meßhinweise stehen in **`docs/ANALYSE-DETAILS-REQUESTS.md`**.
 
+### Fix: Detailansicht aus einer Benachrichtigung (0.17.0.2 und 0.17.0.4)
+
+Die Zeile im Template des versteckten Buttons war abgeschnitten. Statt
+`class="a-button-input" type="submit" aria-labelledby="a-autoid-0-announce">`
+endete sie mit `class="a-butt[...]`, das `<input>` war also **nie geschlossen**.
+Den Rest hat der Browser selbst repariert: der folgende
+`<span class="a-button-text">` wurde in den Input-Tag hineingezogen und war
+kein eigenes Element mehr. Der Fehler steckte seit dem Commit `3641acf`
+(2025-06-09) auch in **`main`** (Release 0.17.0) und war der **einzige**
+`[...]`-Treffer im gesamten Repository.
+
+Der Button ist jetzt wieder vollständig und entspricht dem Button eines Tiles:
+`aria-labelledby` zeigt auf `a-autoid-0-announce` (die ID der span daneben),
+nicht auf das nicht vorhandene `a-autoid-2-announce`.
+
+**Der Klick wartet außerdem 1000 ms** statt 500 ms, nachdem der Body da ist
+(`VineExplorer.user.js`, der äußere `setTimeout` über
+`aveShareElementTmp.querySelector('input').click()`). Das ist die Taktung, mit
+der die Detailansicht aus einer Benachrichtigung oder einem Teilen-Link geöffnet
+wird. **Kein** Verifikationsskript läuft über diesen Abschnitt (er liegt im
+Top-Level-IIFE, nicht in einer extrahierten Funktion).
+
+**Bestätigt (2026-11-08):** „in Brave kam meistens das Popup nicht bei click auf
+Desktop-Benachrichtigung, jetzt funktioniert es“. Damit ist der abgeschnittene
+`class`-Wert die belegte Ursache des Symptoms.
+
+Der Grund für die Sekunde steht als `// NOTE:` im Code: das Fenster mit den
+Details öffnete sich in Brave meistens nicht, wenn der Klick auf den Button zu
+früh kam.
+
+### Test-Button der Desktop-Benachrichtigungen (0.17.0.5 und 0.17.0.6)
+
+Unter dem Schalter steht `BUTTON_DESKTOP_TEST` („Testnachricht senden", englisch
+„Send a test message", Hintergrund `rgb(0, 160, 255)` wie beim Gotify-Button) mit
+`btnClick: () => sendDesktopTestMessage()`. Der Button hat **kein** `btnEnabled`,
+ist also immer aktiv – der Test soll auch bei ausgeschaltetem Schalter möglich
+sein. **Bestätigt (2026-11-08):** „test positiv".
+
+**Die Testnachricht nutzt das neueste Produkt der Datenbank** (0.17.0.6):
+`getNewestProductOfDatabase()` liest sie über `database.getAll()` und nimmt das
+Produkt mit dem **höchsten `ts_lastSeen`** (also das Produkt, das der letzte Scan
+zuletzt gesehen hat). Damit sind Text, Bild und Klickziel so wie bei einer echten
+Nachricht:
+
+* **Text:** die Testzeile, danach `description_full` – die Testzeile steht also
+dort, wo sonst die Trefferzeilen (Keyword/Preis/Kategorie) stehen. Sie lautet
+„Testnachricht von Amazon Vine Explorer <Version> – dies ist kein echter Treffer"
+(i18n `notifications.desktopTestMessage`), damit niemand sie für einen Treffer
+hält.
+
+* **Bild:** `fixProductImageUrl(data_img_url)`, ohne Produkt oder ohne Bild das
+Standardbild `vine_logo_notification_image.png`.
+* **Klick:** `getProductTargetUrl(prod)` – **dieselbe Funktion**, die auch die
+echte Desktop-Nachricht benutzt (vorher stand die Adresse dort zweimal im Code).
+Sie baut `${origin}/vine/vine-items?vine-data=<JSON>` mit `asin`,
+`isParentAsin`, `recommendationId` und `tax`. Ohne Produkt hat der Klick kein
+Ziel.
+* **`requireInteraction: true`:** die Nachricht bleibt stehen, bis der Nutzer sie
+schließt (wie die echten Nachrichten der Keywords).
+
+**Bestätigt (2026-11-08):** „beides ok" – die Testnachricht zeigt Text, Bild und
+Klickziel des neuesten Produkts, und die Desktop-Nachrichten kommen in Brave
+(Windows) an. Der frühere Befund („in Brave kam trotz `granted` keine Nachricht
+an") ist damit **erledigt**; die genaue Ursache (Berechtigung, Fokus-Assistent oder
+Benachrichtigungscenter von Windows) ist nicht mehr nachgestellt worden.
+Praktisch für später: kommt die **Testnachricht** an, aber keine **echte**, liegen
+die Keyword-Bedingungen quer; kommt auch die Testnachricht nicht, liegt es am
+Browser oder an Windows.
+
+**Wichtig (die Nutzeraktion):** der Klick auf den Button ist die Aktion, die
+Chrome und Brave für `Notification.requestPermission()` verlangen. Die Anfrage
+startet deshalb **vor dem ersten `await`**: `sendDesktopTestMessage()` ist `async`
+(es lädt das Produkt), die Berechtigung wird aber zu Beginn synchron angefragt –
+sonst wäre die Geste weg und die Anfrage würde still ignoriert. Bei „denied"
+bricht die Funktion mit einer Warnung in der Konsole ab.
+
+**Wächter:** `scripts/verify/verify_desktop_notification.js` (Feature-Test, 47
+Fälle) prüft das Ziel, das neueste Produkt, den Text, das Bild, das
+`requireInteraction`, den Klick und die drei Fälle der Berechtigung
+(erlaubt/gefragt/abgelehnt) sowie den Fall ohne `Notification`-Objekt. Damit sind
+es **21 Verifikationen**.
+
+### Gotify-Ziel = Adresse der Desktop-Nachrichten (0.17.0.8)
+
+`gotifyNotification()` baute das Ziel (`client::notification.click.url`) und den
+Bildlink im Text aus `window.location.origin + prod.link` – das war die
+Produktseite (`/dp/<ASIN>`). Beides baut jetzt `getProductTargetUrl(prod)`, also
+**dieselbe Adresse wie die Desktop-Benachrichtigung**
+(`${origin}/vine/vine-items?vine-data=<JSON>`), damit ein Klick in der Gotify-App
+dasselbe Fenster mit den Details öffnet.
+
+* `gotifyNotification()`: `click: { url: getProductTargetUrl(prod) }`.
+* Der Text der echten Nachricht ist jetzt
+  `[![](<Bild>)](<getProductTargetUrl>)  \n<Trefferzeilen>  \n<Beschreibung>`.
+  Die Fallunterscheidung `if (_prod.link)` entfällt, weil das Ziel nicht mehr am
+  `link` hängt – für das große Bild wird weiterhin `data_img_url` gebraucht (und
+  die Testnachricht gibt das Produkt nur mit Bild weiter, weil
+  `fixProductImageUrl()` nicht null-sicher ist).
+* Die Testnachricht hängt den Bildlink genauso an ihr Ziel.
+
+**Kein Baseline-Vergleich bricht:** `verify_new_items.js` vergleicht die
+Benachrichtigungen absichtlich nicht Zeichen für Zeichen (nur Badge, Titel, „gab
+es eine Benachrichtigung", Text-Erwartungen) – der Log darf abweichen. Nötig war
+dort nur `getProductTargetUrl` in der `NEW_NAMES`-Liste, sonst hätte die Sandbox
+einen `ReferenceError` geworfen. `verify_gotify_priority.js` prüft die Adresse
+jetzt explizit über `targetUrl()` im Skript (weiter **44** Fälle).
+
+**Bestätigt (2026-11-08):** „test ok“ – ein Klick in der Gotify-App öffnet die
+Vine-Detailansicht, nicht mehr `/dp/<ASIN>`.
+
+### Gotify-Testnachricht mit dem neuesten Produkt (0.17.0.7)
+
+Der Button „Testnachricht senden" im Gotify-Abschnitt schickt die Testnachricht
+jetzt mit dem **neuesten Produkt der Datenbank** (`getNewestProductOfDatabase()`,
+höchstes `ts_lastSeen`) – dieselbe Funktion, die auch die Desktop-Testnachricht
+nutzt. Der Aufbau ist der einer echten Nachricht:
+
+```
+[![](<Bild>)](<getProductTargetUrl>)  ␣␣
+Testnachricht von Amazon Vine Explorer <Version> – dies ist kein echter Treffer  ␣␣
+<description_full>
+```
+
+Die Testzeile steht also dort, wo sonst die Trefferzeilen stehen, das Bild und der
+Link stehen wie bei einem echten Treffer. `gotifyNotification()` bekommt das
+Produkt **nur**, wenn es einen `link` **und** ein `data_img_url` hat – sonst fehlten
+Ziel und Bild und `fixProductImageUrl(undefined)` würde werfen. Ohne Produkt in der
+Datenbank ist die Nachricht die reine Testzeile (kein Ziel, kein Bild), genauso wie
+vorher. Die i18n-Schlüssel `notifications.gotifyTestMessage` (de/en) sagen jetzt
+ebenfalls „dies ist kein echter Treffer".
+
+`sendGotifyTestMessage()` ist dafür **`async`** geworden (`btnClick` wartet nicht,
+das ist in Ordnung). Die Verifikation `scripts/verify/verify_gotify_priority.js`
+läuft deshalb in einer `async main()` und hat jetzt **44** Fälle – neu sind das
+neueste Produkt, die Beschreibung, das Markdown-Bild mit Link, das Ziel, das große
+Bild und das Produkt ohne Link.
+
+**Bestätigt (2026-11-08):** „test ok“ – die Testnachricht kommt mit Produktbild,
+Testzeile und Beschreibung an.
+
+### Einstellungs-Gruppe „Desktop-Benachrichtigung“ (0.17.0.3)
+
+Der Schalter „Desktop-Benachrichtigungen aktivieren“ stand zwischen den anderen
+Schaltern von „Amazon Vine“, die Keywords standen am Ende der Gruppe. Beide haben
+jetzt eine eigene Gruppe (`TITLE_DESKTOP_NOTIFICATIONS`, der Fallback-Name in
+`globals.js` ist `Desktop notifications`), die **direkt über der Gotify-Gruppe**
+steht – an der Stelle, an der die Keywords schon standen. In `globals.js` folgen
+dafür Titel-Define, `EnableDesktopNotifikation` und `DesktopNotifikationKeywords`
+aufeinander; die Reihenfolge der Defines ist die Reihenfolge im Menü.
+
+Die Überschrift der Keywords stand doppelt (Gruppentitel **und** `<h4>` des
+Wrappers) und ist ausgeblendet: `.ave-keyword-wrapper h4 { display: none; }`,
+dazu `margin: 0 0 25px` statt `25px 0`. **Das `<h4>` bleibt im DOM**, weil
+`scripts/verify/verify_settings_ui.js` das erzeugte DOM des Typs `keywords`
+gegen die Baseline `1e6b6e9` vergleicht – ein Entfernen aus
+`createSettingsKeywordsElement()` würde den Vergleich brechen. Die
+i18n-Schlüssel `TITLE_DESKTOP_NOTIFICATIONS` stehen in allen vier Blöcken
+(`settingsLabels`/`settingsDescriptions` × `de`/`en`).
+
+**Nebenbefund, hier mitkorrigiert:** der Abschnitt „Einstellungen“ weiter unten
+nannte **71** Einträge, tatsächlich waren es schon **74** (inzwischen **76**, der
+Test-Button ist dazugekommen), und die Menüliste dort stammte aus der Zeit vor
+der Gotify-Gruppe (0.16.0).
+
+**Bestätigt (2026-11-08):** „1. funktioniert“ – die Gruppe, der Schalter und die
+ausgeblendete Überschrift der Keywords. `npm run check` und `npm run verify`
+(20/20) sind grün.
+
 ## Wichtige Dateien
 
 | Datei | Inhalt |
@@ -583,7 +758,7 @@ npm run verify
 `npm run verify` startet alle Skripte unter `scripts/verify/`. Ein neues Skript
 gehört in `scripts/verify/` und nutzt `lib/verify_helpers.js`.
 
-### Die 20 Verifikationen
+### Die 21 Verifikationen
 
 **Baseline-Vergleiche** prüfen, dass ein Refactoring das Verhalten **nicht** ändert
 (alt ↔ neu, gleiche Nebenwirkungen). **Feature-Tests** prüfen das aktuelle Verhalten
@@ -601,7 +776,8 @@ gegen erwartete Werte.
 | `verify_site_detection.js` | Feature | die Erkennung der Vine-Seiten (16 URLs) |
 | `verify_search.js` | Feature | die Suche in der Suchleiste (21 Fälle) |
 | `verify_keyword_conditions.js` | Feature | das Parsen und Vergleichen der Bedingungen inkl. `gotifyPriority` (173 Fälle) |
-| `verify_gotify_priority.js` | Feature | die Priorität der Gotify-Nachrichten und die Testnachricht (36 Fälle) |
+| `verify_gotify_priority.js` | Feature | die Priorität der Gotify-Nachrichten und die Testnachricht (44 Fälle) |
+| `verify_desktop_notification.js` | Feature | die Desktop-Benachrichtigungen und ihre Testnachricht (47 Fälle) |
 | `verify_left_side_buttons.js` | Feature | die Buttons der linken Seite in der schmalen Spalte (40 Fälle) |
 | `verify_keyword_order.js` | Feature | die Reihenfolge der Keywords (22 Fälle) |
 | `verify_match_lines.js` | Feature | die Trefferzeilen der Benachrichtigung (10 Fälle) |
@@ -629,20 +805,32 @@ gegen erwartete Werte.
 * Commits: `type(scope): Beschreibung`, z. B. `fix(scan): ...`
 * Version im User-Script + Changelog in `README.md` bei jeder Änderung
 
-## Einstellungen (71)
+## Einstellungen (76)
+
+**Hinweis:** Gezählt sind alle Einträge von `SETTINGS_USERCONFIG_DEFINES`,
+inklusive der zehn Titel-Defines. Die Zahl steht hier, weil
+`scripts/check_settings_keys.js` sie ausgibt (`Einstellungen: 76`).
 
 Aufbau des Menüs (Reihenfolge in `globals.js` = Reihenfolge im Menü):
 
-1. **Amazon Vine** (`TITLE_AMAZON_VINE`): Sprache, alle Schalter, Keyword-Liste,
-   Gotify
-2. **Background-Scan** (`TITLE_BACKGROUND_SCAN`): `EnableBackgroundScan`,
+1. **Amazon Vine** (`TITLE_AMAZON_VINE`): Sprache (`UI_LANGUAGE`), alle Schalter
+   außer denen der Desktop-Benachrichtigungen (u. a. `EnableFullWidth`,
+   `DarkMode`, `DisableCategories`, `EnableBtnAll`, `EnablePaginationTop`,
+   `EnableInfiniteScrollLiveQuerry`, `EnableInfiniteSpinnerFix`)
+2. **Desktop-Benachrichtigung** (`TITLE_DESKTOP_NOTIFICATIONS`, seit 0.17.0.3):
+   `EnableDesktopNotifikation`, Button „Testnachricht senden",
+   `DesktopNotifikationKeywords`
+3. **Gotify** (`TITLE_GOTIFY`): `GotifyUrl`, `GotifyToken`, `GotifyPriority`,
+   Button „Testnachricht senden"
+4. **Background-Scan** (`TITLE_BACKGROUND_SCAN`): `EnableBackgroundScan`,
    Button „Neuen Background Scan starten", `BackGroundScanDelayPerPage`,
    `BackGroundScannerRandomness`
-3. **Fast-Scan** (`TITLE_FAST_SCAN`): `EnableFastScan`,
+5. **Fast-Scan** (`TITLE_FAST_SCAN`): `EnableFastScan`,
    `FastScanIntervalSeconds`
-4. **Turbo-Scan** (`TITLE_TURBO`): `EnableTurboScan`,
+6. **Turbo-Scan** (`TITLE_TURBO`): `EnableTurboScan`,
    `TurboScanIntervalSeconds`, `TurboScanCategories`
-5. **Wartezeiten und Grenzen** (`TITLE_DELAYS`): `DesktopNotifikationDelay`,
+7. **Wartezeiten und Grenzen** (`TITLE_DELAYS`): `DesktopNotifikationDelay`,
    `SearchBarInputDelay`, `IdlePeriodAfterScan`, `HoursBeforeCleanup`,
    `MaxItemsPerPage`, die Schwellwerte der Benachrichtigungen
-6. Farben und Styles, Entwickler-Werte
+8. **Farben und Styles** (`TITLE_COLORS`), **Amazon Shopping**
+   (`TITLE_SHOPPING`), **Entwickler und Tester** (`TITLE_DEV`)

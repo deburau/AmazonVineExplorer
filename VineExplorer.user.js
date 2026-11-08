@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.17.0
+// @version      0.18.0
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -56,8 +56,9 @@
    createShareElement, createTaxInfoElement, createTileFromProduct, createTimeSeenElement,
    currentMainPage, database, desktopNotifikation, detectCurrentPageType, exportDatabase,
    favStarEventhandlerClick, fixProductImageUrl, formatMatchLines, formatTaxPrize, getContrastColor, getFastScanState,
-   getFastScanIntervalSeconds, getGotifyPriority, getPageinationData, getProductDetailsRequestDelay, getRandomizedDelay,
-   sendGotifyTestMessage,
+   getFastScanIntervalSeconds, getGotifyPriority, getNewestProductOfDatabase, getPageinationData, getProductDetailsRequestDelay,
+   getProductTargetUrl, getRandomizedDelay,
+   sendGotifyTestMessage, sendDesktopTestMessage,
    getScanDelay, getTaxPrices,
    getTilesFromURL, getTurboScanCategories, getTurboScanIndex, getTurboScanIntervalSeconds,
    getUrlParameter, getVariationRequestDelay, gotifyNotification, isTurboScanDue,
@@ -217,20 +218,28 @@ let database;
                     aveShareElementTmp.style.display = 'none';
                     aveShareElementTmp.innerHTML = `
                 <span class="a-button a-button-primary vvp-details-btn" id="a-autoid-0">
-                <span class="a-button-inner">
-                <input data-asin="${_data.asin}" data-is-parent-asin="${_data.isParentAsin}" data-is-pre-release="${_data.data_is_pre_release ?? false}" data-recommendation-id="${_data.recommendationId}" data-recommendation-type="VENDOR_TARGETED" class="a-butt[...]
-<span class="a-button-text" aria-hidden="true" id="a-autoid-0-announce">${translate('buttons', 'moreDetails', 'Weitere Details')}
-                </span>
-                </span>
+                    <span class="a-button-inner">
+                        <input
+                            data-asin="${_data.asin}"
+                            data-is-parent-asin="${_data.isParentAsin}"
+                            data-is-pre-release="${_data.data_is_pre_release ?? false}"
+                            data-recommendation-id="${_data.recommendationId}"
+                            data-recommendation-type="VENDOR_TARGETED"
+                            class="a-button-input" type="submit" aria-labelledby="a-autoid-0-announce">
+                        <span class="a-button-text" aria-hidden="true" id="a-autoid-0-announce">${translate('buttons', 'moreDetails', 'Weitere Details')}</span>
+                    </span>
                 </span>
                 `;
                     document.body.appendChild(aveShareElementTmp);
+                    // NOTE: The window with the details did not open most of the time in
+                    // Brave when the click on the button came too early, so the button
+                    // is pressed after a second.
                     setTimeout(() => {
                         aveShareElementTmp.querySelector('input').click();
                         setTimeout(() => {
                             localStorage.removeItem('ave-share-details');
                         }, 200);
-                    }, 500);
+                    }, 1000);
                 });
             }
             addAveSettingsTab();
@@ -2394,7 +2403,15 @@ input:checked + .ave-settings-switch-toggle-slider:before {
 }
 
 .ave-keyword-wrapper {
-  margin: 25px 0;
+  margin: 0 0 25px;
+}
+
+/* NOTE: The name of the keywords is the heading of the section of the desktop
+   notifications, so the heading of the wrapper is not shown twice. The element
+   stays in the DOM - the settings UI is verified against the created DOM - only
+   its display is switched off. */
+.ave-keyword-wrapper h4 {
+  display: none;
 }
 
 .ave-keyword-input {
@@ -3832,7 +3849,7 @@ function initBackgroundScan() {
     // NOTE: The loop of the scan runs the turbo scan as well, so it is started
     // when one of the two scans is switched on.
     if (!SETTINGS.EnableBackgroundScan && SETTINGS.EnableTurboScan !== true) {
-        console.warn('initBackgroundScan(): the background scan and the turbo scan are disabled => Exit');
+        console.warn('initBackgroundScan(): the background scans are disabled => Exit');
         return;
     }
     if (!AVE_IS_THIS_SESSION_MASTER) {
@@ -6020,35 +6037,23 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
                 true,
                 function (event) {
                     event.preventDefault();
-                    const newUrl = `${window.location.origin}/vine/vine-items?vine-data=${encodeURIComponent(
-                        JSON.stringify({
-                            asin: _prod.data_asin,
-                            isParentAsin: _prod.data_asin_is_parent,
-                            recommendationId: _prod.data_recommendation_id,
-                            tax: _prod.data_estimated_tax
-                        })
-                    )}`;
-                    window.open(newUrl, '_blank');
+                    window.open(getProductTargetUrl(_prod), '_blank');
                 }
             );
         }
         if (SETTINGS.GotifyUrl) {
             // NOTE: The reasons for the match stand before the description of the
-            // product, like in the desktop notification. The priority of the
-            // message is the one that the keyword named, if it named one.
-            if (_prod.link) {
-                gotifyNotification(
-                    `[![](${fixProductImageUrl(_prod.data_img_url)})](${window.location.origin + _prod.link})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`,
-                    _prod,
-                    _entry.gotifyPriority
-                );
-            } else {
-                gotifyNotification(
-                    `![](${fixProductImageUrl(_prod.data_img_url)})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`,
-                    null,
-                    _entry.gotifyPriority
-                );
-            }
+            // product, like in the desktop notification. The priority of the message
+            // is the one that the keyword named, if it named one. The image of the
+            // message is a link to the same address that a click on the desktop
+            // notification opens (see getProductTargetUrl()), so that a click in the
+            // Gotify app opens the window with the details of the product and not the
+            // page of the product.
+            gotifyNotification(
+                `[![](${fixProductImageUrl(_prod.data_img_url)})](${getProductTargetUrl(_prod)})  \n${_matchLines.join('  \n')}  \n${_prod.description_full}`,
+                _prod,
+                _entry.gotifyPriority
+            );
         }
         return true;
     }
@@ -6248,12 +6253,26 @@ function processNewItems() {
 }
 
 /**
- * Send a Desktop Notifikation
- * @param {string} title
- * @param {string} message
- * @param {string} icon
+ * Builds the address that opens the details of a product.
  *
+ * The page of the products opens the window with the details when the parameter
+ * "vine-data" names a product. This is the click target of the desktop
+ * notifications - the notification about a real product and the test message of
+ * the settings use the same address.
+ *
+ * @param {object} prod The product
+ * @returns {string} The address with the encoded data of the product
  */
+function getProductTargetUrl(prod) {
+    const _data = {
+        asin: prod.data_asin,
+        isParentAsin: prod.data_asin_is_parent,
+        recommendationId: prod.data_recommendation_id,
+        tax: prod.data_estimated_tax
+    };
+    return `${window.location.origin}/vine/vine-items?vine-data=${encodeURIComponent(JSON.stringify(_data))}`;
+}
+
 // NOTE: 'desktopNotifikation' and all related settings use the misspelling
 //   'Notifikation' instead of 'Notification'. The spelling is consistent across
 //   globals.js and VineExplorer.user.js and is part of the public settings API,
@@ -6349,7 +6368,10 @@ function gotifyNotification(message, prod = null, priority = null) {
                       contentType: 'text/markdown'
                   },
                   'client::notification': {
-                      click: { url: window.location.origin + prod.link },
+                      // NOTE: The target is the address of the desktop notifications,
+                      // so that a click in the Gotify app opens the same window with the
+                      // details of the product (see getProductTargetUrl()).
+                      click: { url: getProductTargetUrl(prod) },
                       bigImageUrl: fixProductImageUrl(prod.data_img_url)
                   }
               }
@@ -6386,20 +6408,132 @@ function gotifyNotification(message, prod = null, priority = null) {
  *
  * The message is sent with the priority of the settings (GotifyPriority), so that
  * the button shows which priority the messages of the notifications have (see
- * getGotifyPriority()). The test message belongs to no product, so it has no target
- * and no image.
+ * getGotifyPriority()).
  *
- * @returns {boolean} true if the message was sent
+ * The test uses the product of the database that was seen last, so that the text,
+ * the image and the target of a click are the same as in the message about a real
+ * product. The first line of the message says that the message is a test - it stands
+ * where the lines of the matches stand in a real message. Without a product in the
+ * database the message is the plain test line.
+ *
+ * @returns {Promise<boolean>} true if the message was sent
  */
-function sendGotifyTestMessage() {
+async function sendGotifyTestMessage() {
     if (!SETTINGS.GotifyUrl || !SETTINGS.GotifyToken) {
         console.warn('sendGotifyTestMessage(): the address or the token of the Gotify server is missing.');
         return false;
     }
 
-    const _message = translate('notifications', 'gotifyTestMessage', `Test message of Amazon Vine Explorer ${AVE_VERSION}`, AVE_VERSION);
-    console.log(`sendGotifyTestMessage(): sending "${_message}" with the priority ${getGotifyPriority()}`);
-    gotifyNotification(_message);
+    const _testLine = translate(
+        'notifications',
+        'gotifyTestMessage',
+        `Test message of Amazon Vine Explorer ${AVE_VERSION} - this is not a real match`,
+        AVE_VERSION
+    );
+    const _prod = await getNewestProductOfDatabase();
+    const _image = _prod && _prod.data_img_url ? fixProductImageUrl(_prod.data_img_url) : null;
+    // NOTE: gotifyNotification() takes the target and the big image of the message
+    //   from the product, so it only gets one with an image (the target is built from
+    //   the data of the product, see getProductTargetUrl()).
+    const _prodForTarget = _prod && _prod.data_img_url ? _prod : null;
+    const _imageMarkdown = _image ? `[![](${_image})](${getProductTargetUrl(_prod)})  \n` : '';
+    const _message = _prod ? `${_imageMarkdown}${_testLine}  \n${_prod.description_full}` : _testLine;
+
+    console.log(
+        `sendGotifyTestMessage(): sending "${_testLine}" with the priority ${getGotifyPriority()}${
+            _prod ? ` and the product ${_prod.data_asin}` : ' without a product'
+        }`
+    );
+    gotifyNotification(_message, _prodForTarget, getGotifyPriority());
+    return true;
+}
+
+/**
+ * Reads the product of the database that was seen last.
+ *
+ * The product with the highest "ts_lastSeen" is the product of the last scan. The test
+ * messages of the desktop notifications and of Gotify use it, because its
+ * description, its image and its click target are available.
+ *
+ * @returns {Promise<object|null>} The product or null, if the database is empty or
+ *   the products can not be read
+ */
+async function getNewestProductOfDatabase() {
+    try {
+        const _products = await database.getAll();
+        if (!Array.isArray(_products) || _products.length === 0) return null;
+
+        let _newest = null;
+        let _newestTs = -1;
+        for (const _prod of _products) {
+            const _ts = Number(_prod?.ts_lastSeen) || 0;
+            if (_ts > _newestTs) {
+                _newest = _prod;
+                _newestTs = _ts;
+            }
+        }
+        return _newest;
+    } catch (error) {
+        console.error(`getNewestProductOfDatabase(): could not read the products: ${error}`);
+        return null;
+    }
+}
+
+/**
+ * Sends a test notification to the desktop.
+ *
+ * The click on the button of the setting is the user action that the browsers need
+ * for the permission: Chrome and Brave ignore the request of a page that was not
+ * clicked, so a test without the click shows nothing.
+ *
+ * The test uses the product of the database that was seen last, so that the text,
+ * the image and the click target are the same as in the notification about a real
+ * product. The first line of the message says that the notification is a test - it
+ * stands where the lines of the matches stand in a real notification. Without a
+ * product in the database the message has no description, no image of a product and
+ * no click target.
+ *
+ * @returns {Promise<boolean>} true if the test was sent
+ */
+async function sendDesktopTestMessage() {
+    if (typeof Notification === 'undefined') {
+        console.warn('sendDesktopTestMessage(): the browser does not support notifications.');
+        return false;
+    }
+
+    // NOTE: The request of the permission has to start in the click itself: Chrome
+    //   and Brave ignore it when an await stands between the click and the request,
+    //   so the promise is created here, before the product is loaded.
+    const _permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (_permission !== 'granted') {
+        console.warn(`sendDesktopTestMessage(): the permission is "${_permission}". Allow the notifications for this page and try again.`);
+        return false;
+    }
+
+    const _testLine = translate(
+        'notifications',
+        'desktopTestMessage',
+        `Test message of Amazon Vine Explorer ${AVE_VERSION} - this is not a real match`,
+        AVE_VERSION
+    );
+    const _prod = await getNewestProductOfDatabase();
+    const _message = _prod ? `${_testLine}\n${_prod.description_full}` : _testLine;
+    const _image = _prod && _prod.data_img_url ? fixProductImageUrl(_prod.data_img_url) : null;
+    const _onClick = _prod
+        ? (event) => {
+              event.preventDefault();
+              window.open(getProductTargetUrl(_prod), '_blank');
+          }
+        : () => {};
+
+    console.log(
+        `sendDesktopTestMessage(): sending "${_testLine}" (the permission is "${Notification.permission}")${
+            _prod ? ` with the product ${_prod.data_asin}` : ' without a product'
+        }`
+    );
+    // NOTE: requireInteraction keeps the test on the screen until the user closes
+    //   it, so that it can not be missed.
+    desktopNotifikation(`Amazon Vine Explorer - ${AVE_VERSION}`, _message, _image, true, _onClick);
     return true;
 }
 
