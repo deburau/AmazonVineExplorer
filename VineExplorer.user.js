@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.17.0.2
+// @version      0.17.0.3
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -2399,7 +2399,15 @@ input:checked + .ave-settings-switch-toggle-slider:before {
 }
 
 .ave-keyword-wrapper {
-  margin: 25px 0;
+  margin: 0 0 25px;
+}
+
+/* NOTE: The name of the keywords is the heading of the section of the desktop
+   notifications, so the heading of the wrapper is not shown twice. The element
+   stays in the DOM - the settings UI is verified against the created DOM - only
+   its display is switched off. */
+.ave-keyword-wrapper h4 {
+  display: none;
 }
 
 .ave-keyword-input {

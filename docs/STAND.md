@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.18.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.17.0.2` (in Entwicklung, Release 0.18.0 vorbereitet) |
+| Version im User-Script | `0.17.0.3` (in Entwicklung, Release 0.18.0 vorbereitet) |
 | Letztes Release | **0.17.0** (auf `main`, veröffentlicht, Merge-Commit `e34488d`, Doku-Commit `5f7ea82`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 20 erfolgreich (`npm run verify`) |
@@ -566,10 +566,31 @@ nicht auf das nicht vorhandene `a-autoid-2-announce`.
 **Noch nicht im Browser getestet.** Die Prüfungen sind grün (`npm run check`,
 `npm run verify` = 20/20), es gibt keine eigene Verifikation für das Markup.
 
-**Bekannter Doku-Fehler (offen):** der Abschnitt „Einstellungen (71)“ weiter
-unten ist veraltet – es sind **74** Einträge (`scripts/check_settings_keys.js`
-und eine unabhängige Zählung der `key`-Werte sagen beide 74), und die
-Menüliste dort stammt noch aus der Zeit vor dem Gotify-Abschnitt (0.16.0).
+### Einstellungs-Gruppe „Desktop-Benachrichtigung“ (0.17.0.3)
+
+Der Schalter „Desktop-Benachrichtigungen aktivieren“ stand zwischen den anderen
+Schaltern von „Amazon Vine“, die Keywords standen am Ende der Gruppe. Beide haben
+jetzt eine eigene Gruppe (`TITLE_DESKTOP_NOTIFICATIONS`, der Fallback-Name in
+`globals.js` ist `Desktop notifications`), die **direkt über der Gotify-Gruppe**
+steht – an der Stelle, an der die Keywords schon standen. In `globals.js` folgen
+dafür Titel-Define, `EnableDesktopNotifikation` und `DesktopNotifikationKeywords`
+aufeinander; die Reihenfolge der Defines ist die Reihenfolge im Menü.
+
+Die Überschrift der Keywords stand doppelt (Gruppentitel **und** `<h4>` des
+Wrappers) und ist ausgeblendet: `.ave-keyword-wrapper h4 { display: none; }`,
+dazu `margin: 0 0 25px` statt `25px 0`. **Das `<h4>` bleibt im DOM**, weil
+`scripts/verify/verify_settings_ui.js` das erzeugte DOM des Typs `keywords`
+gegen die Baseline `1e6b6e9` vergleicht – ein Entfernen aus
+`createSettingsKeywordsElement()` würde den Vergleich brechen. Die
+i18n-Schlüssel `TITLE_DESKTOP_NOTIFICATIONS` stehen in allen vier Blöcken
+(`settingsLabels`/`settingsDescriptions` × `de`/`en`).
+
+**Nebenbefund, hier mitkorrigiert:** der Abschnitt „Einstellungen“ weiter unten
+nannte **71** Einträge, tatsächlich waren es schon **74** (jetzt **75**), und die
+Menüliste dort stammte aus der Zeit vor der Gotify-Gruppe (0.16.0).
+
+**Noch nicht im Browser getestet.** `npm run check` (75 Einstellungen) und
+`npm run verify` (20/20) sind grün.
 
 ## Wichtige Dateien
 
@@ -652,20 +673,31 @@ gegen erwartete Werte.
 * Commits: `type(scope): Beschreibung`, z. B. `fix(scan): ...`
 * Version im User-Script + Changelog in `README.md` bei jeder Änderung
 
-## Einstellungen (71)
+## Einstellungen (75)
+
+**Hinweis:** Gezählt sind alle Einträge von `SETTINGS_USERCONFIG_DEFINES`,
+inklusive der zehn Titel-Defines. Die Zahl steht hier, weil
+`scripts/check_settings_keys.js` sie ausgibt (`Einstellungen: 75`).
 
 Aufbau des Menüs (Reihenfolge in `globals.js` = Reihenfolge im Menü):
 
-1. **Amazon Vine** (`TITLE_AMAZON_VINE`): Sprache, alle Schalter, Keyword-Liste,
-   Gotify
-2. **Background-Scan** (`TITLE_BACKGROUND_SCAN`): `EnableBackgroundScan`,
+1. **Amazon Vine** (`TITLE_AMAZON_VINE`): Sprache (`UI_LANGUAGE`), alle Schalter
+   außer denen der Desktop-Benachrichtigungen (u. a. `EnableFullWidth`,
+   `DarkMode`, `DisableCategories`, `EnableBtnAll`, `EnablePaginationTop`,
+   `EnableInfiniteScrollLiveQuerry`, `EnableInfiniteSpinnerFix`)
+2. **Desktop-Benachrichtigung** (`TITLE_DESKTOP_NOTIFICATIONS`, seit 0.17.0.3):
+   `EnableDesktopNotifikation`, `DesktopNotifikationKeywords`
+3. **Gotify** (`TITLE_GOTIFY`): `GotifyUrl`, `GotifyToken`, `GotifyPriority`,
+   Button „Testnachricht senden"
+4. **Background-Scan** (`TITLE_BACKGROUND_SCAN`): `EnableBackgroundScan`,
    Button „Neuen Background Scan starten", `BackGroundScanDelayPerPage`,
    `BackGroundScannerRandomness`
-3. **Fast-Scan** (`TITLE_FAST_SCAN`): `EnableFastScan`,
+5. **Fast-Scan** (`TITLE_FAST_SCAN`): `EnableFastScan`,
    `FastScanIntervalSeconds`
-4. **Turbo-Scan** (`TITLE_TURBO`): `EnableTurboScan`,
+6. **Turbo-Scan** (`TITLE_TURBO`): `EnableTurboScan`,
    `TurboScanIntervalSeconds`, `TurboScanCategories`
-5. **Wartezeiten und Grenzen** (`TITLE_DELAYS`): `DesktopNotifikationDelay`,
+7. **Wartezeiten und Grenzen** (`TITLE_DELAYS`): `DesktopNotifikationDelay`,
    `SearchBarInputDelay`, `IdlePeriodAfterScan`, `HoursBeforeCleanup`,
    `MaxItemsPerPage`, die Schwellwerte der Benachrichtigungen
-6. Farben und Styles, Entwickler-Werte
+8. **Farben und Styles** (`TITLE_COLORS`), **Amazon Shopping**
+   (`TITLE_SHOPPING`), **Entwickler und Tester** (`TITLE_DEV`)

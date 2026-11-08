@@ -83,6 +83,11 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
+##### [2026-11-08] - Version 0.17.0.3
+
+* New: the switch "Desktop-Benachrichtigungen aktivieren" and the keywords of the desktop notifications have their own section **"Desktop-Benachrichtigung"**. They stood between the other switches of "Amazon Vine" before, the section stands directly above the section of Gotify now.
+* The heading above the keywords is hidden and the space above it is gone, so the keywords stand directly under the switch of their section.
+
 ##### [2026-11-08] - Version 0.17.0.2
 
 * Fix: the hidden "More details" button, which AVE uses to open the details of a product, has its complete markup again. A part of its `class` attribute was missing, so the browser had to repair the tag by itself. The button now matches the button of a product tile.

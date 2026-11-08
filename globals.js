@@ -447,12 +447,6 @@ SETTINGS_USERCONFIG_DEFINES.push({
     description: 'Repairs malformed product variation data that can leave Amazon Vine loading indefinitely'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
-    key: 'EnableDesktopNotifikation',
-    type: 'bool',
-    name: 'Enable Desktop Notifications',
-    description: 'Enable Desktop Notifications if new Products are detected'
-});
-SETTINGS_USERCONFIG_DEFINES.push({
     key: 'EnableAutoMarkFavorite',
     type: 'bool',
     name: 'Enable auto marking product as favotite',
@@ -482,6 +476,16 @@ SETTINGS_USERCONFIG_DEFINES.push({
     type: 'bool',
     name: 'Show first seen instead of last seen',
     description: 'Instead of the &quot;Last seen&quot; date in the product box show the date, the item was first seen'
+});
+// NOTE: The switch and the keywords of the desktop notifications stand under their
+// own heading, because only a part of the users uses the notifications and the two
+// settings belong together.
+SETTINGS_USERCONFIG_DEFINES.push({ type: 'title', name: 'Desktop notifications', description: '', key: 'TITLE_DESKTOP_NOTIFICATIONS' });
+SETTINGS_USERCONFIG_DEFINES.push({
+    key: 'EnableDesktopNotifikation',
+    type: 'bool',
+    name: 'Enable Desktop Notifications',
+    description: 'Enable Desktop Notifications if new Products are detected'
 });
 SETTINGS_USERCONFIG_DEFINES.push({
     key: 'DesktopNotifikationKeywords',
