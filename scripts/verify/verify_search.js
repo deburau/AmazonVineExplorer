@@ -16,6 +16,8 @@
  *   - Produkte ohne bekannten Preis werden ignoriert
  *   - eine ungueltige Preisbedingung liefert kein Ergebnis
  *   - Klammern sind Text und keine Bedingung
+ *   - Woerter mit einem Minus duerfen nicht im Text vorkommen
+ *   - eine Suche nur mit Woertern mit einem Minus liefert kein Ergebnis
  *
  * Das Skript prueft das aktuelle Verhalten gegen erwartete Werte. Es vergleicht
  * nicht eine alte mit einer neuen Implementierung, weil die Preissuche ein
@@ -52,12 +54,15 @@ const CODE = [
     extractBody(mainSrc, 'parsePriceCondition'),
     extractBody(mainSrc, 'aveIsConditionWord'),
     extractBody(mainSrc, 'aveSplitQuotedWords'),
+    extractBody(mainSrc, 'aveSplitKeywordWords'),
     extractBody(mainSrc, 'aveUnquoteKeywordPart'),
     extractBody(mainSrc, 'parseCategoryCondition'),
     extractBody(mainSrc, 'parseGotifyPriorityCondition'),
     extractBody(mainSrc, 'parseKeywordConfig'),
     extractBody(mainSrc, 'getTaxPrices'),
     extractBody(mainSrc, 'matchPriceConditions'),
+    // Die Suche filtert die Woerter mit einem Minus mit dem Textvergleich.
+    extractBody(mainSrc, 'matchesKeyword'),
     extractBody(mainSrc, 'searchProducts')
 ].join('\n\n');
 
@@ -177,6 +182,28 @@ async function check(queryText, expected, label) {
     await check('[kaffee]', [], 'Ein Text in Klammern ist kein Treffer, wenn er nicht im Text steht');
     await check('[price=0]', [], 'Eine Bedingung in Klammern ist Text und keine Bedingung');
     await check('[price>=0]', [], 'Auch eine Preisbedingung in Klammern sucht nur den Text');
+
+    // Ein Wort mit einem Minus darf nicht im Text vorkommen. Die Datenbank
+    // durchsucht nur die Woerter ohne Minus, der Rest wird danach gefiltert.
+    await check('kaffee -bohnen', ['p1', 'p2', 'p3'], 'Ein Wort mit einem Minus schliesst die Produkte aus');
+    await check('kaffee -maschine -bohnen', ['p1', 'p3'], 'Zwei Woerter mit einem Minus');
+    await check('kaffee -kaffee', [], 'Ein Wort mit einem Minus, das im Text steht, schliesst alle Produkte aus');
+    await check('teekanne -glas', ['p6'], 'Ein Wort mit einem Minus, das nur ein Produkt hat');
+    await check('kaffee -"kaffee bohnen"', ['p1', 'p2', 'p3'], 'Ein verbatim-String mit einem Minus');
+    await check('kaffee -/voll|bohnen/', ['p2', 'p3'], 'Ein regulaerer Ausdruck mit einem Minus');
+    await check('kaffee -bohnen price>=10', ['p1', 'p2'], 'Ein Wort mit einem Minus und eine Preisbedingung');
+
+    // Ein Minus allein ist nicht genug: fast alle Produkte wuerden passen.
+    const _negativeOnly = await search(' -kaffee');
+    await check(' -kaffee', [], 'Eine Suche nur mit einem Wort mit einem Minus liefert kein Ergebnis');
+    await check('-bohnen -maschine', [], 'Eine Suche nur mit Woertern mit einem Minus liefert kein Ergebnis');
+    _checks++;
+    if (_negativeOnly.warnings.length === 0) {
+        _errors++;
+        console.log('  FAIL Eine Suche nur mit einem Wort mit einem Minus wird gemeldet');
+    } else {
+        console.log('  OK   Eine Suche nur mit einem Wort mit einem Minus wird gemeldet');
+    }
 
     // Die Kategorie ist nicht in der Datenbank, die Suche kann sie nicht pruefen.
     const _category = await search('kaffee category=getränke');

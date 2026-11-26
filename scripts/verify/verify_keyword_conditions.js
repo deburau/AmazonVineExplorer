@@ -23,6 +23,8 @@
  *   - der Vergleich der Kategorie mit dem Namen der Kategorie (matchCategoryConditions())
  *   - das Parsen der Prioritaet einer Gotify-Nachricht (parseGotifyPriorityCondition())
  *   - die Prioritaet der Nachricht (getGotifyPriority(): Keyword schlaegt Einstellung)
+ *   - der Textvergleich mit Woertern, verbatim-Strings, regulaeren Ausdruecken und
+ *     Woertern mit einem Minus (matchesKeyword())
  *
  * Das Skript prueft das aktuelle Verhalten gegen erwartete Werte. Es vergleicht
  * nicht eine alte mit einer neuen Implementierung, weil die Preisbedingungen
@@ -68,6 +70,7 @@ const CODE = [
     extractBody(mainSrc, 'getGotifyPriority'),
     // Das Zerlegen in Woerter und verbatim-Strings und der Textvergleich.
     extractBody(mainSrc, 'aveSplitQuotedWords'),
+    extractBody(mainSrc, 'aveSplitKeywordWords'),
     extractBody(mainSrc, 'aveUnquoteKeywordPart'),
     extractBody(mainSrc, 'stringToRegex'),
     extractBody(mainSrc, 'matchesKeyword')
@@ -346,6 +349,31 @@ const KEYWORD_CASES = [
         label: 'Ein einfaches Keyword bleibt unveraendert',
         input: 'toaster',
         expected: { keyword: 'toaster', conditions: [], categories: [], gotifyPriority: null, valid: true }
+    },
+    {
+        label: 'Ein Wort mit einem Minus bleibt im Keyword',
+        input: 'toaster -defekt',
+        expected: { keyword: 'toaster -defekt', conditions: [], categories: [], gotifyPriority: null, valid: true }
+    },
+    {
+        label: 'Ein Keyword nur mit einem Wort mit einem Minus ist ungueltig',
+        input: '-toaster',
+        expected: { keyword: '-toaster', conditions: [], categories: [], gotifyPriority: null, valid: false }
+    },
+    {
+        label: 'Ein regulaerer Ausdruck mit einem Minus allein ist ungueltig',
+        input: '-/toaster/i',
+        expected: { keyword: '-/toaster/i', conditions: [], categories: [], gotifyPriority: null, valid: false }
+    },
+    {
+        label: 'Ein Wort mit einem Minus neben einer Preisbedingung',
+        input: 'toaster -defekt price>=10',
+        expected: { keyword: 'toaster -defekt', conditions: [{ op: '>=', price: 10 }], categories: [], gotifyPriority: null, valid: true }
+    },
+    {
+        label: 'Nur ein Wort mit einem Minus neben einer Preisbedingung ist ungueltig',
+        input: '-defekt price>=10',
+        expected: { keyword: '-defekt', conditions: [{ op: '>=', price: 10 }], categories: [], gotifyPriority: null, valid: false }
     },
     {
         label: 'Ein regulaerer Ausdruck bleibt unveraendert',
@@ -806,7 +834,75 @@ const KEYWORD_MATCH_CASES = [
     { label: 'Ein verbatim-String ist kein regulaerer Ausdruck', keyword: '"a.b"', descFull: 'a.b c', expected: true },
     { label: 'Ein Punkt im verbatim-String passt auf kein anderes Zeichen', keyword: '"a.b"', descFull: 'axb', expected: false },
     { label: 'Ein regulaerer Ausdruck im Keyword', keyword: '/a.c/', descFull: 'abc', expected: true },
-    { label: 'Ein leerer Text passt nicht', keyword: 'kaffee', descFull: '', expected: false }
+    { label: 'Ein leerer Text passt nicht', keyword: 'kaffee', descFull: '', expected: false },
+
+    // Ein Wort mit einem Minus darf nicht im Text vorkommen.
+    { label: 'Ein Wort mit einem Minus passt, wenn es fehlt', keyword: 'toaster -defekt', descFull: 'toaster silber', expected: true },
+    {
+        label: 'Ein Wort mit einem Minus passt nicht, wenn es im Text steht',
+        keyword: 'toaster -defekt',
+        descFull: 'toaster mit defekt',
+        expected: false
+    },
+    {
+        label: 'Zwei Woerter mit einem Minus: beide muessen fehlen',
+        keyword: 'toaster -defekt -kaputt',
+        descFull: 'toaster kaputt',
+        expected: false
+    },
+    {
+        label: 'Zwei Woerter mit einem Minus passen, wenn beide fehlen',
+        keyword: 'toaster -defekt -kaputt',
+        descFull: 'toaster neu',
+        expected: true
+    },
+    { label: 'Das Wort ohne Minus muss trotzdem vorkommen', keyword: 'toaster -defekt', descFull: 'kaffeemaschine', expected: false },
+    {
+        label: 'Ein verbatim-String mit einem Minus passt, wenn er fehlt',
+        keyword: 'toaster -"a b"',
+        descFull: 'toaster a x b',
+        expected: true
+    },
+    {
+        label: 'Ein verbatim-String mit einem Minus passt nicht, wenn er vorkommt',
+        keyword: 'toaster -"a b"',
+        descFull: 'toaster a b',
+        expected: false
+    },
+    {
+        label: 'Ein regulaerer Ausdruck mit einem Minus passt nicht, wenn er trifft',
+        keyword: 'toaster -/defekt|kaputt/i',
+        descFull: 'toaster KAPUTT',
+        expected: false
+    },
+    {
+        label: 'Ein regulaerer Ausdruck mit einem Minus passt, wenn er nicht trifft',
+        keyword: 'toaster -/defekt|kaputt/i',
+        descFull: 'toaster silber',
+        expected: true
+    },
+    {
+        label: 'Ein regulaerer Ausdruck mit einem Minus mit dem Flag i',
+        keyword: 'toaster -/Defekt/i',
+        descFull: 'toaster mit defekt',
+        expected: false
+    },
+    {
+        label: 'Ein regulaerer Ausdruck ohne Minus neben Woertern',
+        keyword: '/toast.r/ -defekt',
+        descFull: 'toaster silber',
+        expected: true
+    },
+    // Ein Keyword mit nur Woertern mit einem Minus wuerde fast alles treffen und
+    // passt darum nie (siehe parseKeywordConfig()).
+    { label: 'Nur ein Wort mit einem Minus passt nicht, obwohl das Wort fehlt', keyword: '-toaster', descFull: 'kaffee', expected: false },
+    {
+        label: 'Nur ein Wort mit einem Minus passt auch nicht, wenn das Wort vorkommt',
+        keyword: '-toaster',
+        descFull: 'toaster',
+        expected: false
+    },
+    { label: 'Nur Woerter mit einem Minus passen nie', keyword: '-toaster -defekt', descFull: 'kaffee', expected: false }
 ];
 
 console.log('Bedingungen der Keywords pruefen (Preis und Kategorie)');

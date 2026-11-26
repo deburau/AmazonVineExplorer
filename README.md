@@ -83,6 +83,10 @@ only the products that were just added to the database are checked by the keywor
 
 ## Changelog Deburau
 
+##### [2026-11-26] - Version 0.18.0.2
+
+* New: a word of a keyword or of the search bar can be excluded with a minus in front of it. `toaster -defekt` matches a toaster only if the description does **not** contain "defekt", `teekanne -"mit deckel"` does the same for a verbatim string and `toaster -/defekt|kaputt/i` for a regular expression. A keyword or a search that only has such words is not run, because it would match almost every product.
+
 ##### [2026-11-08] - Version 0.18.0.1
 
 * The development continues on the branch `dev-0.19.0`, the version was raised to prepare the next release.

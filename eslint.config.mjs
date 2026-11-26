@@ -128,6 +128,7 @@ const mainFile = [
     'aveExpandKeywordAbbreviations',
     'aveGetCategoryNames',
     'aveIsConditionWord',
+    'aveSplitKeywordWords',
     'aveSplitQuotedWords',
     'aveUnquoteKeywordPart',
     'getContrastColor',

@@ -41,8 +41,10 @@ const NEW_NAMES = [
     'parseKeywordConfig',
     // Die Funktion, die prueft, ob ein Wort eine Verkuerzung eines Feldnamens ist.
     'aveIsConditionWord',
-    // Die Funktionen fuer die verbatim-Strings in Anfuehrungszeichen.
+    // Die Funktionen fuer die verbatim-Strings in Anfuehrungszeichen und die
+    // Woerter mit einem Minus.
     'aveSplitQuotedWords',
+    'aveSplitKeywordWords',
     'aveUnquoteKeywordPart',
     'matchPriceConditions',
     // Die Funktion, die die Details laedt.

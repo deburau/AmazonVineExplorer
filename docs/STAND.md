@@ -8,7 +8,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | Punkt | Stand |
 |---|---|
 | Branch | `dev-0.19.0` (gepusht, aus `main` angelegt) |
-| Version im User-Script | `0.18.0.1` (in Entwicklung, Release 0.19.0 vorbereitet) |
+| Version im User-Script | `0.18.0.2` (in Entwicklung, Release 0.19.0 vorbereitet) |
 | Letztes Release | **0.18.0** (auf `main`, veröffentlicht, Merge-Commit `e0a9439`, Release-Commit `4ae6a8b`) |
 | Lint / Formatierung | 0 Errors, 0 Warnings (`npm run check`) |
 | Verifikationen | alle 21 erfolgreich (`npm run verify`) |
@@ -52,6 +52,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.17.0.6 | Desktop-Testnachricht mit dem neuesten Produkt (Text, Bild, Klickziel) | bestätigt (2026-11-08, „beides ok“) |
 | 0.17.0.5 / 0.17.0.6 | Desktop-Nachrichten kommen in Brave/Windows an (Test und echt) | bestätigt (2026-11-08, „beides ok“) |
 | 0.17.0.7 / 0.17.0.8 | Gotify-Testnachricht mit dem neuesten Produkt und der Adresse der Desktop-Nachrichten (`vine-data`) | bestätigt (2026-11-08, „test ok“) |
+| 0.18.0.2 | „enthält nicht“ (Minus) in Suche und Keywords – auch mit verbatim-String und regulärem Ausdruck | offen (vom Maintainer zu testen) |
 
 **„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
@@ -723,6 +724,33 @@ der Gotify-Gruppe (0.16.0).
 ausgeblendete Überschrift der Keywords. `npm run check` und `npm run verify`
 (20/20) sind grün.
 
+### Feature: „enthält nicht“ in Suche und Keywords (0.18.0.2)
+
+Ein Minus direkt vor einem Wort schließt es aus: `toaster -defekt` passt nur, wenn
+„defekt“ **nicht** im Text steht. Das gilt in den Keywords (Benachrichtigung und
+Auto-Favorit) und in der Suchleiste. Auch ein verbatim-String (`-"mit deckel"`)
+und ein regulärer Ausdruck (`-/defekt|kaputt/i`) dürfen ein Minus tragen.
+
+Umsetzung: `aveSplitKeywordWords()` in `VineExplorer.user.js` zerlegt den Text in
+`{positive, negative}` (die Anführungszeichen werden dabei entfernt).
+`matchesKeyword()` prüft alle positiven Wörter auf Vorkommen und alle negativen auf
+**Nicht**-Vorkommen; jedes Wort kann ein regulärer Ausdruck sein. Die Suche der
+Datenbank kann nur „enthält“ (`DB_HANDLER.query()`), deshalb bekommt sie nur die
+positiven Wörter und filtert die gefundenen Produkte danach mit `matchesKeyword()`.
+
+**Sicherung:** ein Keyword oder eine Suche, die nur Wörter mit Minus enthält, wird
+nicht ausgeführt (`parseKeywordConfig()` setzt `valid: false`) – sonst würde fast
+jedes Produkt passen. Das betrifft auch `-defekt price>=10`: es bleibt mindestens
+ein Wort ohne Minus nötig.
+
+**Verifikationen:** `verify_search.js` 31 Fälle (neu: Minus, verbatim, Regex,
+Preisbedingung, nur Minus), `verify_keyword_conditions.js` 192 Fälle (neu: neun
+Textvergleiche, sechs Parse-Fälle). Die Baseline-Vergleiche (`verify_new_items.js`,
+`verify_details_on_favorite.js`) führen `aveSplitKeywordWords` in ihren
+`NEW_NAMES`-Listen.
+
+**Bestätigt:** offen – der Test im Browser (Keywords und Suche) steht noch aus.
+
 ## Wichtige Dateien
 
 | Datei | Inhalt |
@@ -774,8 +802,8 @@ gegen erwartete Werte.
 | `verify_details_on_favorite.js` | Baseline | die Requests der Preisdetails beim Favorisieren |
 | `verify_settings_categories.js` | Feature | die Kategorieauswahl des Turbo-Scans inkl. „Alle Produkte" (32 Fälle) |
 | `verify_site_detection.js` | Feature | die Erkennung der Vine-Seiten (16 URLs) |
-| `verify_search.js` | Feature | die Suche in der Suchleiste (21 Fälle) |
-| `verify_keyword_conditions.js` | Feature | das Parsen und Vergleichen der Bedingungen inkl. `gotifyPriority` (173 Fälle) |
+| `verify_search.js` | Feature | die Suche in der Suchleiste inkl. „enthält nicht“ (31 Fälle) |
+| `verify_keyword_conditions.js` | Feature | das Parsen und Vergleichen der Bedingungen inkl. `gotifyPriority` und „enthält nicht“ (192 Fälle) |
 | `verify_gotify_priority.js` | Feature | die Priorität der Gotify-Nachrichten und die Testnachricht (44 Fälle) |
 | `verify_desktop_notification.js` | Feature | die Desktop-Benachrichtigungen und ihre Testnachricht (47 Fälle) |
 | `verify_left_side_buttons.js` | Feature | die Buttons der linken Seite in der schmalen Spalte (40 Fälle) |

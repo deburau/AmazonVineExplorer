@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon Vine Explorer
 // @namespace    https://github.com/deburau/AmazonVineExplorer
-// @version      0.18.0.1
+// @version      0.18.0.2
 // @updateURL    https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @downloadURL  https://raw.githubusercontent.com/deburau/AmazonVineExplorer/main/VineExplorer.user.js
 // @supportURL   https://github.com/deburau/AmazonVineExplorer/issues
@@ -41,7 +41,7 @@
    addVerticalButtonsStyle, createVerticalButton, getLeftSideButtonStyle, getVerticalButtonsCss,
    appendInfiniteScrollTiles, aveFixRelativeVineLinks, aveGetVineBaseUrl, aveResolveUrl,
    addProductToKeywordSearch, aveExpandCategoryNames, aveExpandKeywordAbbreviations, aveGetCategoryNames,
-   aveIsConditionWord, aveSplitQuotedWords, aveUnquoteKeywordPart, backGroundTileScanner,
+   aveIsConditionWord, aveSplitKeywordWords, aveSplitQuotedWords, aveUnquoteKeywordPart, backGroundTileScanner,
    btnEventhandlerClick, checkKeywordsForProduct,
    cleanUpDatabase, getPageCategoryText, hasCategoryCondition, matchCategoryConditions, matchesKeyword,
    matchesKeywordEntry, matchesPriceConditions, parseCategoryCondition, parseGotifyPriorityCondition,
@@ -5548,6 +5548,32 @@ function aveUnquoteKeywordPart(part) {
 }
 
 /**
+ * Splits the text of a keyword into the words it needs and the words it must not
+ * contain.
+ *
+ * A word with a leading minus is a negative term: the description of a product
+ * matches only if it does **not** contain that text, e.g. "toaster -defekt". The
+ * minus is not a part of the searched text, so it is removed, like the quotes of
+ * a verbatim string. The words keep the order in which they were typed.
+ *
+ * @param {string} keyword The text of the keyword
+ * @returns {{positive: string[], negative: string[]}} The words of the keyword
+ */
+function aveSplitKeywordWords(keyword) {
+    const _positive = [];
+    const _negative = [];
+
+    for (const _word of aveSplitQuotedWords(keyword)) {
+        const _isNegative = _word.length > 1 && _word.startsWith('-');
+        const _text = aveUnquoteKeywordPart(_isNegative ? _word.slice(1) : _word);
+        if (_text.length === 0) continue;
+        if (_isNegative) _negative.push(_text);
+        else _positive.push(_text);
+    }
+    return { positive: _positive, negative: _negative };
+}
+
+/**
  * Checks if a word is a shortening of the name of a field of a condition.
  *
  * Every shortening works: "p", "pr", "pri", "pric" and "price" as well as "c",
@@ -5606,6 +5632,11 @@ function parsePriceCondition(text) {
  * category is one word, so "category~kaffee tee" searches for the category
  * "kaffee" and for the text "tee".
  *
+ * NOTE: A word with a leading minus is a negative term, the text of the keyword
+ * must not contain it (e.g. "toaster -defekt", see matchesKeyword()). A keyword
+ * that only has negative terms is reported as not valid, because it would match
+ * almost every product. Such a keyword can never match.
+ *
  * @param {string} config The keyword of the configuration
  * @returns {{keyword: string, conditions: object[], categories: object[], gotifyPriority: number|null, valid: boolean}} The parsed keyword
  */
@@ -5613,12 +5644,29 @@ function parseKeywordConfig(config) {
     const _text = String(config ?? '');
     const _result = { keyword: _text, conditions: [], categories: [], gotifyPriority: null, valid: true };
 
+    /**
+     * Marks a keyword that only has words with a minus as not valid.
+     *
+     * @param {string} keyword The text of the keyword, without the conditions
+     */
+    const _checkNegativeOnly = (keyword) => {
+        // NOTE: Such a keyword would match almost every product, because nothing of
+        // the text has to occur. At least one word without a minus is needed.
+        const _terms = aveSplitKeywordWords(keyword);
+        if (_terms.negative.length === 0 || _terms.positive.length > 0) return;
+        _result.valid = false;
+        console.warn(`The keyword "${_text}" has only words with a minus and can never match.`);
+    };
+
     // NOTE: Only a keyword with a condition is parsed. The keywords can be regular
     // expressions and they can contain the name of a field, so it is checked if a
     // field name stands directly in front of an operator. The field names can be
     // shortened (see aveExpandKeywordAbbreviations()).
     const _start = /\b([a-z]+)\s*(?=[=!<>])/i.exec(_text);
-    if (!_start || !aveIsConditionWord(_start[1])) return _result;
+    if (!_start || !aveIsConditionWord(_start[1])) {
+        _checkNegativeOnly(_text);
+        return _result;
+    }
 
     // NOTE: A condition is a word of its own, the spaces around the operator are
     // optional ("price>=10" and "price >= 10" are the same). A condition of up to
@@ -5687,6 +5735,8 @@ function parseKeywordConfig(config) {
         _result.valid = false;
         console.warn(`The condition of the keyword "${_text}" is not valid.`);
     }
+
+    _checkNegativeOnly(_keyword);
 
     _result.keyword = _keyword;
     _result.conditions = _conditions;
@@ -6066,7 +6116,13 @@ async function checkKeywordsForProduct(_prod, _configKeyWords, categoryText = ''
  * A keyword that is a regular expression (e.g. "/toaster/i") is tested as it
  * is. A keyword with several words matches if **all** of its words appear in the
  * description, the order of the words and the distance between them do not
- * matter.
+ * matter. Every word can be a regular expression as well, e.g.
+ * "toaster -/defekt|kaputt/i".
+ *
+ * NOTE: A word with a leading minus must **not** appear in the description, e.g.
+ * "toaster -defekt" matches a toaster without the word "defekt". A keyword that
+ * only has words with a minus would match almost every product, so it never
+ * matches (see parseKeywordConfig()).
  *
  * @param {string} descFull The description of the product in lower case
  * @param {string} keyword The keyword of the settings in lower case
@@ -6079,12 +6135,31 @@ function matchesKeyword(descFull, keyword) {
         return _regExp.test(descFull);
     }
 
-    if (SETTINGS.DebugLevel > 1) console.log(`matchesKeyword(): Search the description for the keyword: ${keyword}`);
     // NOTE: A part in double quotes is a verbatim string and has to occur with its
     // spaces: "a b" does not match the text "a x b". Without the quotes every word
-    // has to occur somewhere in the text, the order does not matter.
-    const _parts = aveSplitQuotedWords(keyword);
-    return _parts.length > 0 && _parts.every((part) => descFull.includes(aveUnquoteKeywordPart(part)));
+    // has to occur somewhere in the text, the order does not matter. A word with a
+    // leading minus must not occur (see aveSplitKeywordWords()).
+    const _terms = aveSplitKeywordWords(keyword);
+
+    // NOTE: Only words with a minus would match almost every product (see
+    // parseKeywordConfig(), which reports such a keyword as not valid).
+    if (_terms.positive.length === 0) {
+        if (SETTINGS.DebugLevel > 1)
+            console.warn(`matchesKeyword(): The keyword "${keyword}" has only words with a minus and can never match.`);
+        return false;
+    }
+
+    // NOTE: Every word can be a regular expression as well, so the same test is
+    // used for the words with and without a minus.
+    const _matches = (part) => {
+        const _partRegExp = stringToRegex(part);
+        if (_partRegExp !== undefined) return _partRegExp.test(descFull);
+        return descFull.includes(part);
+    };
+
+    if (SETTINGS.DebugLevel > 1) console.log(`matchesKeyword(): Search the description for the keyword: ${keyword}`);
+    if (!_terms.positive.every(_matches)) return false;
+    return !_terms.negative.some(_matches);
 }
 
 /**
@@ -7135,13 +7210,18 @@ function initNavigationButtons() {
  * NOTE: A product whose price is not known can not match a price condition, so it
  * is not part of the result (matchPriceConditions() returns false for it).
  *
+ * NOTE: A word with a leading minus must not occur in the description of a
+ * product, e.g. "teekanne -glas" (see matchesKeyword()). The database has no
+ * search for a text that must not occur, so the products that were found are
+ * filtered. A search that only has words with a minus is not valid.
+ *
  * @param {string} queryText The text of the search (lower case)
  * @returns {Promise<Product[]>} The products that match the search
  */
 async function searchProducts(queryText) {
     const _entry = parseKeywordConfig(String(queryText ?? '').trim());
     if (!_entry.valid) {
-        console.warn(`searchProducts(): the search "${queryText}" has a condition that is not valid.`);
+        console.warn(`searchProducts(): the search "${queryText}" is not valid.`);
         return [];
     }
 
@@ -7154,16 +7234,22 @@ async function searchProducts(queryText) {
 
     // NOTE: A part in double quotes is a verbatim string. The quotes are removed, so
     // that the search of the database looks for the text with its spaces (query()
-    // checks every word with includes()).
-    const _words = aveSplitQuotedWords(_entry.keyword)
-        .map((word) => aveUnquoteKeywordPart(word))
-        .filter((word) => word.length > 0);
+    // checks every word with includes()). The words with a minus are not part of the
+    // query, because the database would search for the minus as well.
+    const _terms = aveSplitKeywordWords(_entry.keyword);
     // NOTE: getAll() is used when the search has no text at all, because query()
     // is meant for a text search.
-    const _products = _words.length > 0 ? await database.query(_words) : await database.getAll();
-    if (_entry.conditions.length === 0) return _products;
+    const _products = _terms.positive.length > 0 ? await database.query(_terms.positive) : await database.getAll();
 
-    return _products.filter((prod) => matchPriceConditions(_entry.conditions, getTaxPrices(prod)));
+    // NOTE: The words with a minus are checked on the products that were found, so
+    // that the same rule applies as in the keywords (matchesKeyword()).
+    const _matched =
+        _terms.negative.length > 0
+            ? _products.filter((prod) => matchesKeyword(String(prod.description_full ?? '').toLowerCase(), _entry.keyword))
+            : _products;
+    if (_entry.conditions.length === 0) return _matched;
+
+    return _matched.filter((prod) => matchPriceConditions(_entry.conditions, getTaxPrices(prod)));
 }
 
 /**
