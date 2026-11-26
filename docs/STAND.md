@@ -52,7 +52,7 @@ nicht verloren geht. Bei Fragen zuerst hier und in `git log` nachschauen.
 | 0.17.0.6 | Desktop-Testnachricht mit dem neuesten Produkt (Text, Bild, Klickziel) | bestätigt (2026-11-08, „beides ok“) |
 | 0.17.0.5 / 0.17.0.6 | Desktop-Nachrichten kommen in Brave/Windows an (Test und echt) | bestätigt (2026-11-08, „beides ok“) |
 | 0.17.0.7 / 0.17.0.8 | Gotify-Testnachricht mit dem neuesten Produkt und der Adresse der Desktop-Nachrichten (`vine-data`) | bestätigt (2026-11-08, „test ok“) |
-| 0.18.0.2 | „enthält nicht“ (Minus) in Suche und Keywords – auch mit verbatim-String und regulärem Ausdruck | offen (vom Maintainer zu testen) |
+| 0.18.0.2 | „enthält nicht“ (Minus) in Suche und Keywords – auch mit verbatim-String und regulärem Ausdruck | bestätigt (2026-11-26) |
 
 **„ohne Befund”** heißt: der Maintainer hat die ausgelieferte **0.16.0** im Browser
 benutzt und dabei am 2026-11-05 keine Auffälligkeit und keinen Fehler gefunden.
@@ -749,7 +749,7 @@ Textvergleiche, sechs Parse-Fälle). Die Baseline-Vergleiche (`verify_new_items.
 `verify_details_on_favorite.js`) führen `aveSplitKeywordWords` in ihren
 `NEW_NAMES`-Listen.
 
-**Bestätigt:** offen – der Test im Browser (Keywords und Suche) steht noch aus.
+**Bestätigt (2026-11-26):** der Test im Browser (Keywords und Suche) ist ok.
 
 ## Wichtige Dateien
 
